@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ar-Gesture</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0f1115;
+        color: #e8eaed;
+      }
+      .card {
+        max-width: 30rem;
+        padding: 2.5rem;
+        text-align: center;
+      }
+      h1 { font-size: 1.6rem; margin: 0 0 0.5rem; }
+      p { color: #9aa0a6; line-height: 1.5; }
+      .links { display: flex; gap: 1rem; justify-content: center; margin-top: 1.75rem; }
+      a.btn {
+        display: inline-block;
+        padding: 0.85rem 1.5rem;
+        border-radius: 0.6rem;
+        text-decoration: none;
+        font-weight: 600;
+        background: #1a73e8;
+        color: #fff;
+      }
+      a.btn.secondary { background: #2a2f3a; color: #e8eaed; }
+      code { background: #2a2f3a; padding: 0.15rem 0.4rem; border-radius: 0.3rem; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Ar-Gesture</h1>
+      <p>
+        Gesture typing demo. Open <strong>Display</strong> on the desktop and
+        <strong>Mobile</strong> on the phone (touchpad). The phone streams your
+        swipe to the backend, which decodes it into a word on the display.
+      </p>
+      <p>Backend: <code>wss://gesture.drziangchen.uk</code></p>
+      <div class="links">
+        <a class="btn" href="display.html">Display</a>
+        <a class="btn secondary" href="mobile.html">Mobile</a>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,328 @@
+:root {
+  --bg: #f3f0e8;
+  --panel: #fffdf7;
+  --ink: #111111;
+  --line: #242424;
+  --guide: rgba(17, 17, 17, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at top, #fffdf8 0%, var(--bg) 68%);
+  color: var(--ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.mobile-body,
+.display-body {
+  display: flex;
+  touch-action: none;
+}
+
+.mobile-stage,
+.display-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#mobile-canvas,
+.display-frame,
+#display-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.display-stage {
+  padding: 4vmin;
+}
+
+.display-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4vmin;
+  border: 2px solid rgba(17, 17, 17, 0.18);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 252, 245, 0.94));
+  box-shadow: 0 28px 60px rgba(48, 39, 24, 0.08);
+  overflow: hidden;
+}
+
+#mobile-canvas,
+#display-canvas {
+  display: block;
+}
+
+.mobile-stage #mobile-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  touch-action: none;
+}
+
+#display-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cursor-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #111111;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 0 0 5px rgba(255, 204, 51, 0.28), 0 8px 18px rgba(17, 17, 17, 0.18);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.text-panel {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  width: min(92%, 960px);
+  gap: 10px;
+}
+
+.decoded-text {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  border: 1.5px solid rgba(17, 17, 17, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.2rem;
+  padding: 0 14px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.mode-select {
+  height: 48px;
+  border: 1.5px solid rgba(17, 17, 17, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0 12px;
+}
+
+.mode-select:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.text-action {
+  height: 48px;
+  border: 1.5px solid rgba(17, 17, 17, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0 14px;
+}
+
+.text-action:active {
+  transform: translateY(1px);
+}
+
+.keyboard-shell {
+  --key-width: 8.4vmin;
+  --key-height: 10vmin;
+  --key-border: 1.5px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4vmin;
+}
+
+.keyboard-row {
+  display: flex;
+  gap: 0;
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--key-width);
+  height: var(--key-height);
+  max-height: 86px;
+  border: var(--key-border) solid rgba(17, 17, 17, 0.22);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 241, 229, 0.92));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  color: rgba(17, 17, 17, 0.9);
+  font-size: clamp(1rem, 2.5vmin, 1.8rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-left: calc(-1 * var(--key-border));
+  margin-top: calc(-1 * var(--key-border));
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.keyboard-row .key:first-child {
+  margin-left: 0;
+}
+
+.keyboard-row:first-child .key {
+  margin-top: 0;
+}
+
+.keyboard-row-offset-sm {
+  margin-left: calc(var(--key-width) / 2);
+}
+
+.keyboard-row-offset-lg {
+  margin-left: var(--key-width);
+}
+
+.key-anchor {
+  background: linear-gradient(180deg, rgba(255, 244, 199, 0.98), rgba(245, 223, 143, 0.92));
+}
+
+.is-continuous-mode .key-anchor,
+.is-absolute-mode .key-anchor {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 241, 229, 0.92));
+}
+
+.mobile-keyboard-overlay {
+  --overlay-x: 50%;
+  --overlay-y: 50%;
+  position: absolute;
+  left: var(--overlay-x);
+  top: var(--overlay-y);
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease-out;
+}
+
+.mobile-keyboard-overlay.is-visible {
+  opacity: 1;
+}
+
+.is-mobile-keyboard-hidden .mobile-keyboard-overlay.is-visible {
+  opacity: 0;
+}
+
+.is-absolute-mode .mobile-keyboard-overlay {
+  left: 50%;
+  top: auto;
+  bottom: max(44px, 7vh);
+  transform: translateX(-50%);
+  opacity: 1;
+}
+
+.is-absolute-mode.is-mobile-keyboard-hidden .mobile-keyboard-overlay {
+  opacity: 0;
+}
+
+.keyboard-shell-mobile {
+  --key-width: clamp(18px, 4.6vw, 22px);
+  --key-height: calc(var(--key-width) * 3);
+  --key-border: 1px;
+  padding: 0;
+  filter: drop-shadow(0 10px 18px rgba(17, 17, 17, 0.18));
+}
+
+.keyboard-shell-mobile .key {
+  height: var(--key-height);
+  max-height: none;
+  font-size: clamp(0.72rem, 2.1vw, 0.92rem);
+  font-weight: 500;
+  color: rgba(17, 17, 17, 0.88);
+}
+
+.is-absolute-mode .keyboard-shell-mobile {
+  --key-width: min(9.4vw, 44px);
+  --key-height: min(8vh, 72px);
+  opacity: 0.92;
+}
+
+@media (max-width: 900px) {
+  .display-frame {
+    gap: 3vmin;
+  }
+
+  .text-panel {
+    width: 96%;
+  }
+
+  .decoded-text,
+  .mode-select,
+  .text-action {
+    height: 42px;
+    font-size: 0.9rem;
+  }
+
+  .mode-select {
+    max-width: 116px;
+    padding: 0 8px;
+  }
+
+  .text-action {
+    padding: 0 10px;
+  }
+
+  .keyboard-shell {
+    --key-width: 8.4vmin;
+    --key-height: 9vmin;
+    padding: 3vmin;
+  }
+
+  .keyboard-shell-mobile {
+    --key-width: clamp(18px, 4.6vw, 22px);
+    --key-height: calc(var(--key-width) * 3);
+    padding: 0;
+  }
+
+  .is-absolute-mode .keyboard-shell-mobile {
+    --key-width: min(9.4vw, 44px);
+    --key-height: min(8vh, 72px);
+  }
+
+  .key {
+    font-size: clamp(0.9rem, 2.3vmin, 1.4rem);
+  }
+
+  .keyboard-shell-mobile .key {
+    font-size: clamp(0.72rem, 2.1vw, 0.92rem);
+  }
+}
