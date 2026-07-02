@@ -7,9 +7,7 @@ const visualModeSelect = document.getElementById("visual-mode");
 const mobileKeyboardModeSelect = document.getElementById("mobile-keyboard-mode");
 const algoVersionSelect = document.getElementById("algo-version");
 const candidateStrip = document.getElementById("candidate-strip");
-const decodedTextInput = document.getElementById("decoded-text");
-const backspaceButton = document.getElementById("backspace-button");
-const clearButton = document.getElementById("clear-button");
+const decodedText = document.getElementById("decoded-text");
 const cursorMarker = document.getElementById("cursor-marker");
 
 const socket = new WebSocket(window.GESTURE_CONFIG.backendWsUrl);
@@ -160,21 +158,36 @@ function positionCandidateBar() {
   candidateStrip.style.top = `${Math.max(0, top)}px`;
 }
 
+// The bar always shows 5 word slots + a backspace segment + a clear segment.
+// Everything here is display-only; selection happens by the cursor (touchpad)
+// sliding onto a segment, decided on the server. Weights must match server.py.
 function renderCandidates(candidates) {
   const list = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
   candidateStrip.innerHTML = "";
-  candidateStrip.classList.toggle("is-visible", list.length > 0);
-  list.forEach((candidate, i) => {
-    const seg = document.createElement("button");
-    seg.type = "button";
-    seg.className = "candidate-seg" + (i === 0 ? " is-top" : "");
-    seg.style.flex = `${candidateWeight(candidate.word)} 1 0`;
-    seg.textContent = candidate.word;
-    seg.addEventListener("click", () => {
-      sendMessage({ type: "pick-candidate", word: candidate.word });
-    });
+  candidateStrip.classList.add("is-visible");
+
+  for (let i = 0; i < 5; i += 1) {
+    const candidate = list[i];
+    const word = candidate ? candidate.word : "";
+    const seg = document.createElement("div");
+    seg.className = "candidate-seg" + (i === 0 && candidate ? " is-top" : "");
+    seg.style.flex = `${candidateWeight(word)} 1 0`;
+    seg.textContent = word;
     candidateStrip.appendChild(seg);
-  });
+  }
+
+  const backspace = document.createElement("div");
+  backspace.className = "candidate-seg candidate-action";
+  backspace.style.flex = "3 1 0";
+  backspace.textContent = "⌫";
+  candidateStrip.appendChild(backspace);
+
+  const clear = document.createElement("div");
+  clear.className = "candidate-seg candidate-action";
+  clear.style.flex = "3 1 0";
+  clear.textContent = "Clear";
+  candidateStrip.appendChild(clear);
+
   positionCandidateBar();
 }
 
@@ -257,12 +270,7 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "text-update" || message.type === "state-update") {
-    const nextText = message.text || "";
-    if (decodedTextInput.value !== nextText) {
-      isApplyingServerText = true;
-      decodedTextInput.value = nextText;
-      isApplyingServerText = false;
-    }
+    decodedText.textContent = message.text || "";
 
     if (message.mappingMode && mappingModeSelect.value !== message.mappingMode) {
       isApplyingServerMappingMode = true;
@@ -335,25 +343,6 @@ socket.addEventListener("message", (event) => {
 
     applyModeClasses();
   }
-});
-
-decodedTextInput.addEventListener("input", () => {
-  if (isApplyingServerText) {
-    return;
-  }
-
-  sendMessage({
-    type: "text-set",
-    text: decodedTextInput.value
-  });
-});
-
-backspaceButton.addEventListener("click", () => {
-  sendMessage({ type: "text-backspace" });
-});
-
-clearButton.addEventListener("click", () => {
-  sendMessage({ type: "text-clear" });
 });
 
 mappingModeSelect.addEventListener("change", () => {

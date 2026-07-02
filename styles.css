@@ -98,28 +98,37 @@ body {
   transform: translate(-50%, -50%);
 }
 
-.text-panel {
+.settings-row {
   position: relative;
   z-index: 3;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   width: min(92%, 960px);
   gap: 10px;
 }
 
+.text-row {
+  position: relative;
+  z-index: 3;
+  width: min(92%, 960px);
+  margin-top: 10px;
+}
+
 .decoded-text {
-  flex: 1;
-  min-width: 0;
-  height: 48px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 56px;
   border: 1.5px solid rgba(17, 17, 17, 0.24);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.88);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
   color: var(--ink);
   font: inherit;
-  font-size: 1.2rem;
-  padding: 0 14px;
-  -webkit-user-select: text;
-  user-select: text;
+  font-size: 1.35rem;
+  padding: 8px 16px;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .mode-select {
@@ -281,24 +290,21 @@ body {
     gap: 3vmin;
   }
 
-  .text-panel {
+  .settings-row,
+  .text-row {
     width: 96%;
   }
 
-  .decoded-text,
-  .mode-select,
-  .text-action {
+  .mode-select {
     height: 42px;
     font-size: 0.9rem;
-  }
-
-  .mode-select {
     max-width: 116px;
     padding: 0 8px;
   }
 
-  .text-action {
-    padding: 0 10px;
+  .decoded-text {
+    min-height: 46px;
+    font-size: 1.1rem;
   }
 
   .keyboard-shell {
@@ -483,3 +489,14 @@ body {
 
 /* The phone shows no candidate UI; selection is decided from the display cursor
    position on the server. See server.py candidate_slot / mobile.js. */
+
+/* backspace / clear segments in the candidate bar (touchpad-only, like candidates) */
+.candidate-seg.candidate-action {
+  color: #5f6368;
+  background: #f1f3f4;
+  font-weight: 600;
+}
+.candidate-seg.candidate-action.is-hover {
+  background: #1a73e8;
+  color: #ffffff;
+}
