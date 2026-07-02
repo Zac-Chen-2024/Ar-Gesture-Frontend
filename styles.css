@@ -150,7 +150,7 @@ body {
   position: relative;
   z-index: 3;
   width: min(95%, 1260px);
-  margin-bottom: 3vmin;
+  margin-bottom: 7vmin;
 }
 
 .decoded-text {
@@ -346,7 +346,7 @@ body {
 
   .text-row {
     width: 96%;
-    margin-bottom: 2vmin;
+    margin-bottom: 4vmin;
   }
 
   .mode-select {
