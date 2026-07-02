@@ -14,6 +14,55 @@ let currentInputMode = "center";
 let mobileKeyboardVisible = true;
 let paired = false;
 let roomCode = null;
+let strokeKind = null;
+let lastCandidates = [];
+
+const mobileCandidates = document.getElementById("mobile-candidates");
+const mcSlots = mobileCandidates
+  ? Array.from(mobileCandidates.querySelectorAll(".mc-slot"))
+  : [];
+
+function candidatesActive() {
+  return lastCandidates.length > 0;
+}
+
+function candidateZoneHeight() {
+  return Math.round(window.innerHeight * 0.16);
+}
+
+function isInCandidateZone(point) {
+  return candidatesActive() && point.y <= candidateZoneHeight();
+}
+
+function candidateSlotFromX(x) {
+  const slot = Math.floor(x / (window.innerWidth / 5));
+  return Math.max(0, Math.min(4, slot));
+}
+
+function renderMobileCandidates() {
+  if (!mobileCandidates) {
+    return;
+  }
+  mobileCandidates.classList.toggle("is-visible", candidatesActive());
+  mcSlots.forEach((slot, index) => {
+    const candidate = lastCandidates[index];
+    slot.textContent = candidate ? candidate.word : "";
+    slot.classList.toggle("is-empty", !candidate);
+    slot.classList.remove("is-hover");
+  });
+}
+
+function hoverCandidate(point) {
+  const index = candidateSlotFromX(point.x);
+  mcSlots.forEach((slot, i) => {
+    slot.classList.toggle("is-hover", i === index && Boolean(lastCandidates[i]));
+  });
+  sendMessage({ type: "candidate-hover", index });
+}
+
+function clearCandidateHover() {
+  mcSlots.forEach((slot) => slot.classList.remove("is-hover"));
+}
 
 function applyModeClasses() {
   const isAbsoluteMode = currentMappingMode === "absolute";
@@ -158,6 +207,19 @@ function startGesture(event) {
   event.preventDefault();
   const point = getPoint(event);
 
+  // touch down inside the candidate zone -> this stroke selects a candidate
+  if (isInCandidateZone(point)) {
+    isDrawing = true;
+    pointerId = event.pointerId;
+    startPoint = point;
+    lastPoint = point;
+    canvas.setPointerCapture(pointerId);
+    drawIdleState();
+    strokeKind = "select";
+    hoverCandidate(point);
+    return;
+  }
+
   if (isAbsoluteMode() && !isInsideRect(point, getAbsoluteKeyboardRect())) {
     return;
   }
@@ -166,14 +228,15 @@ function startGesture(event) {
   pointerId = event.pointerId;
   startPoint = point;
   lastPoint = point;
+  canvas.setPointerCapture(pointerId);
 
   drawIdleState();
+  strokeKind = "draw";
   if (isAbsoluteMode()) {
     applyModeClasses();
   } else {
     showOverlay(point);
   }
-  canvas.setPointerCapture(pointerId);
 
   sendMessage({
     type: "gesture-start",
@@ -188,8 +251,28 @@ function moveGesture(event) {
 
   event.preventDefault();
   const point = getPoint(event);
-  drawSegment(lastPoint, point);
 
+  if (isInCandidateZone(point)) {
+    if (strokeKind === "draw") {
+      // finger moved up into the candidate zone -> abandon the word attempt
+      strokeKind = "select";
+      sendMessage({ type: "gesture-cancel" });
+      drawIdleState();
+      hideOverlay();
+    }
+    hoverCandidate(point);
+    lastPoint = point;
+    return;
+  }
+
+  if (strokeKind === "select") {
+    // travelled back out of the zone; keep it a selection stroke, nothing hovered
+    clearCandidateHover();
+    lastPoint = point;
+    return;
+  }
+
+  drawSegment(lastPoint, point);
   sendMessage({
     type: "gesture-move",
     point: isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : toKeyboardUnits(point)
@@ -205,14 +288,29 @@ function endGesture(event) {
 
   event.preventDefault();
 
+  const endPoint = lastPoint;
+  const kind = strokeKind;
   isDrawing = false;
   pointerId = null;
   startPoint = null;
   lastPoint = null;
+  strokeKind = null;
 
   drawIdleState();
   applyModeClasses();
-  sendMessage({ type: "gesture-end" });
+
+  if (kind === "select") {
+    clearCandidateHover();
+    if (endPoint && isInCandidateZone(endPoint)) {
+      // pick the candidate under the final finger position
+      sendMessage({ type: "candidate-select", index: candidateSlotFromX(endPoint.x) });
+    } else {
+      // lifted outside the zone -> cancel, keep the current word
+      sendMessage({ type: "candidate-hover", index: -1 });
+    }
+  } else if (kind === "draw") {
+    sendMessage({ type: "gesture-end" });
+  }
 }
 
 const sessionPicker = document.getElementById("session-picker");
@@ -299,6 +397,10 @@ socket.addEventListener("message", (event) => {
     currentMappingMode = message.mappingMode || "relative";
     currentInputMode = message.mode || "center";
     mobileKeyboardVisible = message.mobileKeyboardVisible !== false;
+    if (Array.isArray(message.candidates)) {
+      lastCandidates = message.candidates;
+      renderMobileCandidates();
+    }
     applyModeClasses();
   }
 });

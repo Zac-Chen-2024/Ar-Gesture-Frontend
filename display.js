@@ -140,21 +140,30 @@ function populateVersions(versions) {
 }
 
 function renderCandidates(candidates) {
+  const list = Array.isArray(candidates) ? candidates : [];
   candidateStrip.innerHTML = "";
-  if (currentBehavior !== "candidates" || !Array.isArray(candidates) || candidates.length === 0) {
-    candidateStrip.classList.remove("is-visible");
-    return;
-  }
   candidateStrip.classList.add("is-visible");
-  candidates.forEach((candidate, index) => {
+  for (let i = 0; i < 5; i += 1) {
+    const candidate = list[i];
     const chip = document.createElement("button");
     chip.type = "button";
-    chip.className = "candidate-chip" + (index === 0 ? " is-top" : "");
-    chip.textContent = candidate.word;
-    chip.addEventListener("click", () => {
-      sendMessage({ type: "pick-candidate", word: candidate.word });
-    });
+    chip.className =
+      "candidate-chip" +
+      (candidate ? "" : " is-empty") +
+      (candidate && i === 0 ? " is-top" : "");
+    chip.textContent = candidate ? candidate.word : "";
+    if (candidate) {
+      chip.addEventListener("click", () => {
+        sendMessage({ type: "pick-candidate", word: candidate.word });
+      });
+    }
     candidateStrip.appendChild(chip);
+  }
+}
+
+function highlightCandidate(index) {
+  Array.from(candidateStrip.children).forEach((chip, i) => {
+    chip.classList.toggle("is-hover", i === index);
   });
 }
 
@@ -193,6 +202,16 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "mobile-left") {
     updateRoomBadge(null, false);
+    return;
+  }
+
+  if (message.type === "candidate-hover") {
+    highlightCandidate(message.index);
+    return;
+  }
+
+  if (message.type === "gesture-cancel") {
+    clearCanvas();
     return;
   }
 
@@ -378,3 +397,4 @@ algoVersionSelect.addEventListener("change", () => {
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 applyModeClasses();
+renderCandidates([]);
