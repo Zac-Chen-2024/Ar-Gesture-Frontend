@@ -49,6 +49,7 @@ function resizeCanvas() {
   updateKeyboardReference();
   clearCanvas();
   updateCursorByKey(currentCursorKey);
+  positionCandidateBar();
 }
 
 function updateKeyboardReference() {
@@ -139,31 +140,47 @@ function populateVersions(versions) {
   versionsPopulated = true;
 }
 
-function renderCandidates(candidates) {
-  const list = Array.isArray(candidates) ? candidates : [];
-  candidateStrip.innerHTML = "";
-  candidateStrip.classList.add("is-visible");
-  for (let i = 0; i < 5; i += 1) {
-    const candidate = list[i];
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className =
-      "candidate-chip" +
-      (candidate ? "" : " is-empty") +
-      (candidate && i === 0 ? " is-top" : "");
-    chip.textContent = candidate ? candidate.word : "";
-    if (candidate) {
-      chip.addEventListener("click", () => {
-        sendMessage({ type: "pick-candidate", word: candidate.word });
-      });
-    }
-    candidateStrip.appendChild(chip);
+const keyboardShell = document.querySelector(".keyboard-shell");
+
+// Segment weight must match the server's candidate_slot (max(len, 2)).
+function candidateWeight(word) {
+  return Math.max(String(word || "").length, 2);
+}
+
+function positionCandidateBar() {
+  if (!keyboardShell) {
+    return;
   }
+  const shellRect = keyboardShell.getBoundingClientRect();
+  const frameRect = frame.getBoundingClientRect();
+  candidateStrip.style.left = `${shellRect.left - frameRect.left}px`;
+  candidateStrip.style.width = `${shellRect.width}px`;
+  const barHeight = candidateStrip.offsetHeight || 38;
+  const top = shellRect.top - frameRect.top - barHeight - 8;
+  candidateStrip.style.top = `${Math.max(0, top)}px`;
+}
+
+function renderCandidates(candidates) {
+  const list = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
+  candidateStrip.innerHTML = "";
+  candidateStrip.classList.toggle("is-visible", list.length > 0);
+  list.forEach((candidate, i) => {
+    const seg = document.createElement("button");
+    seg.type = "button";
+    seg.className = "candidate-seg" + (i === 0 ? " is-top" : "");
+    seg.style.flex = `${candidateWeight(candidate.word)} 1 0`;
+    seg.textContent = candidate.word;
+    seg.addEventListener("click", () => {
+      sendMessage({ type: "pick-candidate", word: candidate.word });
+    });
+    candidateStrip.appendChild(seg);
+  });
+  positionCandidateBar();
 }
 
 function highlightCandidate(index) {
-  Array.from(candidateStrip.children).forEach((chip, i) => {
-    chip.classList.toggle("is-hover", i === index);
+  Array.from(candidateStrip.children).forEach((seg, i) => {
+    seg.classList.toggle("is-hover", i === index);
   });
 }
 

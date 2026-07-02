@@ -439,61 +439,47 @@ body {
   font-size: 0.95rem;
 }
 
-/* ---- v2: candidate strip (display) ---- */
+/* ---- candidate bar: keyboard-width, segments proportional to word length ---- */
 .candidate-strip {
+  position: absolute;
   display: none;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  margin-top: 0.4rem;
+  height: 2.4rem;
+  z-index: 15;
+  border: 1px solid #d0d3d9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 .candidate-strip.is-visible {
   display: flex;
 }
-.candidate-chip {
-  padding: 0.45rem 0.9rem;
-  border: 1px solid #d0d3d9;
-  border-radius: 999px;
-  background: #ffffff;
+.candidate-seg {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.4rem;
+  border: none;
+  border-right: 1px solid #e6e8ec;
+  background: transparent;
   color: #202124;
   font-size: 1rem;
   cursor: pointer;
-}
-.candidate-chip:hover {
-  background: #f1f3f4;
-}
-.candidate-chip.is-top {
-  background: #1a73e8;
-  border-color: #1a73e8;
-  color: #ffffff;
-  font-weight: 600;
-}
-
-/* ---- redesign: fixed 5-slot candidate area (display) ---- */
-.candidate-strip {
-  min-height: 3rem;
-  flex-wrap: nowrap;
-  align-items: stretch;
-}
-.candidate-chip {
-  flex: 1 1 0;
-  min-width: 0;
-  justify-content: center;
-  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.candidate-chip.is-empty {
-  visibility: hidden;
+.candidate-seg:last-child {
+  border-right: none;
 }
-.candidate-chip.is-hover {
-  outline: 3px solid #1a73e8;
-  outline-offset: -3px;
-  background: #e8f0fe;
+.candidate-seg.is-top {
+  font-weight: 700;
 }
-.candidate-chip.is-top.is-hover {
-  background: #1558b0;
+.candidate-seg.is-hover {
+  background: #1a73e8;
+  color: #ffffff;
 }
 
-/* Candidate selection uses an invisible top hot-band on the phone (no UI);
-   feedback is shown only on the display. See mobile.js candidate zone logic. */
+/* The phone shows no candidate UI; selection is decided from the display cursor
+   position on the server. See server.py candidate_slot / mobile.js. */
