@@ -176,7 +176,7 @@ body {
   gap: 0;
   width: fit-content;
   max-width: 100%;
-  padding: 4vmin;
+  padding: 0;
 }
 
 .keyboard-row {
@@ -311,7 +311,7 @@ body {
   .keyboard-shell {
     --key-width: 8.4vmin;
     --key-height: 9vmin;
-    padding: 3vmin;
+    padding: 0;
   }
 
   .keyboard-shell-mobile {

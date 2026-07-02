@@ -34,7 +34,24 @@ function sendMessage(payload) {
   }
 }
 
+const keyboardShell = document.querySelector(".keyboard-shell");
+const textRow = document.querySelector(".text-row");
+
+// Make the keyboard (and the candidate bar inside it) span the same width as
+// the text row above: 10 keys across the row's width.
+function sizeKeyboardToTextRow() {
+  if (!keyboardShell || !textRow) {
+    return;
+  }
+  const width = textRow.getBoundingClientRect().width;
+  if (width > 0) {
+    keyboardShell.style.setProperty("--key-width", `${width / 10}px`);
+  }
+}
+
 function resizeCanvas() {
+  sizeKeyboardToTextRow();
+
   const rect = frame.getBoundingClientRect();
   const ratio = window.devicePixelRatio || 1;
 
