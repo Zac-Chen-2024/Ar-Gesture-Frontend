@@ -69,12 +69,26 @@ body {
 .top-bar {
   position: relative;
   z-index: 3;
+  order: -2;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   width: 100%;
   padding: 16px 20px 0;
+}
+
+/* flexible spacers: whitespace splits ~60:40 above/below the main block,
+   so it sits slightly below center and stays put as the window resizes */
+.display-frame::before {
+  content: "";
+  order: -1;
+  flex: 6 1 0;
+}
+
+.display-frame::after {
+  content: "";
+  flex: 4 1 0;
 }
 
 #mobile-canvas,
@@ -136,9 +150,6 @@ body {
   position: relative;
   z-index: 3;
   width: min(92%, 960px);
-  /* margin-top:auto soaks up the flexible whitespace, pinning the
-     text row + keyboard block toward the bottom */
-  margin-top: auto;
   margin-bottom: 3vmin;
 }
 
@@ -218,8 +229,6 @@ body {
   width: fit-content;
   max-width: 100%;
   padding: 0;
-  /* keyboard block is anchored toward the bottom of the frame */
-  margin-bottom: 4vmin;
 }
 
 .keyboard-row {
