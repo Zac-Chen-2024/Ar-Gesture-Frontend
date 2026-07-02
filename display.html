@@ -4,35 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260702-3" />
+    <link rel="stylesheet" href="styles.css?v=20260702-4" />
   </head>
   <body class="display-body">
     <main class="display-stage">
       <section class="display-frame" aria-label="Gesture display area">
-        <div id="room-code" class="room-code">
-          <span class="room-code-label">Session</span>
-          <span class="room-code-value">····</span>
-          <span class="room-code-status">waiting for phone…</span>
-        </div>
-        <div class="settings-row">
-          <select id="algo-version" class="mode-select" aria-label="Algorithm version"></select>
-          <select id="mapping-mode" class="mode-select" aria-label="Mapping mode">
-            <option value="relative">Relative</option>
-            <option value="absolute">Absolute</option>
-          </select>
-          <select id="input-mode" class="mode-select" aria-label="Input mode">
-            <option value="center">Center</option>
-            <option value="continuous">Continuous</option>
-          </select>
-          <select id="visual-mode" class="mode-select" aria-label="Visualization mode">
-            <option value="cursor">Cursor</option>
-            <option value="gesture">Gesture</option>
-          </select>
-          <select id="mobile-keyboard-mode" class="mode-select" aria-label="Mobile keyboard reference">
-            <option value="show">Mobile keys</option>
-            <option value="hide">No keys</option>
-          </select>
-        </div>
+        <header class="top-bar">
+          <div class="settings-row">
+            <label class="setting">
+              <span class="setting-label">Algorithm</span>
+              <select id="algo-version" class="mode-select" aria-label="Algorithm version"></select>
+            </label>
+            <label class="setting">
+              <span class="setting-label">Mapping</span>
+              <select id="mapping-mode" class="mode-select" aria-label="Mapping mode">
+                <option value="relative">Relative</option>
+                <option value="absolute">Absolute</option>
+              </select>
+            </label>
+            <label class="setting">
+              <span class="setting-label">Word start</span>
+              <select id="input-mode" class="mode-select" aria-label="Input mode">
+                <option value="center">Center</option>
+                <option value="continuous">Continuous</option>
+              </select>
+            </label>
+            <label class="setting">
+              <span class="setting-label">Trace</span>
+              <select id="visual-mode" class="mode-select" aria-label="Visualization mode">
+                <option value="cursor">Cursor</option>
+                <option value="gesture">Gesture</option>
+              </select>
+            </label>
+            <label class="setting">
+              <span class="setting-label">Phone keys</span>
+              <select id="mobile-keyboard-mode" class="mode-select" aria-label="Mobile keyboard reference">
+                <option value="show">Show</option>
+                <option value="hide">Hide</option>
+              </select>
+            </label>
+          </div>
+          <div id="room-code" class="room-code">
+            <span class="room-code-label">Session</span>
+            <span class="room-code-value">····</span>
+            <span class="room-code-status">waiting for phone…</span>
+          </div>
+        </header>
         <div class="text-row">
           <div id="decoded-text" class="decoded-text" aria-live="polite"></div>
         </div>
@@ -76,7 +93,7 @@
         <div id="build-badge" class="build-badge" aria-hidden="true"></div>
       </section>
     </main>
-    <script src="config.js?v=20260702-3"></script>
-    <script src="display.js?v=20260702-3"></script>
+    <script src="config.js?v=20260702-4"></script>
+    <script src="display.js?v=20260702-4"></script>
   </body>
   </html>
