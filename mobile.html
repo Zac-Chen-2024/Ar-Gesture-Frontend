@@ -8,6 +8,15 @@
   </head>
   <body class="mobile-body">
     <main class="mobile-stage">
+      <div id="session-picker" class="session-picker">
+        <div class="picker-card">
+          <h2>Select a session</h2>
+          <p class="picker-hint">Tap the code shown on the display screen.</p>
+          <div id="session-list" class="session-list"></div>
+          <p id="picker-status" class="picker-status"></p>
+          <button id="picker-refresh" class="picker-refresh" type="button">Refresh</button>
+        </div>
+      </div>
       <canvas id="mobile-canvas" aria-label="Gesture drawing area"></canvas>
       <div class="mobile-keyboard-overlay" aria-hidden="true">
         <div class="keyboard-shell keyboard-shell-mobile">

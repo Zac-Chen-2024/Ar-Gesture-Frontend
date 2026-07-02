@@ -117,12 +117,43 @@ function drawSegment(from, to) {
   context.stroke();
 }
 
+const roomCodeBadge = document.getElementById("room-code");
+
+function updateRoomBadge(code, paired) {
+  if (!roomCodeBadge) {
+    return;
+  }
+  if (code) {
+    roomCodeBadge.querySelector(".room-code-value").textContent = code;
+  }
+  roomCodeBadge.classList.toggle("is-paired", Boolean(paired));
+  const statusEl = roomCodeBadge.querySelector(".room-code-status");
+  if (statusEl) {
+    statusEl.textContent = paired ? "phone paired" : "waiting for phone…";
+  }
+}
+
 socket.addEventListener("open", () => {
   sendMessage({ type: "join", role: "display" });
 });
 
 socket.addEventListener("message", (event) => {
   const message = JSON.parse(event.data);
+
+  if (message.type === "room-created") {
+    updateRoomBadge(message.code, false);
+    return;
+  }
+
+  if (message.type === "mobile-joined") {
+    updateRoomBadge(null, true);
+    return;
+  }
+
+  if (message.type === "mobile-left") {
+    updateRoomBadge(null, false);
+    return;
+  }
 
   if (message.type === "gesture-start") {
     updateKeyboardReference();
@@ -198,6 +229,10 @@ socket.addEventListener("message", (event) => {
     if (message.cursorKey) {
       currentCursorKey = String(message.cursorKey).toUpperCase();
       updateCursorByKey(currentCursorKey);
+    }
+
+    if (message.code) {
+      updateRoomBadge(message.code, message.mobilePaired === true);
     }
 
     if (message.reset) {

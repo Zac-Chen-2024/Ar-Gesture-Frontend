@@ -12,6 +12,8 @@ let currentStartKey = "G";
 let currentMappingMode = "relative";
 let currentInputMode = "center";
 let mobileKeyboardVisible = true;
+let paired = false;
+let roomCode = null;
 
 function applyModeClasses() {
   const isAbsoluteMode = currentMappingMode === "absolute";
@@ -149,7 +151,7 @@ function toKeyboardUnits(point) {
 }
 
 function startGesture(event) {
-  if (isDrawing) {
+  if (isDrawing || !paired) {
     return;
   }
 
@@ -213,12 +215,84 @@ function endGesture(event) {
   sendMessage({ type: "gesture-end" });
 }
 
+const sessionPicker = document.getElementById("session-picker");
+const sessionList = document.getElementById("session-list");
+const pickerRefresh = document.getElementById("picker-refresh");
+const pickerStatus = document.getElementById("picker-status");
+
+function showPicker(statusMessage) {
+  paired = false;
+  roomCode = null;
+  document.body.classList.remove("is-paired");
+  if (pickerStatus) {
+    pickerStatus.textContent = statusMessage || "";
+  }
+  sessionPicker.classList.remove("is-hidden");
+}
+
+function hidePicker() {
+  sessionPicker.classList.add("is-hidden");
+}
+
+function renderRooms(list) {
+  sessionList.innerHTML = "";
+  const openRooms = (list || []).filter((room) => !room.busy);
+
+  if (openRooms.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "session-empty";
+    empty.textContent = "No open sessions. Open the display page, then Refresh.";
+    sessionList.appendChild(empty);
+    return;
+  }
+
+  for (const room of openRooms) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "session-item";
+    button.textContent = room.code;
+    button.addEventListener("click", () => {
+      sendMessage({ type: "join-room", code: room.code });
+    });
+    sessionList.appendChild(button);
+  }
+}
+
+if (pickerRefresh) {
+  pickerRefresh.addEventListener("click", () => sendMessage({ type: "list-rooms" }));
+}
+
 socket.addEventListener("open", () => {
   sendMessage({ type: "join", role: "mobile" });
 });
 
+socket.addEventListener("close", () => {
+  showPicker("Disconnected. Reload the page to reconnect.");
+});
+
 socket.addEventListener("message", (event) => {
   const message = JSON.parse(event.data);
+
+  if (message.type === "room-list") {
+    if (!paired) {
+      renderRooms(message.rooms);
+    }
+    return;
+  }
+
+  if (message.type === "room-joined") {
+    paired = true;
+    roomCode = message.code;
+    document.body.classList.add("is-paired");
+    hidePicker();
+    resizeCanvas();
+    return;
+  }
+
+  if (message.type === "room-closed" || message.type === "room-error") {
+    showPicker(message.message || "Session ended.");
+    return;
+  }
 
   if (message.type === "state-update") {
     currentStartKey = String(message.cursorKey || "g").toUpperCase();
