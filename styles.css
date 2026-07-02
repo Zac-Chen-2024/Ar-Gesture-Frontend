@@ -118,17 +118,20 @@ body {
 .decoded-text {
   display: flex;
   align-items: center;
+  justify-content: center;
   width: 100%;
   min-height: 56px;
-  border: 1.5px solid rgba(17, 17, 17, 0.24);
-  border-radius: 10px;
+  border: none;
   background: rgba(255, 255, 255, 0.92);
   color: var(--ink);
   font: inherit;
   font-size: 1.35rem;
-  padding: 8px 16px;
-  overflow-x: auto;
+  padding: 8px 24px;
+  overflow: hidden;
   white-space: nowrap;
+  /* open, fading edges: the row dissolves into the page on both sides */
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
 }
 
 .mode-select {
@@ -306,6 +309,7 @@ body {
   .decoded-text {
     min-height: 46px;
     font-size: 1.1rem;
+    padding: 6px 16px;
   }
 
   .keyboard-shell {

@@ -179,13 +179,13 @@ function renderCandidates(candidates) {
 
   const backspace = document.createElement("div");
   backspace.className = "candidate-seg candidate-action";
-  backspace.style.flex = "3 1 0";
+  backspace.style.flex = "2 1 0";
   backspace.textContent = "⌫";
   candidateStrip.appendChild(backspace);
 
   const clear = document.createElement("div");
   clear.className = "candidate-seg candidate-action";
-  clear.style.flex = "3 1 0";
+  clear.style.flex = "2 1 0";
   clear.textContent = "Clear";
   candidateStrip.appendChild(clear);
 }
@@ -270,6 +270,7 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "text-update" || message.type === "state-update") {
     decodedText.textContent = message.text || "";
+    decodedText.scrollLeft = decodedText.scrollWidth; // keep the newest words visible
 
     if (message.mappingMode && mappingModeSelect.value !== message.mappingMode) {
       isApplyingServerMappingMode = true;
