@@ -17,11 +17,9 @@ let roomCode = null;
 let strokeKind = null;
 let lastCandidates = [];
 
-const mobileCandidates = document.getElementById("mobile-candidates");
-const mcSlots = mobileCandidates
-  ? Array.from(mobileCandidates.querySelectorAll(".mc-slot"))
-  : [];
-
+// The phone is purely a touchpad. After a word it exposes an INVISIBLE hot band
+// across the top; its 5 columns map to the candidate slots shown on the DISPLAY.
+// Nothing about candidates is drawn on the phone — feedback is on the display.
 function candidatesActive() {
   return lastCandidates.length > 0;
 }
@@ -39,29 +37,8 @@ function candidateSlotFromX(x) {
   return Math.max(0, Math.min(4, slot));
 }
 
-function renderMobileCandidates() {
-  if (!mobileCandidates) {
-    return;
-  }
-  mobileCandidates.classList.toggle("is-visible", candidatesActive());
-  mcSlots.forEach((slot, index) => {
-    const candidate = lastCandidates[index];
-    slot.textContent = candidate ? candidate.word : "";
-    slot.classList.toggle("is-empty", !candidate);
-    slot.classList.remove("is-hover");
-  });
-}
-
 function hoverCandidate(point) {
-  const index = candidateSlotFromX(point.x);
-  mcSlots.forEach((slot, i) => {
-    slot.classList.toggle("is-hover", i === index && Boolean(lastCandidates[i]));
-  });
-  sendMessage({ type: "candidate-hover", index });
-}
-
-function clearCandidateHover() {
-  mcSlots.forEach((slot) => slot.classList.remove("is-hover"));
+  sendMessage({ type: "candidate-hover", index: candidateSlotFromX(point.x) });
 }
 
 function applyModeClasses() {
@@ -266,8 +243,7 @@ function moveGesture(event) {
   }
 
   if (strokeKind === "select") {
-    // travelled back out of the zone; keep it a selection stroke, nothing hovered
-    clearCandidateHover();
+    // travelled back out of the zone; still a selection stroke
     lastPoint = point;
     return;
   }
@@ -300,7 +276,6 @@ function endGesture(event) {
   applyModeClasses();
 
   if (kind === "select") {
-    clearCandidateHover();
     if (endPoint && isInCandidateZone(endPoint)) {
       // pick the candidate under the final finger position
       sendMessage({ type: "candidate-select", index: candidateSlotFromX(endPoint.x) });
@@ -399,7 +374,6 @@ socket.addEventListener("message", (event) => {
     mobileKeyboardVisible = message.mobileKeyboardVisible !== false;
     if (Array.isArray(message.candidates)) {
       lastCandidates = message.candidates;
-      renderMobileCandidates();
     }
     applyModeClasses();
   }

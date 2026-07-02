@@ -495,44 +495,5 @@ body {
   background: #1558b0;
 }
 
-/* ---- redesign: candidate zone (mobile touchpad, 5 horizontal slots) ---- */
-.mobile-candidates {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 16vh;
-  display: none;
-  pointer-events: none;
-  z-index: 30;
-  background: rgba(26, 115, 232, 0.06);
-  border-bottom: 2px solid rgba(26, 115, 232, 0.35);
-}
-.mobile-candidates.is-visible {
-  display: flex;
-}
-.mc-slot {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 0.25rem;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #202124;
-  border-right: 1px solid rgba(26, 115, 232, 0.25);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.mc-slot:last-child {
-  border-right: none;
-}
-.mc-slot.is-empty {
-  color: transparent;
-}
-.mc-slot.is-hover {
-  background: #1a73e8;
-  color: #ffffff;
-}
+/* Candidate selection uses an invisible top hot-band on the phone (no UI);
+   feedback is shown only on the display. See mobile.js candidate zone logic. */
