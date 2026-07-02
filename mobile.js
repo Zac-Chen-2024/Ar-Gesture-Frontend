@@ -303,6 +303,11 @@ socket.addEventListener("message", (event) => {
   }
 });
 
+const buildBadge = document.getElementById("build-badge");
+if (buildBadge) {
+  buildBadge.textContent = window.GESTURE_CONFIG.version || "";
+}
+
 window.addEventListener("resize", resizeCanvas);
 canvas.addEventListener("pointerdown", startGesture);
 canvas.addEventListener("pointermove", moveGesture);

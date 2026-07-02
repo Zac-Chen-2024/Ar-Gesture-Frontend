@@ -9,6 +9,9 @@
 
   window.GESTURE_CONFIG = {
     // Production backend (nginx + WSS on the tap&say host).
-    backendWsUrl: isLocal ? sameOrigin : "wss://gesture.drziangchen.uk"
+    backendWsUrl: isLocal ? sameOrigin : "wss://gesture.drziangchen.uk",
+    // Frontend build version, shown in the corner badge. Bump on every push
+    // (and keep the ?v= query strings in the HTML in sync).
+    version: "v2026-07-02.1"
   };
 })();

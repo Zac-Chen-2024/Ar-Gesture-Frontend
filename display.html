@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260702-1" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -36,8 +36,8 @@
         <div class="text-row">
           <div id="decoded-text" class="decoded-text" aria-live="polite"></div>
         </div>
-        <div id="candidate-strip" class="candidate-strip" aria-label="Word candidates and actions"></div>
-        <div class="keyboard-shell" aria-hidden="true">
+        <div class="keyboard-shell">
+          <div id="candidate-strip" class="candidate-strip" aria-label="Word candidates and actions"></div>
           <div class="keyboard-row">
             <div class="key" data-key="Q">Q</div>
             <div class="key" data-key="W">W</div>
@@ -73,9 +73,10 @@
         </div>
         <div id="cursor-marker" class="cursor-marker" aria-hidden="true"></div>
         <canvas id="display-canvas"></canvas>
+        <div id="build-badge" class="build-badge" aria-hidden="true"></div>
       </section>
     </main>
-    <script src="config.js"></script>
-    <script src="display.js"></script>
+    <script src="config.js?v=20260702-1"></script>
+    <script src="display.js?v=20260702-1"></script>
   </body>
   </html>

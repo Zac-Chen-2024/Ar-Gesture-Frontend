@@ -47,7 +47,6 @@ function resizeCanvas() {
   updateKeyboardReference();
   clearCanvas();
   updateCursorByKey(currentCursorKey);
-  positionCandidateBar();
 }
 
 function updateKeyboardReference() {
@@ -138,33 +137,18 @@ function populateVersions(versions) {
   versionsPopulated = true;
 }
 
-const keyboardShell = document.querySelector(".keyboard-shell");
-
 // Segment weight must match the server's candidate_slot (max(len, 2)).
 function candidateWeight(word) {
   return Math.max(String(word || "").length, 2);
 }
 
-function positionCandidateBar() {
-  if (!keyboardShell) {
-    return;
-  }
-  const shellRect = keyboardShell.getBoundingClientRect();
-  const frameRect = frame.getBoundingClientRect();
-  candidateStrip.style.left = `${shellRect.left - frameRect.left}px`;
-  candidateStrip.style.width = `${shellRect.width}px`;
-  const barHeight = candidateStrip.offsetHeight || 38;
-  const top = shellRect.top - frameRect.top - barHeight - 8;
-  candidateStrip.style.top = `${Math.max(0, top)}px`;
-}
-
-// The bar always shows 5 word slots + a backspace segment + a clear segment.
-// Everything here is display-only; selection happens by the cursor (touchpad)
-// sliding onto a segment, decided on the server. Weights must match server.py.
+// The bar is a permanent in-flow row inside the keyboard shell (aligned with
+// the top key row): 5 word slots + backspace + clear. Everything here is
+// display-only; selection happens by the cursor (touchpad) sliding onto a
+// segment, decided on the server. Weights must match server.py.
 function renderCandidates(candidates) {
   const list = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
   candidateStrip.innerHTML = "";
-  candidateStrip.classList.add("is-visible");
 
   for (let i = 0; i < 5; i += 1) {
     const candidate = list[i];
@@ -187,8 +171,6 @@ function renderCandidates(candidates) {
   clear.style.flex = "3 1 0";
   clear.textContent = "Clear";
   candidateStrip.appendChild(clear);
-
-  positionCandidateBar();
 }
 
 function highlightCandidate(index) {
@@ -399,6 +381,11 @@ algoVersionSelect.addEventListener("change", () => {
     version: algoVersionSelect.value
   });
 });
+
+const buildBadge = document.getElementById("build-badge");
+if (buildBadge) {
+  buildBadge.textContent = window.GESTURE_CONFIG.version || "";
+}
 
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
