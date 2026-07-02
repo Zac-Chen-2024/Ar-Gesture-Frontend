@@ -15,6 +15,7 @@
           <span class="room-code-status">waiting for phone…</span>
         </div>
         <div class="text-panel">
+          <select id="algo-version" class="mode-select" aria-label="Algorithm version"></select>
           <select id="mapping-mode" class="mode-select" aria-label="Mapping mode">
             <option value="relative">Relative</option>
             <option value="absolute">Absolute</option>
@@ -35,6 +36,7 @@
           <button id="backspace-button" class="text-action" type="button">Backspace</button>
           <button id="clear-button" class="text-action" type="button">Clear</button>
         </div>
+        <div id="candidate-strip" class="candidate-strip" aria-label="Word candidates"></div>
         <div class="keyboard-shell" aria-hidden="true">
           <div class="keyboard-row">
             <div class="key" data-key="Q">Q</div>

@@ -5,6 +5,8 @@ const mappingModeSelect = document.getElementById("mapping-mode");
 const inputModeSelect = document.getElementById("input-mode");
 const visualModeSelect = document.getElementById("visual-mode");
 const mobileKeyboardModeSelect = document.getElementById("mobile-keyboard-mode");
+const algoVersionSelect = document.getElementById("algo-version");
+const candidateStrip = document.getElementById("candidate-strip");
 const decodedTextInput = document.getElementById("decoded-text");
 const backspaceButton = document.getElementById("backspace-button");
 const clearButton = document.getElementById("clear-button");
@@ -24,6 +26,9 @@ let currentCursorKey = "G";
 let currentMappingMode = "relative";
 let currentInputMode = "center";
 let currentVisualMode = "gesture";
+let currentBehavior = "top1";
+let isApplyingServerVersion = false;
+let versionsPopulated = false;
 
 function sendMessage(payload) {
   if (socket.readyState === WebSocket.OPEN) {
@@ -115,6 +120,42 @@ function drawSegment(from, to) {
   context.moveTo(from.x, from.y);
   context.lineTo(to.x, to.y);
   context.stroke();
+}
+
+function populateVersions(versions) {
+  if (versionsPopulated || !Array.isArray(versions) || versions.length === 0) {
+    return;
+  }
+  algoVersionSelect.innerHTML = "";
+  for (const version of versions) {
+    const option = document.createElement("option");
+    option.value = version.id;
+    option.textContent = version.name;
+    if (version.summary) {
+      option.title = version.summary;
+    }
+    algoVersionSelect.appendChild(option);
+  }
+  versionsPopulated = true;
+}
+
+function renderCandidates(candidates) {
+  candidateStrip.innerHTML = "";
+  if (currentBehavior !== "candidates" || !Array.isArray(candidates) || candidates.length === 0) {
+    candidateStrip.classList.remove("is-visible");
+    return;
+  }
+  candidateStrip.classList.add("is-visible");
+  candidates.forEach((candidate, index) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "candidate-chip" + (index === 0 ? " is-top" : "");
+    chip.textContent = candidate.word;
+    chip.addEventListener("click", () => {
+      sendMessage({ type: "pick-candidate", word: candidate.word });
+    });
+    candidateStrip.appendChild(chip);
+  });
 }
 
 const roomCodeBadge = document.getElementById("room-code");
@@ -235,8 +276,25 @@ socket.addEventListener("message", (event) => {
       updateRoomBadge(message.code, message.mobilePaired === true);
     }
 
+    if (message.versions) {
+      populateVersions(message.versions);
+    }
+
+    if (message.version && algoVersionSelect.value !== message.version) {
+      isApplyingServerVersion = true;
+      algoVersionSelect.value = message.version;
+      isApplyingServerVersion = false;
+    }
+
+    if (typeof message.behavior === "string") {
+      currentBehavior = message.behavior;
+    }
+
     if (message.reset) {
       clearCanvas();
+      renderCandidates([]);
+    } else if ("candidates" in message) {
+      renderCandidates(message.candidates);
     }
 
     applyModeClasses();
@@ -303,6 +361,17 @@ mobileKeyboardModeSelect.addEventListener("change", () => {
   sendMessage({
     type: "mobile-keyboard-set",
     visible: mobileKeyboardModeSelect.value === "show"
+  });
+});
+
+algoVersionSelect.addEventListener("change", () => {
+  if (isApplyingServerVersion) {
+    return;
+  }
+
+  sendMessage({
+    type: "version-set",
+    version: algoVersionSelect.value
   });
 });
 
