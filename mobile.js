@@ -8,6 +8,7 @@ let isDrawing = false;
 let pointerId = null;
 let startPoint = null;
 let lastPoint = null;
+let gestureStartTime = 0;
 let currentStartKey = "G";
 let currentMappingMode = "relative";
 let currentInputMode = "center";
@@ -166,6 +167,7 @@ function startGesture(event) {
   pointerId = event.pointerId;
   startPoint = point;
   lastPoint = point;
+  gestureStartTime = performance.now();
   canvas.setPointerCapture(pointerId);
 
   drawIdleState();
@@ -175,10 +177,9 @@ function startGesture(event) {
     showOverlay(point);
   }
 
-  sendMessage({
-    type: "gesture-start",
-    point: isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : { x: 0, y: 0 }
-  });
+  const startPayload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : { x: 0, y: 0 };
+  startPayload.t = 0;
+  sendMessage({ type: "gesture-start", point: startPayload });
 }
 
 function moveGesture(event) {
@@ -190,10 +191,11 @@ function moveGesture(event) {
   const point = getPoint(event);
   drawSegment(lastPoint, point);
 
-  sendMessage({
-    type: "gesture-move",
-    point: isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : toKeyboardUnits(point)
-  });
+  // t = ms since gesture start; used server-side for data recording and
+  // (later) dwell/speed-aware decoding
+  const payload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : toKeyboardUnits(point);
+  payload.t = Math.round(performance.now() - gestureStartTime);
+  sendMessage({ type: "gesture-move", point: payload });
 
   lastPoint = point;
 }
