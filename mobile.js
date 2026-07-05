@@ -9,6 +9,64 @@ let pointerId = null;
 let startPoint = null;
 let lastPoint = null;
 let gestureStartTime = 0;
+
+// Long-press / dwell detection (v3 letter input). The phone only reports the
+// raw events; the server decides what they mean for the active version.
+const HOLD_START_MS = 500;   // press-and-hold at stroke start arms letter mode
+const HOLD_MS = 400;         // coming to rest later locks the letter (v3b)
+const HOLD_RADIUS_PX = 14;
+let armTimer = null;
+let stillTimer = null;
+let holdArmed = false;
+let movedSinceArm = false;
+let stillAnchor = null;
+
+function clearHoldTimers() {
+  clearTimeout(armTimer);
+  clearTimeout(stillTimer);
+  armTimer = null;
+  stillTimer = null;
+}
+
+function holdDistance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function beginHoldTracking(point) {
+  holdArmed = false;
+  movedSinceArm = false;
+  stillAnchor = point;
+  clearHoldTimers();
+  armTimer = setTimeout(() => {
+    holdArmed = true;
+    sendMessage({ type: "hold-start" });
+  }, HOLD_START_MS);
+}
+
+function trackHold(point) {
+  if (!holdArmed) {
+    // any real movement before the threshold cancels the long-press
+    if (armTimer && holdDistance(point, startPoint) > HOLD_RADIUS_PX) {
+      clearTimeout(armTimer);
+      armTimer = null;
+    }
+    return;
+  }
+  // armed: watch for the finger coming to rest again (away from the start)
+  if (holdDistance(point, startPoint) > HOLD_RADIUS_PX * 1.5) {
+    movedSinceArm = true;
+  }
+  if (!movedSinceArm) {
+    return;
+  }
+  if (!stillAnchor || holdDistance(point, stillAnchor) > HOLD_RADIUS_PX) {
+    stillAnchor = point;
+    clearTimeout(stillTimer);
+    stillTimer = setTimeout(() => {
+      sendMessage({ type: "hold" });
+    }, HOLD_MS);
+  }
+}
 let currentStartKey = "G";
 let currentMappingMode = "relative";
 let currentInputMode = "center";
@@ -180,6 +238,7 @@ function startGesture(event) {
   const startPayload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : { x: 0, y: 0 };
   startPayload.t = 0;
   sendMessage({ type: "gesture-start", point: startPayload });
+  beginHoldTracking(point);
 }
 
 function moveGesture(event) {
@@ -196,6 +255,7 @@ function moveGesture(event) {
   const payload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : toKeyboardUnits(point);
   payload.t = Math.round(performance.now() - gestureStartTime);
   sendMessage({ type: "gesture-move", point: payload });
+  trackHold(point);
 
   lastPoint = point;
 }
@@ -211,6 +271,8 @@ function endGesture(event) {
   pointerId = null;
   startPoint = null;
   lastPoint = null;
+  clearHoldTimers();
+  holdArmed = false;
 
   drawIdleState();
   applyModeClasses();

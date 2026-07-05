@@ -25,8 +25,10 @@ let currentMappingMode = "relative";
 let currentInputMode = "center";
 let currentVisualMode = "gesture";
 let currentBehavior = "top1";
+let currentLetters = null;
 let isApplyingServerVersion = false;
 let versionsPopulated = false;
+let plainText = "";
 
 function sendMessage(payload) {
   if (socket.readyState === WebSocket.OPEN) {
@@ -186,7 +188,7 @@ function renderCandidates(candidates) {
   const clear = document.createElement("div");
   clear.className = "candidate-seg candidate-action";
   clear.style.flex = "2 1 0";
-  clear.textContent = "Clear";
+  clear.textContent = currentLetters ? "↩" : "Clear"; // v3: Undo replaces Clear
   candidateStrip.appendChild(clear);
 }
 
@@ -194,6 +196,43 @@ function highlightCandidate(index) {
   Array.from(candidateStrip.children).forEach((seg, i) => {
     seg.classList.toggle("is-hover", i === index);
   });
+}
+
+// ---- v3 letter input feedback ----
+const letterBadge = document.getElementById("letter-badge");
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function renderLetterState(state) {
+  const active = state.mode && state.mode !== "off";
+  if (letterBadge) {
+    letterBadge.classList.toggle("is-visible", active);
+    if (active) {
+      const letter = state.letter ? state.letter.toUpperCase() : "·";
+      const label = { armed: "pick a key", pending: "place it", positioning: "place it" }[state.mode] || "";
+      letterBadge.innerHTML =
+        `<span class="lb-letter">${escapeHtml(letter)}</span>` +
+        `<span class="lb-hint">${label}</span>`;
+    }
+  }
+
+  if (!active || state.mode === "armed") {
+    decodedText.textContent = plainText;
+    return;
+  }
+  // pending/positioning: show the insertion caret; caret == len+1 means
+  // "as a new word" (rendered after a gap)
+  const text = state.text || "";
+  const caret = Math.max(0, Math.min(text.length + 1, state.caret));
+  const mark = '<span class="text-caret"></span>';
+  if (caret > text.length) {
+    decodedText.innerHTML = escapeHtml(text) + "&nbsp;" + mark;
+  } else {
+    decodedText.innerHTML = escapeHtml(text.slice(0, caret)) + mark + escapeHtml(text.slice(caret));
+  }
+  decodedText.scrollLeft = decodedText.scrollWidth;
 }
 
 const roomCodeBadge = document.getElementById("room-code");
@@ -239,6 +278,11 @@ socket.addEventListener("message", (event) => {
     return;
   }
 
+  if (message.type === "letter-state") {
+    renderLetterState(message);
+    return;
+  }
+
   if (message.type === "gesture-cancel") {
     clearCanvas();
     return;
@@ -269,8 +313,14 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "text-update" || message.type === "state-update") {
-    decodedText.textContent = message.text || "";
+    plainText = message.text || "";
+    decodedText.textContent = plainText;
     decodedText.scrollLeft = decodedText.scrollWidth; // keep the newest words visible
+
+    if ("letters" in message && message.letters !== currentLetters) {
+      currentLetters = message.letters;
+      renderCandidates(message.candidates || []);
+    }
 
     if (message.mappingMode && mappingModeSelect.value !== message.mappingMode) {
       isApplyingServerMappingMode = true;
