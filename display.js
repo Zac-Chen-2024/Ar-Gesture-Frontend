@@ -235,6 +235,100 @@ function renderLetterState(state) {
   decodedText.scrollLeft = decodedText.scrollWidth;
 }
 
+// ---- LAN mode (optional fast path) ----
+// The phone opens a WebRTC data channel to us and mirrors its gesture stream;
+// we render cursor/trace from it locally (LAN latency) and simply ignore the
+// server's echoed gesture-move messages while the channel is up. All decoding
+// and state stay on the server - this is rendering-only.
+const lanModeSelect = document.getElementById("lan-mode");
+const lanBadge = document.getElementById("lan-badge");
+let isApplyingServerLanMode = false;
+let currentLanMode = false;
+let rtcPeer = null;
+let p2pActive = false;
+
+function setP2pActive(active) {
+  p2pActive = active;
+  if (lanBadge) {
+    lanBadge.classList.toggle("is-visible", active);
+  }
+}
+
+function teardownP2P() {
+  setP2pActive(false);
+  if (rtcPeer) {
+    try { rtcPeer.close(); } catch (e) { /* noop */ }
+    rtcPeer = null;
+  }
+}
+
+function keyboardUnitsOfKey(keyName) {
+  const c = getKeyCenter(keyName);
+  return {
+    x: (c.x - keyboardAnchorPoint.x) / keyboardMetrics.keyWidth,
+    y: (c.y - keyboardAnchorPoint.y) / keyboardMetrics.keyHeight
+  };
+}
+
+// Reconstruct the global keyboard-unit point from the phone's raw payload,
+// mirroring the server's coordinate transforms.
+function p2pGlobalPoint(msg) {
+  if (currentMappingMode === "absolute") {
+    return { x: msg.x * 10 - 5, y: msg.y * 3 - 1.5 };
+  }
+  const start = currentInputMode === "continuous"
+    ? keyboardUnitsOfKey(currentCursorKey)
+    : { x: 0, y: 0 };
+  return { x: start.x + msg.x, y: start.y + msg.y };
+}
+
+function handleP2pTrace(msg) {
+  if (msg.kind === "start") {
+    updateKeyboardReference();
+    clearCanvas();
+    const p = toDisplayPoint(p2pGlobalPoint(msg));
+    moveCursor(p);
+    lastPoint = p;
+  } else if (msg.kind === "move" && lastPoint) {
+    const p = toDisplayPoint(p2pGlobalPoint(msg));
+    moveCursor(p);
+    if (currentVisualMode === "gesture") {
+      drawSegment(lastPoint, p);
+    }
+    lastPoint = p;
+  } else if (msg.kind === "end") {
+    clearCanvas();
+  }
+}
+
+async function handleRtcOffer(message) {
+  teardownP2P();
+  rtcPeer = new RTCPeerConnection({ iceServers: [] }); // LAN only: no STUN/TURN
+  rtcPeer.onicecandidate = (e) => {
+    if (e.candidate) {
+      sendMessage({ type: "rtc-ice", candidate: e.candidate });
+    }
+  };
+  rtcPeer.ondatachannel = (e) => {
+    const channel = e.channel;
+    channel.onopen = () => setP2pActive(true);
+    channel.onclose = () => setP2pActive(false);
+    channel.onmessage = (ev) => {
+      try {
+        handleP2pTrace(JSON.parse(ev.data));
+      } catch (err) { /* ignore malformed frames */ }
+    };
+  };
+  try {
+    await rtcPeer.setRemoteDescription(message.sdp);
+    const answer = await rtcPeer.createAnswer();
+    await rtcPeer.setLocalDescription(answer);
+    sendMessage({ type: "rtc-answer", sdp: rtcPeer.localDescription });
+  } catch (err) {
+    teardownP2P();
+  }
+}
+
 const roomCodeBadge = document.getElementById("room-code");
 
 function updateRoomBadge(code, paired) {
@@ -283,12 +377,27 @@ socket.addEventListener("message", (event) => {
     return;
   }
 
+  if (message.type === "rtc-offer") {
+    handleRtcOffer(message);
+    return;
+  }
+
+  if (message.type === "rtc-ice") {
+    if (rtcPeer && message.candidate) {
+      rtcPeer.addIceCandidate(message.candidate).catch(() => {});
+    }
+    return;
+  }
+
   if (message.type === "gesture-cancel") {
     clearCanvas();
     return;
   }
 
   if (message.type === "gesture-start") {
+    if (p2pActive) {
+      return; // the P2P channel already rendered this stroke locally
+    }
     updateKeyboardReference();
     clearCanvas();
     const nextPoint = toDisplayPoint(message.point);
@@ -298,6 +407,9 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-move" && lastPoint) {
+    if (p2pActive) {
+      return;
+    }
     const nextPoint = toDisplayPoint(message.point);
     moveCursor(nextPoint);
     if (currentVisualMode === "gesture") {
@@ -308,6 +420,9 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-end") {
+    if (p2pActive) {
+      return;
+    }
     clearCanvas();
     return;
   }
@@ -320,6 +435,19 @@ socket.addEventListener("message", (event) => {
     if ("letters" in message && message.letters !== currentLetters) {
       currentLetters = message.letters;
       renderCandidates(message.candidates || []);
+    }
+
+    if ("lanMode" in message) {
+      currentLanMode = message.lanMode === true;
+      const wanted = currentLanMode ? "lan" : "server";
+      if (lanModeSelect && lanModeSelect.value !== wanted) {
+        isApplyingServerLanMode = true;
+        lanModeSelect.value = wanted;
+        isApplyingServerLanMode = false;
+      }
+      if (!currentLanMode) {
+        teardownP2P();
+      }
     }
 
     if (message.mappingMode && mappingModeSelect.value !== message.mappingMode) {
@@ -449,6 +577,18 @@ algoVersionSelect.addEventListener("change", () => {
     version: algoVersionSelect.value
   });
 });
+
+if (lanModeSelect) {
+  lanModeSelect.addEventListener("change", () => {
+    if (isApplyingServerLanMode) {
+      return;
+    }
+    sendMessage({
+      type: "lan-mode-set",
+      enabled: lanModeSelect.value === "lan"
+    });
+  });
+}
 
 const buildBadge = document.getElementById("build-badge");
 if (buildBadge) {

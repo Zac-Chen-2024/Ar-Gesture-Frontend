@@ -12,6 +12,58 @@ let gestureStartTime = 0;
 
 // Long-press / dwell detection for v3 letter input lives entirely on the
 // SERVER (keyboard units + its own clock); the phone stays a dumb touchpad.
+
+// ---- LAN mode (optional fast path) ----
+// When the display enables it, the phone opens a WebRTC data channel straight
+// to the display (host/mDNS ICE candidates keep it on the local network) and
+// MIRRORS every gesture message onto it. The WebSocket path to the server is
+// untouched, so decoding, recording and all logic behave exactly as before;
+// the channel only lets the display render the cursor without the WAN hop.
+let lanMode = false;
+let rtcPeer = null;
+let rtcChannel = null;
+let p2pActive = false;
+
+function stopP2P() {
+  p2pActive = false;
+  if (rtcChannel) {
+    try { rtcChannel.close(); } catch (e) { /* noop */ }
+    rtcChannel = null;
+  }
+  if (rtcPeer) {
+    try { rtcPeer.close(); } catch (e) { /* noop */ }
+    rtcPeer = null;
+  }
+}
+
+function startP2P() {
+  if (rtcPeer || !lanMode || !paired) {
+    return;
+  }
+  rtcPeer = new RTCPeerConnection({ iceServers: [] }); // LAN only: no STUN/TURN
+  rtcChannel = rtcPeer.createDataChannel("trace");
+  rtcChannel.onopen = () => { p2pActive = true; };
+  rtcChannel.onclose = () => { p2pActive = false; };
+  rtcPeer.onicecandidate = (e) => {
+    if (e.candidate) {
+      sendMessage({ type: "rtc-ice", candidate: e.candidate });
+    }
+  };
+  rtcPeer
+    .createOffer()
+    .then((offer) => rtcPeer.setLocalDescription(offer))
+    .then(() => sendMessage({ type: "rtc-offer", sdp: rtcPeer.localDescription }))
+    .catch(() => stopP2P());
+}
+
+function p2pSend(kind, payload) {
+  if (p2pActive && rtcChannel && rtcChannel.readyState === "open") {
+    try {
+      rtcChannel.send(JSON.stringify({ kind, ...(payload || {}) }));
+    } catch (e) { /* fall back silently; the server path is always running */ }
+  }
+}
+
 let currentStartKey = "G";
 let currentMappingMode = "relative";
 let currentInputMode = "center";
@@ -183,6 +235,7 @@ function startGesture(event) {
   const startPayload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : { x: 0, y: 0 };
   startPayload.t = 0;
   sendMessage({ type: "gesture-start", point: startPayload });
+  p2pSend("start", startPayload);
 }
 
 function moveGesture(event) {
@@ -199,6 +252,7 @@ function moveGesture(event) {
   const payload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : toKeyboardUnits(point);
   payload.t = Math.round(performance.now() - gestureStartTime);
   sendMessage({ type: "gesture-move", point: payload });
+  p2pSend("move", payload);
 
   lastPoint = point;
 }
@@ -218,6 +272,7 @@ function endGesture(event) {
   drawIdleState();
   applyModeClasses();
   sendMessage({ type: "gesture-end" });
+  p2pSend("end", {});
 }
 
 const sessionPicker = document.getElementById("session-picker");
@@ -295,7 +350,22 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "room-closed" || message.type === "room-error") {
+    stopP2P();
     showPicker(message.message || "Session ended.");
+    return;
+  }
+
+  if (message.type === "rtc-answer") {
+    if (rtcPeer) {
+      rtcPeer.setRemoteDescription(message.sdp).catch(() => stopP2P());
+    }
+    return;
+  }
+
+  if (message.type === "rtc-ice") {
+    if (rtcPeer && message.candidate) {
+      rtcPeer.addIceCandidate(message.candidate).catch(() => {});
+    }
     return;
   }
 
@@ -304,6 +374,17 @@ socket.addEventListener("message", (event) => {
     currentMappingMode = message.mappingMode || "relative";
     currentInputMode = message.mode || "center";
     mobileKeyboardVisible = message.mobileKeyboardVisible !== false;
+    const nextLan = message.lanMode === true;
+    if (nextLan !== lanMode) {
+      lanMode = nextLan;
+      if (lanMode) {
+        startP2P();
+      } else {
+        stopP2P();
+      }
+    } else if (lanMode && paired && !rtcPeer) {
+      startP2P();
+    }
     applyModeClasses();
   }
 });
