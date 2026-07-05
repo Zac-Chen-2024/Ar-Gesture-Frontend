@@ -211,7 +211,7 @@ function renderLetterState(state) {
     letterBadge.classList.toggle("is-visible", active);
     if (active) {
       const letter = state.letter ? state.letter.toUpperCase() : "·";
-      const label = { armed: "pick a key", pending: "place it", positioning: "place it" }[state.mode] || "";
+      const label = { armed: "lift = input", pending: "place it", positioning: "place it" }[state.mode] || "";
       letterBadge.innerHTML =
         `<span class="lb-letter">${escapeHtml(letter)}</span>` +
         `<span class="lb-hint">${label}</span>`;
