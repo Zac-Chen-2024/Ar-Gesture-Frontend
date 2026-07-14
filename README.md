@@ -1,3 +1,5 @@
+**English** | [简体中文](README.zh-CN.md)
+
 # Ar-Gesture Frontend
 
 Static frontend for the AR-Gesture gesture-typing demo: a phone becomes a blank
