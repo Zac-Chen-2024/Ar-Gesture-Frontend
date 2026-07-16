@@ -12,6 +12,10 @@
     backendWsUrl: isLocal ? sameOrigin : "wss://gesture.drziangchen.uk",
     // Frontend build version, shown in the corner badge. Bump on every push
     // (and keep the ?v= query strings in the HTML in sync).
-    version: "v2026-07-05.4"
+    version: "v2026-07-16.1",
+    // USB-tethering subnets used to pin the P2P cursor path to the cable when
+    // Link is set to USB. AOSP RNDIS defaults to 192.168.42.0/24; some vendors
+    // differ — extend this list as devices are observed.
+    usbSubnets: ["192.168.42."]
   };
 })();

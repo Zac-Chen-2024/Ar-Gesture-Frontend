@@ -246,16 +246,92 @@ let isApplyingServerLanMode = false;
 let currentLanMode = false;
 let rtcPeer = null;
 let p2pActive = false;
+let pathStatsTimer = null;
+
+function linkMode() {
+  return lanModeSelect ? lanModeSelect.value : "server";
+}
 
 function setP2pActive(active) {
   p2pActive = active;
   if (lanBadge) {
     lanBadge.classList.toggle("is-visible", active);
+    if (!active) {
+      lanBadge.textContent = "LAN ⚡";
+    }
+  }
+}
+
+// USB link pinning: keep only candidates we can place on a tethering subnet.
+// Chrome obfuscates host candidates as mDNS (.local) names — those cannot be
+// classified, so they pass through; the badge below reports the address the
+// selected pair ACTUALLY uses, which stats expose post-connect.
+function candidateAllowed(candidateStr) {
+  if (linkMode() !== "usb") {
+    return true;
+  }
+  const m = /(\d+\.\d+\.\d+\.\d+)/.exec(candidateStr || "");
+  if (!m) {
+    return true; // mDNS or no address: cannot classify, let ICE try it
+  }
+  const subnets = window.GESTURE_CONFIG.usbSubnets || [];
+  return subnets.some((p) => m[1].startsWith(p));
+}
+
+// Visual layer: read the selected candidate pair and its live RTT so the
+// actual path (cable vs WiFi) is visible instead of guessed.
+function startPathStats() {
+  stopPathStats();
+  pathStatsTimer = setInterval(async () => {
+    if (!rtcPeer || !p2pActive || !lanBadge) {
+      return;
+    }
+    let stats;
+    try {
+      stats = await rtcPeer.getStats();
+    } catch (e) {
+      return;
+    }
+    let selectedId = null;
+    const pairs = {};
+    const cands = {};
+    stats.forEach((s) => {
+      if (s.type === "transport" && s.selectedCandidatePairId) {
+        selectedId = s.selectedCandidatePairId;
+      } else if (s.type === "candidate-pair") {
+        pairs[s.id] = s;
+      } else if (s.type === "local-candidate" || s.type === "remote-candidate") {
+        cands[s.id] = s;
+      }
+    });
+    let pair = selectedId ? pairs[selectedId] : null;
+    if (!pair) {
+      pair = Object.values(pairs).find((p) => p.nominated && p.state === "succeeded");
+    }
+    if (!pair) {
+      return;
+    }
+    const local = cands[pair.localCandidateId] || {};
+    const addr = local.address || local.ip || "";
+    const subnets = window.GESTURE_CONFIG.usbSubnets || [];
+    const label = subnets.some((p) => addr.startsWith(p)) ? "USB ⚡" : "LAN ⚡";
+    const rtt = typeof pair.currentRoundTripTime === "number"
+      ? ` ${(pair.currentRoundTripTime * 1000).toFixed(1)}ms`
+      : "";
+    lanBadge.textContent = label + rtt;
+  }, 2000);
+}
+
+function stopPathStats() {
+  if (pathStatsTimer) {
+    clearInterval(pathStatsTimer);
+    pathStatsTimer = null;
   }
 }
 
 function teardownP2P() {
   setP2pActive(false);
+  stopPathStats();
   if (rtcPeer) {
     try { rtcPeer.close(); } catch (e) { /* noop */ }
     rtcPeer = null;
@@ -305,13 +381,16 @@ async function handleRtcOffer(message) {
   teardownP2P();
   rtcPeer = new RTCPeerConnection({ iceServers: [] }); // LAN only: no STUN/TURN
   rtcPeer.onicecandidate = (e) => {
-    if (e.candidate) {
+    if (e.candidate && candidateAllowed(e.candidate.candidate)) {
       sendMessage({ type: "rtc-ice", candidate: e.candidate });
     }
   };
   rtcPeer.ondatachannel = (e) => {
     const channel = e.channel;
-    channel.onopen = () => setP2pActive(true);
+    channel.onopen = () => {
+      setP2pActive(true);
+      startPathStats();
+    };
     channel.onclose = () => setP2pActive(false);
     channel.onmessage = (ev) => {
       try {
@@ -383,7 +462,8 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "rtc-ice") {
-    if (rtcPeer && message.candidate) {
+    if (rtcPeer && message.candidate &&
+        candidateAllowed(message.candidate.candidate)) {
       rtcPeer.addIceCandidate(message.candidate).catch(() => {});
     }
     return;
@@ -439,7 +519,11 @@ socket.addEventListener("message", (event) => {
 
     if ("lanMode" in message) {
       currentLanMode = message.lanMode === true;
-      const wanted = currentLanMode ? "lan" : "server";
+      // the server only knows on/off; lan-vs-usb is a display-local choice,
+      // so keep "usb" selected when the server echoes enabled=true
+      const wanted = currentLanMode
+        ? (linkMode() === "usb" ? "usb" : "lan")
+        : "server";
       if (lanModeSelect && lanModeSelect.value !== wanted) {
         isApplyingServerLanMode = true;
         lanModeSelect.value = wanted;
@@ -579,14 +663,24 @@ algoVersionSelect.addEventListener("change", () => {
 });
 
 if (lanModeSelect) {
+  let prevLinkMode = lanModeSelect.value;
   lanModeSelect.addEventListener("change", () => {
     if (isApplyingServerLanMode) {
+      prevLinkMode = lanModeSelect.value;
       return;
     }
-    sendMessage({
-      type: "lan-mode-set",
-      enabled: lanModeSelect.value === "lan"
-    });
+    const mode = lanModeSelect.value;
+    const enabled = mode !== "server";
+    const wasEnabled = prevLinkMode !== "server";
+    prevLinkMode = mode;
+    if (enabled && wasEnabled) {
+      // lan <-> usb: the server-side flag does not change, so bounce it to
+      // force a fresh offer — candidate filtering only applies at negotiation
+      sendMessage({ type: "lan-mode-set", enabled: false });
+      setTimeout(() => sendMessage({ type: "lan-mode-set", enabled: true }), 250);
+      return;
+    }
+    sendMessage({ type: "lan-mode-set", enabled });
   });
 }
 
