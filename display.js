@@ -277,6 +277,7 @@ function setP2pActive(active) {
 // bytes ride the USB cable into this page — no ICE, no network racing. The
 // WebRTC LAN path below is untouched and keeps working independently.
 const usbButton = document.getElementById("usb-connect");
+const usbSetting = document.getElementById("usb-setting");
 const usbStatus = document.getElementById("usb-status");
 let usbDeviceName = "";
 
@@ -288,8 +289,8 @@ function setUsbStatus(text) {
 }
 
 function updateUsbUi() {
-  if (usbButton) {
-    usbButton.hidden = linkMode() !== "usb";
+  if (usbSetting) {
+    usbSetting.hidden = linkMode() !== "usb";
   }
   if (linkMode() !== "usb") {
     setUsbStatus("");

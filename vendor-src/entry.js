@@ -47,7 +47,10 @@ export async function connect(callbacks) {
   try {
     connection = await device.connect();
   } catch (e) {
-    throw new Error("无法打开设备接口。若电脑上运行着 adb，请先执行 adb kill-server 再重试（" + e.message + "）");
+    throw new Error(
+      "设备被其他程序占用。请依次尝试：① 终端执行 adb kill-server；" +
+      "② Windows 任务管理器结束 adb.exe；③ 退出手机厂商助手类软件" +
+      "（HiSuite/小米助手等），然后重新插线再点连接");
   }
   status("等待手机上的「允许 USB 调试」授权…");
   const transport = await AdbDaemonTransport.authenticate({
