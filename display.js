@@ -251,6 +251,7 @@ if (lanModeSelect) {
 }
 const lanBadge = document.getElementById("lan-badge");
 let isApplyingServerLanMode = false;
+let linkModeBounce = false; // true while our own lan<->usb renegotiation bounce is in flight
 let currentLanMode = false;
 let rtcPeer = null;
 let p2pActive = false;
@@ -617,7 +618,7 @@ socket.addEventListener("message", (event) => {
       const wanted = currentLanMode
         ? (linkMode() === "usb" ? "usb" : "lan")
         : "server";
-      if (lanModeSelect && lanModeSelect.value !== wanted) {
+      if (!linkModeBounce && lanModeSelect && lanModeSelect.value !== wanted) {
         isApplyingServerLanMode = true;
         lanModeSelect.value = wanted;
         isApplyingServerLanMode = false;
@@ -771,9 +772,13 @@ if (lanModeSelect) {
     prevLinkMode = mode;
     if (enabled && wasEnabled) {
       // lan <-> usb: the server-side flag does not change, so bounce it to
-      // force a fresh offer — candidate filtering only applies at negotiation
+      // force a fresh offer — candidate filtering only applies at negotiation.
+      // The intermediate disabled echo must not touch the select (it would
+      // flip usb back to server/lan), hence the bounce guard.
+      linkModeBounce = true;
       sendMessage({ type: "lan-mode-set", enabled: false });
       setTimeout(() => sendMessage({ type: "lan-mode-set", enabled: true }), 250);
+      setTimeout(() => { linkModeBounce = false; }, 900);
       return;
     }
     sendMessage({ type: "lan-mode-set", enabled });
