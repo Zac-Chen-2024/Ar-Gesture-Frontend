@@ -35,24 +35,24 @@ export async function connect(callbacks) {
   cbs = callbacks || {};
   const manager = AdbDaemonWebUsbDeviceManager.BROWSER;
   if (!manager) {
-    throw new Error("此浏览器不支持 WebUSB，需要 Chrome/Edge");
+    throw new Error("WebUSB is not supported in this browser — use Chrome or Edge");
   }
-  status("请选择手机…");
+  status("Select your phone…");
   device = await manager.requestDevice();
   if (!device) {
-    throw new Error("未选择设备");
+    throw new Error("No device selected");
   }
-  status("正在连接 " + device.name + "…");
+  status("Connecting to " + device.name + "…");
   let connection;
   try {
     connection = await device.connect();
   } catch (e) {
     throw new Error(
-      "设备被其他程序占用。请依次尝试：① 终端执行 adb kill-server；" +
-      "② Windows 任务管理器结束 adb.exe；③ 退出手机厂商助手类软件" +
-      "（HiSuite/小米助手等），然后重新插线再点连接");
+      "Device is in use by another program. Try, in order: (1) run adb kill-server; " +
+      "(2) end adb.exe in Task Manager; (3) quit phone-assistant software " +
+      "(HiSuite, Mi Assistant, …), then replug and click Connect again");
   }
-  status("等待手机上的「允许 USB 调试」授权…");
+  status("Waiting for the 'Allow USB debugging' prompt on the phone…");
   const transport = await AdbDaemonTransport.authenticate({
     serial: device.serial,
     connection,
@@ -63,7 +63,7 @@ export async function connect(callbacks) {
     await adb.reverse.remove("tcp:" + PORT);
   } catch (e) { /* not registered yet — fine */ }
   await adb.reverse.add("tcp:" + PORT, handleTunnelSocket);
-  status("隧道已注册，自检中…");
+  status("Tunnel registered, self-checking…");
   // self-check ON THE PHONE: is the reverse listener actually there?
   // (38301 = 0x959D in /proc/net/tcp)
   try {
@@ -74,20 +74,20 @@ export async function connect(callbacks) {
     console.log("[UsbDirect] reverse list:", regs);
     console.log("[UsbDirect] phone listener check:", JSON.stringify(net));
     if (/38301|959d/i.test(net)) {
-      status("隧道已建立（自检✓ 手机端口在监听），等待手机页面接入…");
+      status("Tunnel up (self-check ✓, phone port listening) — waiting for the touchpad page…");
     } else {
-      status("自检✗：adbd 注册成功但手机端口未监听——请按 F12 把控制台里 [UsbDirect] 的日志发给 Zac");
+      status("Self-check ✗: registered but the phone port is not listening — press F12 and send the [UsbDirect] console logs");
     }
   } catch (e) {
     console.log("[UsbDirect] self-check error:", e);
-    status("自检异常（" + (e && e.message) + "）——请按 F12 把控制台日志发给 Zac");
+    status("Self-check error (" + (e && e.message) + ") — see the [UsbDirect] console logs");
   }
-  transport.disconnected.then(() => teardown("数据线已断开")).catch(() => teardown("数据线已断开"));
+  transport.disconnected.then(() => teardown("USB cable disconnected")).catch(() => teardown("USB cable disconnected"));
   return { name: device.name, serial: device.serial };
 }
 
 export async function disconnect() {
-  teardown("已断开");
+  teardown("Disconnected");
   if (adb) {
     try { await adb.close(); } catch (e) { /* noop */ }
     adb = null;
@@ -189,7 +189,7 @@ async function pumpTunnelSocket(socket) {
     if (activeSocket === socket) {
       activeSocket = null;
       if (cbs.onActive) cbs.onActive(false);
-      status("手机页面已断开，等待重新接入…");
+      status("Touchpad page disconnected — waiting to reconnect…");
     }
   };
   try {
@@ -202,7 +202,7 @@ async function pumpTunnelSocket(socket) {
       buf = merged;
 
       if (!handshaken) {
-        status("检测到手机接入，正在握手…");
+        status("Phone connected, handshaking…");
         const end = findHeaderEnd(buf);
         if (end < 0) continue;
         const head = new TextDecoder().decode(buf.subarray(0, end));
@@ -214,7 +214,7 @@ async function pumpTunnelSocket(socket) {
           send(new TextEncoder().encode(
             "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n" +
             "Connection: close\r\nContent-Length: 6\r\n\r\nusb-ok"));
-          status("收到 HTTP 探测：隧道可达 ✓（等待手势页 WebSocket 接入…）");
+          status("HTTP probe received: tunnel reachable ✓ (waiting for the touchpad page WebSocket…)");
           close();
           return;
         }

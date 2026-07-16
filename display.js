@@ -302,7 +302,7 @@ function updateUsbUi() {
 if (usbButton) {
   usbButton.addEventListener("click", async () => {
     if (!window.UsbDirect || !UsbDirect.supported()) {
-      setUsbStatus("此浏览器不支持 WebUSB，需要 Chrome/Edge");
+      setUsbStatus("WebUSB is not supported in this browser — use Chrome or Edge");
       return;
     }
     usbButton.disabled = true;
@@ -409,7 +409,7 @@ function startPathStats() {
     // in USB mode, warn loudly when an anonymized (mDNS) WiFi candidate won
     // the race anyway — turning the phone's WiFi off forces the cable
     const label = onUsb ? "USB ⚡"
-      : (linkMode() === "usb" ? "USB✗走WiFi(关手机WiFi强制走线)" : "LAN ⚡");
+      : (linkMode() === "usb" ? "USB✗ on WiFi (turn phone WiFi off to force the cable)" : "LAN ⚡");
     const rtt = typeof pair.currentRoundTripTime === "number"
       ? ` ${(pair.currentRoundTripTime * 1000).toFixed(1)}ms`
       : "";
