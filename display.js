@@ -241,6 +241,14 @@ function renderLetterState(state) {
 // server's echoed gesture-move messages while the channel is up. All decoding
 // and state stay on the server - this is rendering-only.
 const lanModeSelect = document.getElementById("lan-mode");
+// the server only stores on/off, so lan-vs-usb would silently reset to "lan"
+// on every reload — persist the display-local choice
+if (lanModeSelect) {
+  const savedLink = localStorage.getItem("linkMode");
+  if (savedLink === "usb" || savedLink === "lan" || savedLink === "server") {
+    lanModeSelect.value = savedLink;
+  }
+}
 const lanBadge = document.getElementById("lan-badge");
 let isApplyingServerLanMode = false;
 let currentLanMode = false;
@@ -336,7 +344,10 @@ function startPathStats() {
     const raddr = remote.address || remote.ip || "";
     const subnets = window.GESTURE_CONFIG.usbSubnets || [];
     const onUsb = subnets.some((p) => addr.startsWith(p) || raddr.startsWith(p));
-    const label = onUsb ? "USB ⚡" : "LAN ⚡";
+    // in USB mode, warn loudly when an anonymized (mDNS) WiFi candidate won
+    // the race anyway — turning the phone's WiFi off forces the cable
+    const label = onUsb ? "USB ⚡"
+      : (linkMode() === "usb" ? "USB✗走WiFi(关手机WiFi强制走线)" : "LAN ⚡");
     const rtt = typeof pair.currentRoundTripTime === "number"
       ? ` ${(pair.currentRoundTripTime * 1000).toFixed(1)}ms`
       : "";
@@ -694,6 +705,7 @@ if (lanModeSelect) {
       return;
     }
     const mode = lanModeSelect.value;
+    localStorage.setItem("linkMode", mode);
     const enabled = mode !== "server";
     const wasEnabled = prevLinkMode !== "server";
     prevLinkMode = mode;
