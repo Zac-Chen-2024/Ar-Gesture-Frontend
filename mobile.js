@@ -56,10 +56,37 @@ function startP2P() {
     .catch(() => stopP2P());
 }
 
+// USB direct link: when the display holds an ADB reverse tunnel on this
+// phone (Link: USB + authorized), a plain WebSocket to localhost rides the
+// USB cable straight into the display page. Probing costs nothing when the
+// tunnel does not exist (instant refusal), so we just keep trying.
+let usbChannel = null;
+setInterval(() => {
+  if (usbChannel) {
+    return;
+  }
+  let ws;
+  try {
+    ws = new WebSocket("ws://127.0.0.1:38301/trace");
+  } catch (e) {
+    return; // mixed-content blocked on this browser: USB link unavailable
+  }
+  ws.onopen = () => { usbChannel = ws; };
+  ws.onclose = () => { if (usbChannel === ws) usbChannel = null; };
+  ws.onerror = () => { try { ws.close(); } catch (e) { /* noop */ } };
+}, 4000);
+
 function p2pSend(kind, payload) {
+  const msg = JSON.stringify({ kind, ...(payload || {}) });
+  if (usbChannel && usbChannel.readyState === WebSocket.OPEN) {
+    try {
+      usbChannel.send(msg);
+      return;
+    } catch (e) { /* fall through to the WebRTC channel */ }
+  }
   if (p2pActive && rtcChannel && rtcChannel.readyState === "open") {
     try {
-      rtcChannel.send(JSON.stringify({ kind, ...(payload || {}) }));
+      rtcChannel.send(msg);
     } catch (e) { /* fall back silently; the server path is always running */ }
   }
 }

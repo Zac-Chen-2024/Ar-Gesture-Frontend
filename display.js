@@ -254,6 +254,7 @@ let isApplyingServerLanMode = false;
 let currentLanMode = false;
 let rtcPeer = null;
 let p2pActive = false;
+let usbActive = false;
 let pathStatsTimer = null;
 
 function linkMode() {
@@ -263,11 +264,68 @@ function linkMode() {
 function setP2pActive(active) {
   p2pActive = active;
   if (lanBadge) {
-    lanBadge.classList.toggle("is-visible", active);
-    if (!active) {
+    lanBadge.classList.toggle("is-visible", active || usbActive);
+    if (!active && !usbActive) {
       lanBadge.textContent = "LAN ⚡";
     }
   }
+}
+
+// ---- USB direct link (ADB reverse tunnel; vendor/adb.bundle.js) ----
+// Deterministic cable transport: the phone page connects to 127.0.0.1 and the
+// bytes ride the USB cable into this page — no ICE, no network racing. The
+// WebRTC LAN path below is untouched and keeps working independently.
+const usbButton = document.getElementById("usb-connect");
+const usbStatus = document.getElementById("usb-status");
+let usbDeviceName = "";
+
+function setUsbStatus(text) {
+  if (usbStatus) {
+    usbStatus.textContent = text || "";
+    usbStatus.hidden = !text;
+  }
+}
+
+function updateUsbUi() {
+  if (usbButton) {
+    usbButton.hidden = linkMode() !== "usb";
+  }
+  if (linkMode() !== "usb") {
+    setUsbStatus("");
+  }
+}
+
+if (usbButton) {
+  usbButton.addEventListener("click", async () => {
+    if (!window.UsbDirect || !UsbDirect.supported()) {
+      setUsbStatus("此浏览器不支持 WebUSB，需要 Chrome/Edge");
+      return;
+    }
+    usbButton.disabled = true;
+    try {
+      const info = await UsbDirect.connect({
+        onStatus: (text) => setUsbStatus(text),
+        onTrace: (msg) => handleP2pTrace(msg),
+        onActive: (active) => {
+          usbActive = active;
+          if (lanBadge) {
+            lanBadge.classList.toggle("is-visible", active || p2pActive);
+            lanBadge.textContent = active
+              ? `USB ⚡ · ${usbDeviceName}` : "LAN ⚡";
+          }
+        },
+        onRtt: (ms) => {
+          if (usbActive && lanBadge) {
+            lanBadge.textContent = `USB ⚡ ${ms.toFixed(1)}ms · ${usbDeviceName}`;
+          }
+        },
+      });
+      usbDeviceName = info.name || info.serial;
+    } catch (e) {
+      setUsbStatus(e && e.message ? e.message : String(e));
+    }
+    usbButton.disabled = false;
+  });
 }
 
 // USB link pinning: keep only candidates we can place on a tethering subnet.
@@ -510,8 +568,8 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-start") {
-    if (p2pActive) {
-      return; // the P2P channel already rendered this stroke locally
+    if (p2pActive || usbActive) {
+      return; // a fast-path channel already rendered this stroke locally
     }
     updateKeyboardReference();
     clearCanvas();
@@ -522,7 +580,7 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-move" && lastPoint) {
-    if (p2pActive) {
+    if (p2pActive || usbActive) {
       return;
     }
     const nextPoint = toDisplayPoint(message.point);
@@ -535,7 +593,7 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-end") {
-    if (p2pActive) {
+    if (p2pActive || usbActive) {
       return;
     }
     clearCanvas();
@@ -563,6 +621,7 @@ socket.addEventListener("message", (event) => {
         isApplyingServerLanMode = true;
         lanModeSelect.value = wanted;
         isApplyingServerLanMode = false;
+        updateUsbUi();
       }
       if (!currentLanMode) {
         teardownP2P();
@@ -706,6 +765,7 @@ if (lanModeSelect) {
     }
     const mode = lanModeSelect.value;
     localStorage.setItem("linkMode", mode);
+    updateUsbUi();
     const enabled = mode !== "server";
     const wasEnabled = prevLinkMode !== "server";
     prevLinkMode = mode;
@@ -729,3 +789,4 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 applyModeClasses();
 renderCandidates([]);
+updateUsbUi();
