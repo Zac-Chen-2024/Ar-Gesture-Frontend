@@ -164,7 +164,14 @@ function findHeaderEnd(buf) {
   return -1;
 }
 
-async function handleTunnelSocket(socket) {
+function handleTunnelSocket(socket) {
+  // Tango treats the handler's RETURN as "connection accepted" — it must not
+  // block. The long-lived pump runs detached (this was the bug behind adbd
+  // killing every incoming connection into TIME_WAIT).
+  void pumpTunnelSocket(socket);
+}
+
+async function pumpTunnelSocket(socket) {
   if (activeSocket) {
     try { activeSocket.close(); } catch (e) { /* noop */ }
   }

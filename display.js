@@ -169,11 +169,14 @@ function renderCandidates(candidates) {
   const list = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
   candidateStrip.innerHTML = "";
 
-  for (let i = 0; i < 5; i += 1) {
-    const candidate = list[i];
+  // top-1 sits center-stage (bold); 2nd/3rd flank it, 4th/5th at the edges.
+  // MUST match the server's CANDIDATE_DISPLAY_ORDER — picks are positional.
+  const ORDER = [3, 1, 0, 2, 4];
+  for (let p = 0; p < 5; p += 1) {
+    const candidate = list[ORDER[p]];
     const word = candidate ? candidate.word : "";
     const seg = document.createElement("div");
-    seg.className = "candidate-seg" + (i === 0 && candidate ? " is-top" : "");
+    seg.className = "candidate-seg" + (ORDER[p] === 0 && candidate ? " is-top" : "");
     seg.style.flex = `${candidateWeight(word)} 1 0`;
     seg.textContent = word;
     candidateStrip.appendChild(seg);
