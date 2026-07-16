@@ -63,7 +63,25 @@ export async function connect(callbacks) {
     await adb.reverse.remove("tcp:" + PORT);
   } catch (e) { /* not registered yet — fine */ }
   await adb.reverse.add("tcp:" + PORT, handleTunnelSocket);
-  status("隧道已建立，等待手机页面接入…");
+  status("隧道已注册，自检中…");
+  // self-check ON THE PHONE: is the reverse listener actually there?
+  // (38301 = 0x959D in /proc/net/tcp)
+  try {
+    const regs = await adb.reverse.list().catch((e) => "list failed: " + e.message);
+    const net = await adb.subprocess.noneProtocol.spawnWaitText(
+      "netstat -tln 2>/dev/null | grep 38301; " +
+      "grep -i ':959D' /proc/net/tcp /proc/net/tcp6 2>/dev/null; true");
+    console.log("[UsbDirect] reverse list:", regs);
+    console.log("[UsbDirect] phone listener check:", JSON.stringify(net));
+    if (/38301|959d/i.test(net)) {
+      status("隧道已建立（自检✓ 手机端口在监听），等待手机页面接入…");
+    } else {
+      status("自检✗：adbd 注册成功但手机端口未监听——请按 F12 把控制台里 [UsbDirect] 的日志发给 Zac");
+    }
+  } catch (e) {
+    console.log("[UsbDirect] self-check error:", e);
+    status("自检异常（" + (e && e.message) + "）——请按 F12 把控制台日志发给 Zac");
+  }
   transport.disconnected.then(() => teardown("数据线已断开")).catch(() => teardown("数据线已断开"));
   return { name: device.name, serial: device.serial };
 }
