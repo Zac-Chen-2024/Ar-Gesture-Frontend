@@ -289,11 +289,10 @@ function setUsbStatus(text) {
 }
 
 function updateUsbUi() {
+  // the USB device button is always available — the ADB tunnel is orthogonal
+  // to the Server/LAN transport choice (Zac: don't hide it behind Link=USB)
   if (usbSetting) {
-    usbSetting.hidden = linkMode() !== "usb";
-  }
-  if (linkMode() !== "usb") {
-    setUsbStatus("");
+    usbSetting.hidden = false;
   }
 }
 

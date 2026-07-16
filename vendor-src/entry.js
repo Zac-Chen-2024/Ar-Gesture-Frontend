@@ -177,12 +177,22 @@ async function handleTunnelSocket(socket) {
       buf = merged;
 
       if (!handshaken) {
+        status("检测到手机接入，正在握手…");
         const end = findHeaderEnd(buf);
         if (end < 0) continue;
         const head = new TextDecoder().decode(buf.subarray(0, end));
         buf = buf.slice(end + 4);
         const m = /Sec-WebSocket-Key:\s*(\S+)/i.exec(head);
-        if (!m) { close(); return; }
+        if (!m) {
+          // plain HTTP probe (open http://127.0.0.1:38301 in the phone
+          // browser to verify the tunnel end-to-end without WebSocket)
+          send(new TextEncoder().encode(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n" +
+            "Connection: close\r\nContent-Length: 6\r\n\r\nusb-ok"));
+          status("收到 HTTP 探测：隧道可达 ✓（等待手势页 WebSocket 接入…）");
+          close();
+          return;
+        }
         const accept = await wsAcceptKey(m[1]);
         send(new TextEncoder().encode(
           "HTTP/1.1 101 Switching Protocols\r\n" +

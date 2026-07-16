@@ -61,7 +61,16 @@ function startP2P() {
 // USB cable straight into the display page. Probing costs nothing when the
 // tunnel does not exist (instant refusal), so we just keep trying.
 let usbChannel = null;
-setInterval(() => {
+
+function updateUsbBadge() {
+  const badge = document.getElementById("build-badge");
+  if (badge) {
+    const v = window.GESTURE_CONFIG.version || "";
+    badge.textContent = usbChannel ? v + " · USB ⚡" : v;
+  }
+}
+
+function probeUsb() {
   if (usbChannel) {
     return;
   }
@@ -71,10 +80,17 @@ setInterval(() => {
   } catch (e) {
     return; // mixed-content blocked on this browser: USB link unavailable
   }
-  ws.onopen = () => { usbChannel = ws; };
-  ws.onclose = () => { if (usbChannel === ws) usbChannel = null; };
+  ws.onopen = () => { usbChannel = ws; updateUsbBadge(); };
+  ws.onclose = () => {
+    if (usbChannel === ws) { usbChannel = null; updateUsbBadge(); }
+  };
   ws.onerror = () => { try { ws.close(); } catch (e) { /* noop */ } };
-}, 4000);
+}
+probeUsb();
+setInterval(probeUsb, 4000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) probeUsb();
+});
 
 function p2pSend(kind, payload) {
   const msg = JSON.stringify({ kind, ...(payload || {}) });
