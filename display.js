@@ -267,15 +267,34 @@ function setP2pActive(active) {
 // classified, so they pass through; the badge below reports the address the
 // selected pair ACTUALLY uses, which stats expose post-connect.
 function candidateAllowed(candidateStr) {
-  if (linkMode() !== "usb") {
+  const mode = linkMode();
+  if (mode === "server") {
     return true;
   }
-  const m = /(\d+\.\d+\.\d+\.\d+)/.exec(candidateStr || "");
-  if (!m) {
-    return true; // mDNS or no address: cannot classify, let ICE try it
+  // "candidate:<f> <comp> <proto> <prio> <ADDRESS> <port> typ ..."
+  const parts = (candidateStr || "").split(" ");
+  const addr = parts.length > 4 ? parts[4] : "";
+  if (!addr || addr.endsWith(".local")) {
+    return true; // mDNS: cannot classify, let ICE try it
   }
-  const subnets = window.GESTURE_CONFIG.usbSubnets || [];
-  return subnets.some((p) => m[1].startsWith(p));
+  if (addr.includes(":")) {
+    // IPv6. Global addresses route via the ISP — they masquerade as "P2P"
+    // with WAN latency (observed: 72ms over carrier v6). USB pinning drops
+    // v6 entirely; LAN keeps only link-local/ULA.
+    if (mode === "usb") {
+      return false;
+    }
+    return addr.startsWith("fe80") || addr.startsWith("fd") || addr.startsWith("fc");
+  }
+  if (!/^\d+\.\d+\.\d+\.\d+$/.test(addr)) {
+    return true;
+  }
+  if (mode === "usb") {
+    const subnets = window.GESTURE_CONFIG.usbSubnets || [];
+    return subnets.some((p) => addr.startsWith(p));
+  }
+  // lan: private IPv4 only
+  return /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(addr);
 }
 
 // Visual layer: read the selected candidate pair and its live RTT so the
