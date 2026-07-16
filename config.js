@@ -12,10 +12,10 @@
     backendWsUrl: isLocal ? sameOrigin : "wss://gesture.drziangchen.uk",
     // Frontend build version, shown in the corner badge. Bump on every push
     // (and keep the ?v= query strings in the HTML in sync).
-    version: "v2026-07-16.1",
+    version: "v2026-07-16.2",
     // USB-tethering subnets used to pin the P2P cursor path to the cable when
-    // Link is set to USB. AOSP RNDIS defaults to 192.168.42.0/24; some vendors
-    // differ — extend this list as devices are observed.
-    usbSubnets: ["192.168.42."]
+    // Link is set to USB. AOSP RNDIS defaults to 192.168.42.0/24; iPhone
+    // Personal Hotspot always uses 172.20.10.0/28. Extend as observed.
+    usbSubnets: ["192.168.42.", "172.20.10."]
   };
 })();
