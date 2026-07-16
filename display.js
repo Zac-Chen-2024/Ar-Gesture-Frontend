@@ -312,13 +312,18 @@ function startPathStats() {
       return;
     }
     const local = cands[pair.localCandidateId] || {};
+    const remote = cands[pair.remoteCandidateId] || {};
     const addr = local.address || local.ip || "";
+    const raddr = remote.address || remote.ip || "";
     const subnets = window.GESTURE_CONFIG.usbSubnets || [];
-    const label = subnets.some((p) => addr.startsWith(p)) ? "USB ⚡" : "LAN ⚡";
+    const onUsb = subnets.some((p) => addr.startsWith(p) || raddr.startsWith(p));
+    const label = onUsb ? "USB ⚡" : "LAN ⚡";
     const rtt = typeof pair.currentRoundTripTime === "number"
       ? ` ${(pair.currentRoundTripTime * 1000).toFixed(1)}ms`
       : "";
-    lanBadge.textContent = label + rtt;
+    // show the pair's addresses so unknown tethering subnets are identifiable
+    const via = addr || raddr ? ` · ${addr || "?"}→${raddr || "?"}` : "";
+    lanBadge.textContent = label + rtt + via;
   }, 2000);
 }
 
