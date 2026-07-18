@@ -195,6 +195,94 @@ function renderCandidates(candidates) {
   candidateStrip.appendChild(clear);
 }
 
+// ---- decode-score panel (pre/post-bigram top-k, v2f) ----
+const scorePreEl = document.getElementById("score-pre");
+const scorePostEl = document.getElementById("score-post");
+const scorePostHead = document.getElementById("score-post-head");
+const scoreModeSelect = document.getElementById("score-mode");
+
+function scoreRows(container, list, preRankByWord) {
+  container.innerHTML = "";
+  if (!Array.isArray(list) || list.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "score-empty";
+    empty.textContent = "No decode yet (v2f only)";
+    container.appendChild(empty);
+    return;
+  }
+  const scores = list.map((r) => r.score);
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  const span = max - min || 1;
+  list.forEach((r, i) => {
+    const row = document.createElement("div");
+    row.className = "score-row" + (i === 0 ? " is-top1" : "");
+    // bar length: best score fills, worst nearly empty (floor keeps it visible)
+    row.style.setProperty("--w", `${8 + 92 * ((r.score - min) / span)}%`);
+    const rank = document.createElement("span");
+    rank.className = "score-rank";
+    rank.textContent = String(i + 1);
+    const word = document.createElement("span");
+    word.className = "score-word";
+    word.textContent = r.word;
+    const val = document.createElement("span");
+    val.className = "score-val";
+    val.textContent = r.score.toFixed(2);
+    row.append(rank, word, val);
+    if (preRankByWord) {
+      const delta = document.createElement("span");
+      const was = preRankByWord.get(r.word);
+      if (was === undefined) {
+        delta.className = "score-delta up";
+        delta.textContent = "new";
+      } else if (was > i) {
+        delta.className = "score-delta up";
+        delta.textContent = `↑${was - i}`;
+      } else if (was < i) {
+        delta.className = "score-delta down";
+        delta.textContent = `↓${i - was}`;
+      } else {
+        delta.className = "score-delta same";
+        delta.textContent = "=";
+      }
+      row.appendChild(delta);
+    }
+    container.appendChild(row);
+  });
+}
+
+function renderScoreDebug(debug) {
+  if (!scorePreEl || !scorePostEl) {
+    return;
+  }
+  const pre = debug && debug.pre;
+  const post = debug && debug.post;
+  if (scorePostHead) {
+    const prev = debug && debug.prev;
+    scorePostHead.textContent = "Post-bigram · prev " + (prev ? `"${prev}"` : "∅");
+  }
+  scoreRows(scorePreEl, pre || []);
+  const preRank = new Map((pre || []).map((r, i) => [r.word, i]));
+  scoreRows(scorePostEl, post || [], preRank);
+}
+
+function applyScorePanelMode() {
+  const hide = scoreModeSelect && scoreModeSelect.value === "hide";
+  document.body.classList.toggle("score-panel-hidden", hide);
+}
+
+if (scoreModeSelect) {
+  const savedScoreMode = localStorage.getItem("scorePanel");
+  if (savedScoreMode === "hide" || savedScoreMode === "show") {
+    scoreModeSelect.value = savedScoreMode;
+  }
+  scoreModeSelect.addEventListener("change", () => {
+    localStorage.setItem("scorePanel", scoreModeSelect.value);
+    applyScorePanelMode();
+  });
+  applyScorePanelMode();
+}
+
 function highlightCandidate(index) {
   Array.from(candidateStrip.children).forEach((seg, i) => {
     seg.classList.toggle("is-hover", i === index);
@@ -608,6 +696,10 @@ socket.addEventListener("message", (event) => {
     plainText = message.text || "";
     decodedText.textContent = plainText;
     decodedText.scrollLeft = decodedText.scrollWidth; // keep the newest words visible
+
+    if ("scoreDebug" in message) {
+      renderScoreDebug(message.scoreDebug);
+    }
 
     if ("letters" in message && message.letters !== currentLetters) {
       currentLetters = message.letters;
