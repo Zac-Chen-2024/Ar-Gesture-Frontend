@@ -668,16 +668,54 @@ body {
 
 .score-panel {
   flex: 0 0 400px;
-  align-self: center;
-  max-height: 88%;
-  overflow-y: auto;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
   padding: 14px 16px;
   border: 1px solid rgba(17, 17, 17, 0.12);
   border-radius: 12px;
   background: #ffffff;
 }
 
+.score-panel .score-cols {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.score-panel.collapsed {
+  flex-basis: 34px;
+  padding: 14px 6px;
+  align-items: center;
+}
+
+.score-panel.collapsed .score-cols,
+.score-panel.collapsed .score-panel-text {
+  display: none;
+}
+
+.score-collapse {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: rgba(17, 17, 17, 0.5);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.score-collapse:hover {
+  background: rgba(17, 17, 17, 0.06);
+  color: rgba(17, 17, 17, 0.8);
+}
+
 .score-panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;

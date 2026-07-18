@@ -199,16 +199,13 @@ function renderCandidates(candidates) {
 const scorePreEl = document.getElementById("score-pre");
 const scorePostEl = document.getElementById("score-post");
 const scorePostHead = document.getElementById("score-post-head");
-const scoreModeSelect = document.getElementById("score-mode");
+const scorePanelEl = document.getElementById("score-panel");
+const scoreCollapseBtn = document.getElementById("score-collapse");
 
 function scoreRows(container, list, preRankByWord) {
   container.innerHTML = "";
   if (!Array.isArray(list) || list.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "score-empty";
-    empty.textContent = "No decode yet (v2f only)";
-    container.appendChild(empty);
-    return;
+    return; // lists render only when there are words; the frame stays put
   }
   const scores = list.map((r) => r.score);
   const max = Math.max(...scores);
@@ -266,21 +263,26 @@ function renderScoreDebug(debug) {
   scoreRows(scorePostEl, post || [], preRank);
 }
 
-function applyScorePanelMode() {
-  const hide = scoreModeSelect && scoreModeSelect.value === "hide";
-  document.body.classList.toggle("score-panel-hidden", hide);
+// collapsible, expanded by default; the collapsed strip stays full-height so
+// the layout never jumps
+function applyScoreCollapsed(collapsed) {
+  if (scorePanelEl) {
+    scorePanelEl.classList.toggle("collapsed", collapsed);
+  }
+  if (scoreCollapseBtn) {
+    scoreCollapseBtn.textContent = collapsed ? "«" : "»";
+    scoreCollapseBtn.setAttribute(
+      "aria-label", collapsed ? "Expand score panel" : "Collapse score panel");
+  }
 }
 
-if (scoreModeSelect) {
-  const savedScoreMode = localStorage.getItem("scorePanel");
-  if (savedScoreMode === "hide" || savedScoreMode === "show") {
-    scoreModeSelect.value = savedScoreMode;
-  }
-  scoreModeSelect.addEventListener("change", () => {
-    localStorage.setItem("scorePanel", scoreModeSelect.value);
-    applyScorePanelMode();
+if (scoreCollapseBtn) {
+  applyScoreCollapsed(localStorage.getItem("scorePanelCollapsed") === "1");
+  scoreCollapseBtn.addEventListener("click", () => {
+    const collapsed = !scorePanelEl.classList.contains("collapsed");
+    localStorage.setItem("scorePanelCollapsed", collapsed ? "1" : "0");
+    applyScoreCollapsed(collapsed);
   });
-  applyScorePanelMode();
 }
 
 function highlightCandidate(index) {
