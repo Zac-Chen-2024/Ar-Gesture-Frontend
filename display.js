@@ -200,7 +200,7 @@ const scorePreEl = document.getElementById("score-pre");
 const scorePostEl = document.getElementById("score-post");
 const scorePostHead = document.getElementById("score-post-head");
 const scorePanelEl = document.getElementById("score-panel");
-const scoreCollapseBtn = document.getElementById("score-collapse");
+const scoreToggleBtn = document.getElementById("score-toggle");
 
 function scoreRows(container, list, preRankByWord) {
   container.innerHTML = "";
@@ -263,22 +263,22 @@ function renderScoreDebug(debug) {
   scoreRows(scorePostEl, post || [], preRank);
 }
 
-// collapsible, expanded by default; the collapsed strip stays full-height so
-// the layout never jumps
+// collapsible via the toggle button at the frame's top-right (Zac: no thin
+// strip — collapsed means gone); expanded by default, state persisted
 function applyScoreCollapsed(collapsed) {
   if (scorePanelEl) {
     scorePanelEl.classList.toggle("collapsed", collapsed);
   }
-  if (scoreCollapseBtn) {
-    scoreCollapseBtn.textContent = collapsed ? "«" : "»";
-    scoreCollapseBtn.setAttribute(
-      "aria-label", collapsed ? "Expand score panel" : "Collapse score panel");
+  if (scoreToggleBtn) {
+    scoreToggleBtn.textContent = collapsed ? "« Scores" : "Scores »";
+    scoreToggleBtn.setAttribute(
+      "aria-label", collapsed ? "Show score panel" : "Hide score panel");
   }
 }
 
-if (scoreCollapseBtn) {
+if (scoreToggleBtn) {
   applyScoreCollapsed(localStorage.getItem("scorePanelCollapsed") === "1");
-  scoreCollapseBtn.addEventListener("click", () => {
+  scoreToggleBtn.addEventListener("click", () => {
     const collapsed = !scorePanelEl.classList.contains("collapsed");
     localStorage.setItem("scorePanelCollapsed", collapsed ? "1" : "0");
     applyScoreCollapsed(collapsed);
