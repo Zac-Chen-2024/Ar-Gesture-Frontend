@@ -195,10 +195,16 @@ function renderCandidates(candidates) {
   candidateStrip.appendChild(clear);
 }
 
-// ---- decode-score panel (pre/post-bigram top-k, v2f) ----
-const scorePreEl = document.getElementById("score-pre");
-const scorePostEl = document.getElementById("score-post");
-const scorePostHead = document.getElementById("score-post-head");
+// ---- decode-score panel (staged score pipeline, v2f) ----
+// four slots: path / shape / final / extra — stages arrive from the server as
+// an ordered array, so new score components plug in without frontend changes
+const SCORE_SLOTS = ["path", "shape", "final", "extra"];
+const scoreListEls = {};
+const scoreHeadEls = {};
+for (const slot of SCORE_SLOTS) {
+  scoreListEls[slot] = document.getElementById(`list-${slot}`);
+  scoreHeadEls[slot] = document.getElementById(`head-${slot}`);
+}
 const scorePanelEl = document.getElementById("score-panel");
 const scoreToggleBtn = document.getElementById("score-toggle");
 
@@ -249,18 +255,80 @@ function scoreRows(container, list, preRankByWord) {
 }
 
 function renderScoreDebug(debug) {
-  if (!scorePreEl || !scorePostEl) {
+  const stages = (debug && debug.stages) || [];
+  const bySlot = {};
+  const overflow = [];
+  for (const st of stages) {
+    if (SCORE_SLOTS.includes(st.id) && !bySlot[st.id]) {
+      bySlot[st.id] = st;
+    } else {
+      overflow.push(st);
+    }
+  }
+  if (!bySlot.extra && overflow.length) {
+    bySlot.extra = overflow[0];
+  }
+  let prevList = null; // each stage's deltas compare against the stage before it
+  for (const slot of SCORE_SLOTS) {
+    const el = scoreListEls[slot];
+    if (!el) continue;
+    const st = bySlot[slot];
+    if (!st) {
+      // live slots stay blank until there are words; future slots say so
+      const reservedText = { shape: "reserved · shape score", extra: "reserved" }[slot];
+      if (reservedText) {
+        el.classList.add("is-placeholder");
+        el.textContent = reservedText;
+      } else {
+        el.classList.remove("is-placeholder");
+        el.innerHTML = "";
+      }
+      continue;
+    }
+    el.classList.remove("is-placeholder");
+    if (scoreHeadEls[slot] && st.label) {
+      const prevWord = slot === "final" && debug.prev ? ` · prev "${debug.prev}"` : "";
+      const nums = { path: "①", shape: "②", final: "③", extra: "④" };
+      scoreHeadEls[slot].textContent = `${nums[slot]} ${st.label}${prevWord}`;
+    }
+    const rankMap = prevList
+      ? new Map(prevList.map((r, i) => [r.word, i]))
+      : null;
+    scoreRows(el, st.list || [], rankMap);
+    if (st.list && st.list.length) {
+      prevList = st.list;
+    }
+  }
+}
+
+function renderScoreParams(params) {
+  const runtimeEl = document.getElementById("params-runtime");
+  const compiledEl = document.getElementById("params-compiled");
+  if (!runtimeEl || !compiledEl) {
     return;
   }
-  const pre = debug && debug.pre;
-  const post = debug && debug.post;
-  if (scorePostHead) {
-    const prev = debug && debug.prev;
-    scorePostHead.textContent = "Post-bigram · prev " + (prev ? `"${prev}"` : "∅");
+  const fill = (el, tag, rows) => {
+    el.innerHTML = `<div class="score-param-tag">${tag}</div>`;
+    for (const [k, v] of rows || []) {
+      const row = document.createElement("div");
+      row.className = "score-param-row";
+      const key = document.createElement("span");
+      key.className = "k";
+      key.textContent = k;
+      const val = document.createElement("span");
+      val.className = "v";
+      val.textContent = v === null || v === undefined ? "—" : String(v);
+      row.append(key, val);
+      el.appendChild(row);
+    }
+  };
+  if (!params) {
+    fill(runtimeEl, "runtime", [["n/a", "v2f only"]]);
+    compiledEl.innerHTML = "";
+    return;
   }
-  scoreRows(scorePreEl, pre || []);
-  const preRank = new Map((pre || []).map((r, i) => [r.word, i]));
-  scoreRows(scorePostEl, post || [], preRank);
+  fill(runtimeEl, "runtime", params.runtime);
+  fill(compiledEl, "compiled (rebuild to change)", params.compiled);
 }
 
 // collapsible via the toggle button at the frame's top-right (Zac: no thin
@@ -703,6 +771,10 @@ socket.addEventListener("message", (event) => {
       renderScoreDebug(message.scoreDebug);
     }
 
+    if ("scoreParams" in message) {
+      renderScoreParams(message.scoreParams);
+    }
+
     if ("letters" in message && message.letters !== currentLetters) {
       currentLetters = message.letters;
       renderCandidates(message.candidates || []);
@@ -892,3 +964,5 @@ resizeCanvas();
 applyModeClasses();
 renderCandidates([]);
 updateUsbUi();
+renderScoreDebug(null);
+renderScoreParams(null);

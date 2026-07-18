@@ -172,6 +172,65 @@ function isAbsoluteMode() {
   return currentMappingMode === "absolute";
 }
 
+// ---- absolute key size (device-independent swipe feel) ----
+// The overlay key width IS the px->keyboard-unit conversion base, so pinning
+// it to physical millimeters makes the same finger travel mean the same
+// cursor travel on every phone. CSS mm is nominal (±10% across devices);
+// the speed slider absorbs the residual and personal taste.
+const BASE_KEY_MM = 8;
+const mmProbe = document.createElement("div");
+mmProbe.style.cssText = "position:absolute;visibility:hidden;width:100mm;height:0;";
+document.body.appendChild(mmProbe);
+const PX_PER_MM = (mmProbe.offsetWidth / 100) || (96 / 25.4);
+mmProbe.remove();
+
+let cursorSpeed = parseFloat(localStorage.getItem("cursorSpeed"));
+if (!Number.isFinite(cursorSpeed) || cursorSpeed < 0.6 || cursorSpeed > 1.8) {
+  cursorSpeed = 1.0;
+}
+
+function applyKeySize() {
+  const shell = overlay.querySelector(".keyboard-shell");
+  if (!shell) {
+    return;
+  }
+  if (isAbsoluteMode()) {
+    // absolute mapping means "screen is the keyboard" — keep screen-relative
+    shell.style.removeProperty("--key-width");
+    shell.style.removeProperty("--key-height");
+    return;
+  }
+  const w = (BASE_KEY_MM / cursorSpeed) * PX_PER_MM;
+  shell.style.setProperty("--key-width", `${w}px`);
+  shell.style.setProperty("--key-height", `${w * 1.19}px`); // original 8.4:10 ratio
+}
+
+const gearBtn = document.getElementById("gear-btn");
+const speedPanel = document.getElementById("speed-panel");
+const speedSlider = document.getElementById("speed-slider");
+const speedValue = document.getElementById("speed-value");
+const keyMmEl = document.getElementById("key-mm");
+
+function refreshSpeedUi() {
+  if (speedValue) speedValue.textContent = cursorSpeed.toFixed(2) + "×";
+  if (keyMmEl) keyMmEl.textContent = (BASE_KEY_MM / cursorSpeed).toFixed(1);
+}
+
+if (gearBtn && speedPanel && speedSlider) {
+  speedSlider.value = String(cursorSpeed);
+  refreshSpeedUi();
+  gearBtn.addEventListener("click", () => {
+    speedPanel.hidden = !speedPanel.hidden;
+  });
+  speedSlider.addEventListener("input", () => {
+    cursorSpeed = parseFloat(speedSlider.value) || 1.0;
+    localStorage.setItem("cursorSpeed", String(cursorSpeed));
+    refreshSpeedUi();
+    applyKeySize();
+  });
+}
+applyKeySize();
+
 function getOverlayMetrics() {
   const anchorKey = getOverlayAnchorKey();
   const anchorRect = anchorKey.getBoundingClientRect();
@@ -416,6 +475,7 @@ socket.addEventListener("message", (event) => {
     currentStartKey = String(message.cursorKey || "g").toUpperCase();
     currentMappingMode = message.mappingMode || "relative";
     currentInputMode = message.mode || "center";
+    applyKeySize();
     mobileKeyboardVisible = message.mobileKeyboardVisible !== false;
     const nextLan = message.lanMode === true;
     if (nextLan !== lanMode) {

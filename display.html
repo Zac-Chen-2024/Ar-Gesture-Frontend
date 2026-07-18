@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260717-3" />
+    <link rel="stylesheet" href="styles.css?v=20260717-4" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -112,20 +112,35 @@
         <div class="score-panel-title">
           <span class="score-panel-text">Decode scores <span class="score-panel-note">top-10 · v2f</span></span>
         </div>
-        <div class="score-cols">
-          <div class="score-col">
-            <div class="score-col-head">Pre-bigram</div>
-            <div id="score-pre" class="score-list"></div>
+        <div class="score-body">
+          <div class="score-grid">
+            <div class="score-cell">
+              <div class="score-col-head" id="head-path">① Path score</div>
+              <div id="list-path" class="score-list"></div>
+            </div>
+            <div class="score-cell">
+              <div class="score-col-head" id="head-shape">② + Shape (SHARK²)</div>
+              <div id="list-shape" class="score-list"></div>
+            </div>
+            <div class="score-cell">
+              <div class="score-col-head" id="head-final">③ + Bigram (final)</div>
+              <div id="list-final" class="score-list"></div>
+            </div>
+            <div class="score-cell">
+              <div class="score-col-head" id="head-extra">④ Reserved</div>
+              <div id="list-extra" class="score-list"></div>
+            </div>
           </div>
-          <div class="score-col">
-            <div class="score-col-head" id="score-post-head">Post-bigram</div>
-            <div id="score-post" class="score-list"></div>
+          <div class="score-params">
+            <div class="score-col-head">Parameters</div>
+            <div id="params-runtime" class="score-param-group"></div>
+            <div id="params-compiled" class="score-param-group"></div>
           </div>
         </div>
       </aside>
     </main>
-    <script src="config.js?v=20260717-3"></script>
-    <script src="vendor/adb.bundle.js?v=20260717-3"></script>
-    <script src="display.js?v=20260717-3"></script>
+    <script src="config.js?v=20260717-4"></script>
+    <script src="vendor/adb.bundle.js?v=20260717-4"></script>
+    <script src="display.js?v=20260717-4"></script>
   </body>
   </html>

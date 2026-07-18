@@ -677,10 +677,67 @@ body {
   background: #ffffff;
 }
 
-.score-panel .score-cols {
+.score-panel .score-body {
   flex: 1 1 auto;
   overflow-y: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.score-cell {
+  min-width: 0;
+}
+
+.score-list.is-placeholder {
+  border: 1px dashed rgba(17, 17, 17, 0.16);
+  border-radius: 6px;
+  padding: 12px 8px;
+  font-size: 11px;
+  color: rgba(17, 17, 17, 0.32);
+  text-align: center;
+}
+
+.score-params {
+  border-top: 1px solid rgba(17, 17, 17, 0.1);
+  padding-top: 8px;
+}
+
+.score-param-group {
+  margin-bottom: 6px;
+}
+
+.score-param-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  padding: 1px 2px;
+}
+
+.score-param-row .k {
+  color: rgba(17, 17, 17, 0.55);
+}
+
+.score-param-row .v {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-param-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(17, 17, 17, 0.4);
+  margin: 4px 0 2px;
 }
 
 .score-panel.collapsed {
@@ -806,4 +863,63 @@ body.score-panel-hidden .score-panel {
     align-self: stretch;
     max-height: none;
   }
+}
+
+/* Mobile touchpad settings: gear + cursor-speed slider */
+.gear-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 70;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: rgba(17, 17, 17, 0.65);
+}
+
+.display-body .gear-btn,
+.display-body .speed-panel {
+  display: none; /* phone-only controls */
+}
+
+.speed-panel {
+  position: fixed;
+  top: 58px;
+  right: 10px;
+  z-index: 70;
+  width: min(78vw, 280px);
+  padding: 12px 14px;
+  border: 1px solid rgba(17, 17, 17, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.12);
+  font-size: 13px;
+}
+
+.speed-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.speed-panel input[type="range"] {
+  width: 100%;
+}
+
+.speed-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(17, 17, 17, 0.5);
+}
+
+.speed-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
 }
