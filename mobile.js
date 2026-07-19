@@ -2,7 +2,9 @@ const canvas = document.getElementById("mobile-canvas");
 const context = canvas.getContext("2d");
 const overlay = document.querySelector(".mobile-keyboard-overlay");
 
-const socket = new WebSocket(window.GESTURE_CONFIG.backendWsUrl);
+// (re)created by connectSocket(): phone browsers silently kill WebSockets on
+// screen lock / backgrounding, so the connection must be rebuildable
+let socket = null;
 
 let isDrawing = false;
 let pointerId = null;
@@ -163,7 +165,7 @@ function getPoint(event) {
 }
 
 function sendMessage(payload) {
-  if (socket.readyState === WebSocket.OPEN) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(payload));
   }
 }
@@ -421,18 +423,47 @@ function renderRooms(list) {
 }
 
 if (pickerRefresh) {
-  pickerRefresh.addEventListener("click", () => sendMessage({ type: "list-rooms" }));
+  pickerRefresh.addEventListener("click", () => {
+    // a dead socket makes plain list-rooms a silent no-op — reconnect instead
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      sendMessage({ type: "list-rooms" });
+    } else {
+      showPicker("Reconnecting…");
+      connectSocket();
+    }
+  });
 }
 
-socket.addEventListener("open", () => {
+function onSocketOpen() {
   sendMessage({ type: "join", role: "mobile" });
+}
+
+function onSocketClose() {
+  showPicker("Connection lost — tap Refresh.");
+}
+
+function connectSocket() {
+  if (socket) {
+    try {
+      socket.onopen = socket.onclose = socket.onmessage = null;
+      socket.close();
+    } catch (e) { /* noop */ }
+  }
+  socket = new WebSocket(window.GESTURE_CONFIG.backendWsUrl);
+  socket.addEventListener("open", onSocketOpen);
+  socket.addEventListener("close", onSocketClose);
+  socket.addEventListener("message", onSocketMessage);
+}
+
+// self-heal when the page returns to the foreground with a dead socket
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && (!socket || socket.readyState !== WebSocket.OPEN)) {
+    showPicker("Reconnecting…");
+    connectSocket();
+  }
 });
 
-socket.addEventListener("close", () => {
-  showPicker("Disconnected. Reload the page to reconnect.");
-});
-
-socket.addEventListener("message", (event) => {
+function onSocketMessage(event) {
   const message = JSON.parse(event.data);
 
   if (message.type === "room-list") {
@@ -490,7 +521,9 @@ socket.addEventListener("message", (event) => {
     }
     applyModeClasses();
   }
-});
+}
+
+connectSocket();
 
 const buildBadge = document.getElementById("build-badge");
 if (buildBadge) {
