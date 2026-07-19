@@ -322,28 +322,50 @@ function renderScoreParams(params) {
       key.textContent = k;
       row.appendChild(key);
       if (editable) {
+        const PARAM_STEPS = {
+          lambda_bi: 0.1, lambda_shape: 1, junk_cost: 0.1,
+          emission_sigma: 0.05, beam_delta: 1, max_active: 50,
+        };
+        const ctrl = document.createElement("span");
+        ctrl.className = "score-param-ctrl";
         const input = document.createElement("input");
         input.className = "v score-param-input";
         input.type = "number";
         input.step = "any";
         input.value = v === null || v === undefined ? "" : String(v);
-        const commit = () => {
-          const num = parseFloat(input.value);
-          if (Number.isFinite(num)) {
-            sendMessage({ type: "param-set", key: k, value: num });
-          }
-          input.blur();
+        const send = (num) => sendMessage({ type: "param-set", key: k, value: num });
+        const stepBy = (dir) => {
+          const cur = parseFloat(input.value);
+          const step = PARAM_STEPS[k] || 0.1;
+          if (!Number.isFinite(cur)) return;
+          const next = Math.round((cur + dir * step) * 10000) / 10000;
+          input.value = String(next);
+          send(next);
+        };
+        const mkStep = (label, dir) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "score-param-step";
+          b.textContent = label;
+          b.setAttribute("aria-label", `${label === "−" ? "Decrease" : "Increase"} ${k}`);
+          b.addEventListener("click", () => stepBy(dir));
+          return b;
         };
         input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") commit();
+          if (e.key === "Enter") {
+            const num = parseFloat(input.value);
+            if (Number.isFinite(num)) send(num);
+            input.blur();
+          }
         });
         input.addEventListener("blur", () => {
           const num = parseFloat(input.value);
           if (Number.isFinite(num) && String(num) !== String(v)) {
-            sendMessage({ type: "param-set", key: k, value: num });
+            send(num);
           }
         });
-        row.appendChild(input);
+        ctrl.append(mkStep("−", -1), input, mkStep("+", 1));
+        row.appendChild(ctrl);
       } else {
         const val = document.createElement("span");
         val.className = "v";
