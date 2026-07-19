@@ -923,3 +923,20 @@ body.score-panel-hidden .score-panel {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }
+
+.score-param-input {
+  width: 72px;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  text-align: right;
+  background: rgba(17, 17, 17, 0.02);
+}
+
+.score-param-input:focus {
+  outline: none;
+  border-color: #1a73e8;
+  background: #ffffff;
+}

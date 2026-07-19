@@ -307,7 +307,11 @@ function renderScoreParams(params) {
   if (!runtimeEl || !compiledEl) {
     return;
   }
-  const fill = (el, tag, rows) => {
+  // never clobber an input the user is typing into
+  if (runtimeEl.contains(document.activeElement)) {
+    return;
+  }
+  const fill = (el, tag, rows, editable) => {
     el.innerHTML = `<div class="score-param-tag">${tag}</div>`;
     for (const [k, v] of rows || []) {
       const row = document.createElement("div");
@@ -315,20 +319,46 @@ function renderScoreParams(params) {
       const key = document.createElement("span");
       key.className = "k";
       key.textContent = k;
-      const val = document.createElement("span");
-      val.className = "v";
-      val.textContent = v === null || v === undefined ? "—" : String(v);
-      row.append(key, val);
+      row.appendChild(key);
+      if (editable) {
+        const input = document.createElement("input");
+        input.className = "v score-param-input";
+        input.type = "number";
+        input.step = "any";
+        input.value = v === null || v === undefined ? "" : String(v);
+        const commit = () => {
+          const num = parseFloat(input.value);
+          if (Number.isFinite(num)) {
+            sendMessage({ type: "param-set", key: k, value: num });
+          }
+          input.blur();
+        };
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") commit();
+        });
+        input.addEventListener("blur", () => {
+          const num = parseFloat(input.value);
+          if (Number.isFinite(num) && String(num) !== String(v)) {
+            sendMessage({ type: "param-set", key: k, value: num });
+          }
+        });
+        row.appendChild(input);
+      } else {
+        const val = document.createElement("span");
+        val.className = "v";
+        val.textContent = v === null || v === undefined ? "—" : String(v);
+        row.appendChild(val);
+      }
       el.appendChild(row);
     }
   };
   if (!params) {
-    fill(runtimeEl, "runtime", [["n/a", "v2f only"]]);
+    fill(runtimeEl, "runtime", [["n/a", "v2f only"]], false);
     compiledEl.innerHTML = "";
     return;
   }
-  fill(runtimeEl, "runtime", params.runtime);
-  fill(compiledEl, "compiled (rebuild to change)", params.compiled);
+  fill(runtimeEl, "runtime · edit + Enter to apply", params.runtime, true);
+  fill(compiledEl, "compiled (rebuild to change)", params.compiled, false);
 }
 
 // collapsible via the toggle button at the frame's top-right (Zac: no thin
