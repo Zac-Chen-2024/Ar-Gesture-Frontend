@@ -696,6 +696,16 @@ body {
   min-width: 0;
 }
 
+.score-list {
+  min-height: 212px; /* 10 rows reserved even when empty — no layout jumps */
+}
+
+.score-list.is-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .score-list.is-placeholder {
   border: 1px dashed rgba(17, 17, 17, 0.16);
   border-radius: 6px;
@@ -744,12 +754,42 @@ body {
   display: none;
 }
 
-.score-toggle {
-  align-self: flex-start;
-  margin-left: 10px;
-  padding: 0 12px;
-  font-weight: 600;
-  white-space: nowrap;
+.score-chevron {
+  border: 1px solid rgba(17, 17, 17, 0.14);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(17, 17, 17, 0.55);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.score-chevron:hover {
+  background: rgba(17, 17, 17, 0.06);
+  color: rgba(17, 17, 17, 0.85);
+}
+
+.score-expand-tab {
+  position: fixed;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 65;
+  width: 26px;
+  height: 58px;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  font-size: 14px;
+  color: rgba(17, 17, 17, 0.55);
+  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.1);
+}
+
+.score-expand-tab:hover {
+  color: rgba(17, 17, 17, 0.9);
 }
 
 .score-panel-title {

@@ -206,7 +206,8 @@ for (const slot of SCORE_SLOTS) {
   scoreHeadEls[slot] = document.getElementById(`head-${slot}`);
 }
 const scorePanelEl = document.getElementById("score-panel");
-const scoreToggleBtn = document.getElementById("score-toggle");
+const scoreCollapseBtn = document.getElementById("score-collapse");
+const scoreExpandTab = document.getElementById("score-expand");
 
 function scoreRows(container, list, preRankByWord) {
   container.innerHTML = "";
@@ -361,26 +362,26 @@ function renderScoreParams(params) {
   fill(compiledEl, "compiled (rebuild to change)", params.compiled, false);
 }
 
-// collapsible via the toggle button at the frame's top-right (Zac: no thin
-// strip — collapsed means gone); expanded by default, state persisted
+// collapsible: a small chevron in the panel header collapses; a slim tab on
+// the right screen edge expands. Expanded by default, state persisted.
 function applyScoreCollapsed(collapsed) {
   if (scorePanelEl) {
     scorePanelEl.classList.toggle("collapsed", collapsed);
   }
-  if (scoreToggleBtn) {
-    scoreToggleBtn.textContent = collapsed ? "« Scores" : "Scores »";
-    scoreToggleBtn.setAttribute(
-      "aria-label", collapsed ? "Show score panel" : "Hide score panel");
+  if (scoreExpandTab) {
+    scoreExpandTab.hidden = !collapsed;
   }
 }
 
-if (scoreToggleBtn) {
+function setScoreCollapsed(collapsed) {
+  localStorage.setItem("scorePanelCollapsed", collapsed ? "1" : "0");
+  applyScoreCollapsed(collapsed);
+}
+
+if (scoreCollapseBtn && scoreExpandTab) {
   applyScoreCollapsed(localStorage.getItem("scorePanelCollapsed") === "1");
-  scoreToggleBtn.addEventListener("click", () => {
-    const collapsed = !scorePanelEl.classList.contains("collapsed");
-    localStorage.setItem("scorePanelCollapsed", collapsed ? "1" : "0");
-    applyScoreCollapsed(collapsed);
-  });
+  scoreCollapseBtn.addEventListener("click", () => setScoreCollapsed(true));
+  scoreExpandTab.addEventListener("click", () => setScoreCollapsed(false));
 }
 
 function highlightCandidate(index) {

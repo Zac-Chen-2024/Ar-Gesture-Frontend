@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260719-1" />
+    <link rel="stylesheet" href="styles.css?v=20260719-2" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -61,7 +61,6 @@
             <span class="room-code-value">····</span>
             <span class="room-code-status">waiting for phone…</span>
           </div>
-          <button id="score-toggle" class="mode-select score-toggle" type="button" aria-label="Toggle score panel">Scores »</button>
         </header>
         <div class="text-row">
           <div id="decoded-text" class="decoded-text" aria-live="polite"></div>
@@ -111,6 +110,7 @@
       <aside id="score-panel" class="score-panel" aria-label="Decode scores">
         <div class="score-panel-title">
           <span class="score-panel-text">Decode scores <span class="score-panel-note">top-10 · v2f</span></span>
+          <button id="score-collapse" class="score-chevron" type="button" aria-label="Collapse score panel">»</button>
         </div>
         <div class="score-body">
           <div class="score-grid">
@@ -138,9 +138,10 @@
           </div>
         </div>
       </aside>
+      <button id="score-expand" class="score-expand-tab" type="button" aria-label="Expand score panel" hidden>«</button>
     </main>
-    <script src="config.js?v=20260719-1"></script>
-    <script src="vendor/adb.bundle.js?v=20260719-1"></script>
-    <script src="display.js?v=20260719-1"></script>
+    <script src="config.js?v=20260719-2"></script>
+    <script src="vendor/adb.bundle.js?v=20260719-2"></script>
+    <script src="display.js?v=20260719-2"></script>
   </body>
   </html>
