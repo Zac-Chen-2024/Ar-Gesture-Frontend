@@ -4,6 +4,33 @@
   --ink: #111111;
   --line: #242424;
   --guide: rgba(17, 17, 17, 0.16);
+  /* type: system stacks only — UI sans for chrome, mono for numbers/params */
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", monospace;
+  /* ink alpha ramp (one palette everywhere instead of ad-hoc rgba values) */
+  --ink-strong: rgba(17, 17, 17, 0.9);
+  --ink-soft: rgba(17, 17, 17, 0.62);
+  --ink-faint: rgba(17, 17, 17, 0.45);
+  --ink-ghost: rgba(17, 17, 17, 0.3);
+  /* hairlines and interactive accents */
+  --hairline: rgba(17, 17, 17, 0.1);
+  --hairline-strong: rgba(17, 17, 17, 0.16);
+  --accent: #1a73e8;
+  --accent-soft: rgba(26, 115, 232, 0.08);
+  --accent-ring: rgba(26, 115, 232, 0.18);
+  --up: #188038;
+  --down: #d93025;
+  /* warm shadows: tinted with the paper hue, never pure black */
+  --shadow-sm: 0 1px 3px rgba(48, 39, 24, 0.07);
+  --shadow-md: 0 4px 14px rgba(48, 39, 24, 0.09);
+  --shadow-lg: 0 12px 32px rgba(48, 39, 24, 0.1);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --control-h: 38px;
+  --ease: 140ms ease;
 }
 
 * {
@@ -18,7 +45,9 @@ body {
   overflow: hidden;
   background: radial-gradient(circle at top, #fffdf8 0%, var(--bg) 68%);
   color: var(--ink);
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
@@ -59,7 +88,7 @@ body {
      position the main block slightly below center (see ::before/::after) */
   justify-content: flex-start;
   gap: 0;
-  border: 2px solid rgba(17, 17, 17, 0.18);
+  border: 2px solid rgba(17, 17, 17, 0.14);
   border-radius: 28px;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 252, 245, 0.94));
   box-shadow: 0 28px 60px rgba(48, 39, 24, 0.08);
@@ -73,7 +102,7 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 24px;
   width: 100%;
   padding: 16px 20px 0;
 }
@@ -128,7 +157,8 @@ body {
 .settings-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  align-items: flex-end; /* controls share a common 38px baseline row */
+  gap: 8px 12px;
 }
 
 .setting {
@@ -142,8 +172,9 @@ body {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(17, 17, 17, 0.45);
+  color: var(--ink-faint);
   padding-left: 2px;
+  white-space: nowrap;
 }
 
 .text-row {
@@ -163,6 +194,7 @@ body {
   color: var(--ink);
   font: inherit;
   font-size: 1.8rem;
+  letter-spacing: 0.01em;
   padding: 10px 32px;
   overflow: hidden;
   white-space: nowrap;
@@ -179,20 +211,28 @@ body {
 }
 
 .mode-select {
-  height: 38px;
-  border: 1px solid rgba(17, 17, 17, 0.16);
-  border-radius: 8px;
+  height: var(--control-h);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
   background: #ffffff;
   color: var(--ink);
   cursor: pointer;
   font: inherit;
   font-size: 0.88rem;
   padding: 0 10px;
-  box-shadow: 0 1px 3px rgba(48, 39, 24, 0.06);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--ease), box-shadow var(--ease), background-color var(--ease);
 }
 
 .mode-select:hover:not(:disabled) {
   border-color: rgba(17, 17, 17, 0.32);
+  box-shadow: 0 2px 6px rgba(48, 39, 24, 0.1);
+}
+
+.mode-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 .mode-select:disabled {
@@ -203,13 +243,19 @@ body {
 .text-action {
   height: 48px;
   border: 1.5px solid rgba(17, 17, 17, 0.24);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.74);
   color: var(--ink);
   cursor: pointer;
   font: inherit;
   font-size: 0.95rem;
   padding: 0 14px;
+  transition: background-color var(--ease), border-color var(--ease);
+}
+
+.text-action:hover {
+  background: #ffffff;
+  border-color: rgba(17, 17, 17, 0.4);
 }
 
 .text-action:active {
@@ -243,11 +289,11 @@ body {
   width: var(--key-width);
   height: var(--key-height);
   max-height: 112px;
-  border: var(--key-border) solid rgba(17, 17, 17, 0.22);
+  border: var(--key-border) solid rgba(17, 17, 17, 0.2);
   border-radius: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 241, 229, 0.92));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  color: rgba(17, 17, 17, 0.9);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(247, 242, 231, 0.93));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 0 rgba(48, 39, 24, 0.04);
+  color: var(--ink-strong);
   font-size: clamp(1rem, 2.5vmin, 1.8rem);
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -280,7 +326,7 @@ body {
 
 .is-continuous-mode .key-anchor,
 .is-absolute-mode .key-anchor {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 241, 229, 0.92));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(247, 242, 231, 0.93));
 }
 
 .mobile-keyboard-overlay {
@@ -394,16 +440,17 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(20, 22, 28, 0.85);
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background: rgba(20, 22, 28, 0.88);
   color: #e8eaed;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  font-family: var(--font-ui);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 .room-code-label {
   font-size: 10px;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.6;
@@ -411,6 +458,8 @@ body {
 .room-code-value {
   font-size: 28px;
   font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0.18em;
   line-height: 1;
 }
@@ -436,7 +485,7 @@ body {
   justify-content: center;
   background: #0f1115;
   color: #e8eaed;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-ui);
 }
 .session-picker.is-hidden {
   display: none;
@@ -449,6 +498,7 @@ body {
 .picker-card h2 {
   margin: 0 0 0.35rem;
   font-size: 1.3rem;
+  letter-spacing: 0.01em;
 }
 .picker-hint {
   margin: 0 0 1.25rem;
@@ -467,11 +517,15 @@ body {
   padding: 0.9rem 1.1rem;
   font-size: 1.6rem;
   font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0.16em;
   border: none;
   border-radius: 0.7rem;
-  background: #1a73e8;
+  background: var(--accent);
   color: #fff;
+  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.3);
+  transition: background-color var(--ease);
 }
 .session-item:active {
   background: #155ab6;
@@ -495,6 +549,11 @@ body {
   background: transparent;
   color: #e8eaed;
   font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color var(--ease), border-color var(--ease);
+}
+.picker-refresh:active {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ---- candidate bar: permanent in-flow row inside the keyboard shell,
@@ -504,11 +563,11 @@ body {
   width: 100%;
   height: 3.3rem;
   margin-bottom: 2vmin; /* the buffer gap that guards against accidental entry */
-  border: 1px solid #d0d3d9;
-  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 17, 0.14);
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-sm);
 }
 .candidate-seg {
   min-width: 0;
@@ -517,14 +576,16 @@ body {
   justify-content: center;
   padding: 0 0.4rem;
   border: none;
-  border-right: 1px solid #e6e8ec;
+  border-right: 1px solid #ece9e1;
   background: transparent;
   color: #202124;
+  font: inherit;
   font-size: 1rem;
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: background-color var(--ease), color var(--ease);
 }
 .candidate-seg:last-child {
   border-right: none;
@@ -533,7 +594,7 @@ body {
   font-weight: 700;
 }
 .candidate-seg.is-hover {
-  background: #1a73e8;
+  background: var(--accent);
   color: #ffffff;
 }
 
@@ -543,11 +604,11 @@ body {
 /* backspace / clear segments in the candidate bar (touchpad-only, like candidates) */
 .candidate-seg.candidate-action {
   color: #5f6368;
-  background: #f1f3f4;
+  background: #f4f2ec;
   font-weight: 600;
 }
 .candidate-seg.candidate-action.is-hover {
-  background: #1a73e8;
+  background: var(--accent);
   color: #ffffff;
 }
 
@@ -558,8 +619,10 @@ body {
   bottom: 6px;
   z-index: 60;
   font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: rgba(17, 17, 17, 0.45);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
   pointer-events: none;
   -webkit-user-select: none;
   user-select: none;
@@ -575,10 +638,10 @@ body {
   gap: 8px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: #1a73e8;
+  background: var(--accent);
   color: #ffffff;
   box-shadow: 0 3px 10px rgba(26, 115, 232, 0.35);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-ui);
   z-index: 6;
 }
 .letter-badge.is-visible {
@@ -601,7 +664,7 @@ body {
   height: 1.25em;
   margin: 0 1px;
   vertical-align: text-bottom;
-  background: #1a73e8;
+  background: var(--accent);
   border-radius: 2px;
   animation: caret-blink 0.85s steps(1) infinite;
 }
@@ -622,7 +685,8 @@ body {
   color: #7ee2a8;
   font-size: 11px;
   font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0.02em;
+  font-family: var(--font-ui);
   pointer-events: none;
 }
 .lan-badge.is-visible {
@@ -648,7 +712,8 @@ body {
   color: #cbd5e1;
   font-size: 11px;
   font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0.02em;
+  font-family: var(--font-ui);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -657,7 +722,7 @@ body {
 /* Decode-score panel: pre/post-bigram top-k side by side, right of the frame */
 .display-stage {
   display: flex;
-  gap: 14px;
+  gap: 16px;
   align-items: stretch;
 }
 
@@ -671,10 +736,11 @@ body {
   align-self: stretch;
   display: flex;
   flex-direction: column;
-  padding: 14px 16px;
-  border: 1px solid rgba(17, 17, 17, 0.12);
-  border-radius: 12px;
-  background: #ffffff;
+  padding: 16px 16px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: #fffefb;
+  box-shadow: var(--shadow-md);
 }
 
 .score-panel .score-body {
@@ -683,7 +749,28 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  /* keep content clear of the scrollbar gutter */
+  padding-right: 4px;
+  margin-right: -4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(17, 17, 17, 0.22) transparent;
+}
+
+/* WebKit scrollbar, matched to the thin Firefox styling above */
+.score-panel .score-body::-webkit-scrollbar {
+  width: 8px;
+}
+.score-panel .score-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.score-panel .score-body::-webkit-scrollbar-thumb {
+  background: rgba(17, 17, 17, 0.18);
+  border-radius: 4px;
+  border: 2px solid #fffefb;
+}
+.score-panel .score-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(17, 17, 17, 0.32);
 }
 
 .score-grid {
@@ -694,6 +781,10 @@ body {
 
 .score-cell {
   min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: #ffffff;
 }
 
 .score-list {
@@ -707,47 +798,55 @@ body {
 }
 
 .score-list.is-placeholder {
-  border: 1px dashed rgba(17, 17, 17, 0.16);
-  border-radius: 6px;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius-sm);
   padding: 12px 8px;
   font-size: 11px;
-  color: rgba(17, 17, 17, 0.32);
+  letter-spacing: 0.02em;
+  color: var(--ink-ghost);
   text-align: center;
 }
 
 .score-params {
-  border-top: 1px solid rgba(17, 17, 17, 0.1);
-  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 12px;
 }
 
 .score-param-group {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .score-param-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 8px;
   font-size: 11.5px;
-  padding: 1px 2px;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.score-param-row:hover {
+  background: rgba(17, 17, 17, 0.03);
 }
 
 .score-param-row .k {
-  color: rgba(17, 17, 17, 0.55);
+  color: var(--ink-soft);
 }
 
 .score-param-row .v {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .score-param-tag {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(17, 17, 17, 0.4);
-  margin: 4px 0 2px;
+  color: var(--ink-faint);
+  margin: 8px 0 4px;
 }
 
 .score-panel.collapsed {
@@ -755,20 +854,25 @@ body {
 }
 
 .score-chevron {
-  border: 1px solid rgba(17, 17, 17, 0.14);
+  border: 1px solid var(--hairline-strong);
   background: none;
   cursor: pointer;
   font: inherit;
   font-size: 14px;
   line-height: 1;
-  color: rgba(17, 17, 17, 0.55);
-  padding: 3px 8px;
-  border-radius: 6px;
+  color: var(--ink-soft);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--ease), color var(--ease), border-color var(--ease);
 }
 
 .score-chevron:hover {
   background: rgba(17, 17, 17, 0.06);
-  color: rgba(17, 17, 17, 0.85);
+  color: var(--ink-strong);
+}
+
+.score-chevron:active {
+  background: rgba(17, 17, 17, 0.1);
 }
 
 .score-expand-tab {
@@ -779,41 +883,51 @@ body {
   z-index: 65;
   width: 26px;
   height: 58px;
-  border: 1px solid rgba(17, 17, 17, 0.16);
+  border: 1px solid var(--hairline-strong);
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.92);
   cursor: pointer;
   font-size: 14px;
-  color: rgba(17, 17, 17, 0.55);
-  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.1);
+  color: var(--ink-soft);
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--ease), color var(--ease), box-shadow var(--ease);
 }
 
 .score-expand-tab:hover {
-  color: rgba(17, 17, 17, 0.9);
+  color: var(--ink-strong);
+  background: #ffffff;
+  box-shadow: var(--shadow-md);
+}
+
+.score-expand-tab:active {
+  background: rgba(17, 17, 17, 0.05);
 }
 
 .score-panel-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  color: var(--ink-strong);
+  margin-bottom: 12px;
 }
 
 .score-panel-note {
   font-weight: 500;
-  color: rgba(17, 17, 17, 0.4);
+  color: var(--ink-faint);
   text-transform: none;
-  letter-spacing: 0;
+  letter-spacing: 0.01em;
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
 .score-cols {
   display: flex;
-  gap: 14px;
+  gap: 16px;
 }
 
 .score-col {
@@ -824,10 +938,11 @@ body {
 .score-col-head {
   font-size: 11px;
   font-weight: 600;
-  color: rgba(17, 17, 17, 0.55);
-  border-bottom: 1px solid rgba(17, 17, 17, 0.1);
-  padding-bottom: 4px;
-  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -840,15 +955,23 @@ body {
   font-size: 12.5px;
   padding: 2px 4px;
   border-radius: 4px;
-  /* the row's background doubles as the score bar (set inline via --w) */
-  background: linear-gradient(90deg, rgba(26, 115, 232, 0.1) var(--w, 0%), transparent var(--w, 0%));
+  /* the row's background doubles as the score bar (set inline via --w);
+     the gradient is a background-image, so a hover background-color can
+     sit underneath it without disturbing the bar */
+  background: linear-gradient(90deg, rgba(26, 115, 232, 0.08) var(--w, 0%), transparent var(--w, 0%));
+  transition: background-color var(--ease);
+}
+
+.score-row:hover {
+  background-color: rgba(17, 17, 17, 0.04);
 }
 
 .score-rank {
   width: 15px;
   flex: none;
-  font-size: 10.5px;
-  color: rgba(17, 17, 17, 0.4);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--ink-ghost);
   font-variant-numeric: tabular-nums;
 }
 
@@ -866,10 +989,10 @@ body {
 
 .score-val {
   flex: none;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: rgba(17, 17, 17, 0.65);
+  color: var(--ink-soft);
 }
 
 .score-delta {
@@ -877,16 +1000,17 @@ body {
   width: 24px;
   text-align: right;
   font-size: 10.5px;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-.score-delta.up { color: #188038; }
-.score-delta.down { color: #d93025; }
-.score-delta.same { color: rgba(17, 17, 17, 0.35); }
+.score-delta.up { color: var(--up); }
+.score-delta.down { color: var(--down); }
+.score-delta.same { color: var(--ink-ghost); }
 
 .score-empty {
   font-size: 12px;
-  color: rgba(17, 17, 17, 0.4);
+  color: var(--ink-faint);
   padding: 6px 2px;
 }
 
@@ -914,12 +1038,25 @@ body.score-panel-hidden .score-panel {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid rgba(17, 17, 17, 0.16);
+  border: 1px solid var(--hairline-strong);
   background: rgba(255, 255, 255, 0.85);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  color: rgba(17, 17, 17, 0.65);
+  color: var(--ink-soft);
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--ease), color var(--ease), box-shadow var(--ease);
+}
+
+.gear-btn:hover {
+  background: #ffffff;
+  color: var(--ink-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.gear-btn:active {
+  background: rgba(17, 17, 17, 0.06);
+  color: var(--ink-strong);
 }
 
 .display-body .gear-btn,
@@ -933,11 +1070,11 @@ body.score-panel-hidden .score-panel {
   right: 10px;
   z-index: 70;
   width: min(78vw, 280px);
-  padding: 12px 14px;
-  border: 1px solid rgba(17, 17, 17, 0.14);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.12);
+  padding: 14px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: var(--shadow-lg);
   font-size: 13px;
 }
 
@@ -946,37 +1083,60 @@ body.score-panel-hidden .score-panel {
   justify-content: space-between;
   align-items: baseline;
   font-weight: 600;
-  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+  margin-bottom: 8px;
 }
 
 .speed-panel input[type="range"] {
   width: 100%;
+  accent-color: var(--accent);
 }
 
 .speed-hint {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 11px;
+  letter-spacing: 0.01em;
   color: rgba(17, 17, 17, 0.5);
 }
 
 .speed-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
 .score-param-input {
   width: 72px;
-  border: 1px solid rgba(17, 17, 17, 0.16);
+  height: 22px;
+  border: 1px solid var(--hairline-strong);
   border-radius: 5px;
-  padding: 1px 5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
   text-align: right;
+  color: var(--ink);
   background: rgba(17, 17, 17, 0.02);
+  transition: border-color var(--ease), box-shadow var(--ease), background-color var(--ease);
+}
+
+.score-param-input:hover {
+  border-color: rgba(17, 17, 17, 0.3);
 }
 
 .score-param-input:focus {
   outline: none;
-  border-color: #1a73e8;
+  border-color: var(--accent);
   background: #ffffff;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* hide number-input spinners: they crowd the narrow param fields */
+.score-param-input::-webkit-outer-spin-button,
+.score-param-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.score-param-input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }

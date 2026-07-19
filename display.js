@@ -354,7 +354,7 @@ function renderScoreParams(params) {
     }
   };
   if (!params) {
-    fill(runtimeEl, "runtime", [["n/a", "v2f only"]], false);
+    fill(runtimeEl, "runtime", [["n/a", "v3 only"]], false);
     compiledEl.innerHTML = "";
     return;
   }
