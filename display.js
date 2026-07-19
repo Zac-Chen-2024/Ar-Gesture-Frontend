@@ -323,7 +323,7 @@ function renderScoreParams(params) {
       row.appendChild(key);
       if (editable) {
         const PARAM_STEPS = {
-          lambda_bi: 0.1, lambda_shape: 1, junk_cost: 0.1,
+          bigram_table: 1, lambda_bi: 0.1, lambda_shape: 1, junk_cost: 0.1,
           emission_sigma: 0.05, beam_delta: 1, max_active: 50,
         };
         const ctrl = document.createElement("span");
