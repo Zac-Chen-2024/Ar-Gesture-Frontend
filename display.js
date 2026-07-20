@@ -821,9 +821,10 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-end") {
-    if (p2pActive || usbActive) {
-      return;
-    }
+    // ALWAYS clear, even when a fast-path channel is active: if that
+    // channel's own "end" was lost or raced a stale active-flag, this is the
+    // backstop that wipes leftover trace tails. Double-clearing is harmless
+    // (clearCanvas nulls lastPoint, so late fast-path moves can't redraw).
     clearCanvas();
     return;
   }
