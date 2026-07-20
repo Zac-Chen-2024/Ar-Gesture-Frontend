@@ -89,6 +89,19 @@ function clearCanvas() {
   lastPoint = null;
 }
 
+// Visual ceiling for the cursor: the candidate bar acts as the top of the
+// world — once in the bar you slide along it (left/right to choose, down to
+// leave), never above it. Render-only: the server, decode and gesture logs
+// keep the raw unclamped trajectory. MIRRORS server.py CANDIDATE_ZONE_Y_*.
+const CANDIDATE_ZONE_Y = { relative: -1.8, absolute: -1.35 };
+const BAR_BAND_H = 0.45; // visual height of the bar band above the zone line
+
+function clampTracePoint(point) {
+  const zone = CANDIDATE_ZONE_Y[currentMappingMode] || CANDIDATE_ZONE_Y.relative;
+  const top = zone - BAR_BAND_H;
+  return point.y < top ? { x: point.x, y: top } : point;
+}
+
 function toDisplayPoint(point) {
   return {
     x: keyboardAnchorPoint.x + point.x * keyboardMetrics.keyWidth,
@@ -670,11 +683,11 @@ function handleP2pTrace(msg) {
   if (msg.kind === "start") {
     updateKeyboardReference();
     clearCanvas();
-    const p = toDisplayPoint(p2pGlobalPoint(msg));
+    const p = toDisplayPoint(clampTracePoint(p2pGlobalPoint(msg)));
     moveCursor(p);
     lastPoint = p;
   } else if (msg.kind === "move" && lastPoint) {
-    const p = toDisplayPoint(p2pGlobalPoint(msg));
+    const p = toDisplayPoint(clampTracePoint(p2pGlobalPoint(msg)));
     moveCursor(p);
     if (currentVisualMode === "gesture") {
       drawSegment(lastPoint, p);
@@ -788,7 +801,7 @@ socket.addEventListener("message", (event) => {
     }
     updateKeyboardReference();
     clearCanvas();
-    const nextPoint = toDisplayPoint(message.point);
+    const nextPoint = toDisplayPoint(clampTracePoint(message.point));
     moveCursor(nextPoint);
     lastPoint = nextPoint;
     return;
@@ -798,7 +811,7 @@ socket.addEventListener("message", (event) => {
     if (p2pActive || usbActive) {
       return;
     }
-    const nextPoint = toDisplayPoint(message.point);
+    const nextPoint = toDisplayPoint(clampTracePoint(message.point));
     moveCursor(nextPoint);
     if (currentVisualMode === "gesture") {
       drawSegment(lastPoint, nextPoint);
