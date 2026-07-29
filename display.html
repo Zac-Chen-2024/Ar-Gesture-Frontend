@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260720-2" />
+    <link rel="stylesheet" href="styles.css?v=20260729-1" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -100,6 +100,9 @@
             <div class="key" data-key="N">N</div>
             <div class="key" data-key="M">M</div>
           </div>
+          <div class="action-strip" aria-hidden="true">
+            <span id="action-clear" class="action-pill">Clear</span>
+          </div>
         </div>
         <div id="cursor-marker" class="cursor-marker" aria-hidden="true"></div>
         <canvas id="display-canvas"></canvas>
@@ -140,8 +143,8 @@
       </aside>
       <button id="score-expand" class="score-expand-tab" type="button" aria-label="Expand score panel" hidden>«</button>
     </main>
-    <script src="config.js?v=20260720-2"></script>
-    <script src="vendor/adb.bundle.js?v=20260720-2"></script>
-    <script src="display.js?v=20260720-2"></script>
+    <script src="config.js?v=20260729-1"></script>
+    <script src="vendor/adb.bundle.js?v=20260729-1"></script>
+    <script src="display.js?v=20260729-1"></script>
   </body>
   </html>

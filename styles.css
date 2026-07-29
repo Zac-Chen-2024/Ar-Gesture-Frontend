@@ -1173,3 +1173,30 @@ body.score-panel-hidden .score-panel {
 .score-param-step:active {
   transform: translateY(0.5px);
 }
+
+/* Bottom action zone: Clear/Undo pill, bottom-LEFT under the Z key */
+.action-strip {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.action-pill {
+  min-width: 84px;
+  padding: 6px 18px;
+  text-align: center;
+  border: 1px solid var(--hairline, rgba(17, 17, 17, 0.16));
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft, rgba(17, 17, 17, 0.55));
+  background: rgba(255, 255, 255, 0.7);
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.action-pill.is-hover {
+  background: #d93025;
+  border-color: #d93025;
+  color: #ffffff;
+}

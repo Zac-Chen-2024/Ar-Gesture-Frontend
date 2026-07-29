@@ -94,12 +94,16 @@ function clearCanvas() {
 // leave), never above it. Render-only: the server, decode and gesture logs
 // keep the raw unclamped trajectory. MIRRORS server.py CANDIDATE_ZONE_Y_*.
 const CANDIDATE_ZONE_Y = { relative: -1.8, absolute: -1.35 };
+const ACTION_ZONE_Y = { relative: 1.8, absolute: 1.35 }; // mirrors server.py
 const BAR_BAND_H = 0.45; // visual height of the bar band above the zone line
 
 function clampTracePoint(point) {
-  const zone = CANDIDATE_ZONE_Y[currentMappingMode] || CANDIDATE_ZONE_Y.relative;
-  const top = zone - BAR_BAND_H;
-  return point.y < top ? { x: point.x, y: top } : point;
+  const mode = currentMappingMode === "absolute" ? "absolute" : "relative";
+  const top = CANDIDATE_ZONE_Y[mode] - BAR_BAND_H;
+  const bottom = ACTION_ZONE_Y[mode] + BAR_BAND_H;
+  if (point.y < top) return { x: point.x, y: top };
+  if (point.y > bottom) return { x: point.x, y: bottom };
+  return point;
 }
 
 function toDisplayPoint(point) {
@@ -175,7 +179,7 @@ function candidateWeight(word) {
 }
 
 // The bar is a permanent in-flow row inside the keyboard shell (aligned with
-// the top key row): 5 word slots + backspace + clear. Everything here is
+// the top key row): 5 word slots + backspace. Clear/Undo lives in the
 // display-only; selection happens by the cursor (touchpad) sliding onto a
 // segment, decided on the server. Weights must match server.py.
 function renderCandidates(candidates) {
@@ -201,11 +205,11 @@ function renderCandidates(candidates) {
   backspace.textContent = "⌫";
   candidateStrip.appendChild(backspace);
 
-  const clear = document.createElement("div");
-  clear.className = "candidate-seg candidate-action";
-  clear.style.flex = "2 1 0";
-  clear.textContent = currentLetters ? "↩" : "Clear"; // v3: Undo replaces Clear
-  candidateStrip.appendChild(clear);
+  // bottom action zone (slide down past the keyboard, lift on the LEFT half)
+  const actionPill = document.getElementById("action-clear");
+  if (actionPill) {
+    actionPill.textContent = currentLetters ? "↩ Undo" : "Clear";
+  }
 }
 
 // ---- decode-score panel (staged score pipeline, v2f) ----
@@ -792,6 +796,14 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "gesture-cancel") {
     clearCanvas();
+    return;
+  }
+
+  if (message.type === "action-hover") {
+    const pill = document.getElementById("action-clear");
+    if (pill) {
+      pill.classList.toggle("is-hover", message.active === true);
+    }
     return;
   }
 
