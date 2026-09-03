@@ -22,9 +22,9 @@ let isApplyingServerVisualMode = false;
 let isApplyingServerMobileKeyboardMode = false;
 let currentCursorKey = "G";
 let currentMappingMode = "relative";
-let currentInputMode = "center";
+let currentInputMode = "continuous";
 let currentVisualMode = "gesture";
-let currentBehavior = "top1";
+let currentBehavior = "candidates";
 let currentLetters = null;
 let isApplyingServerVersion = false;
 let versionsPopulated = false;
@@ -401,8 +401,8 @@ function renderScoreParams(params) {
   fill(compiledEl, "compiled (rebuild to change)", params.compiled, false);
 }
 
-// collapsible: a small chevron in the panel header collapses; a slim tab on
-// the right screen edge expands. Expanded by default, state persisted.
+// Collapsible: hidden by default, with a slim tab on the right screen edge to
+// expand it. An explicit user choice remains persisted across visits.
 function applyScoreCollapsed(collapsed) {
   if (scorePanelEl) {
     scorePanelEl.classList.toggle("collapsed", collapsed);
@@ -418,7 +418,7 @@ function setScoreCollapsed(collapsed) {
 }
 
 if (scoreCollapseBtn && scoreExpandTab) {
-  applyScoreCollapsed(localStorage.getItem("scorePanelCollapsed") === "1");
+  applyScoreCollapsed(localStorage.getItem("scorePanelCollapsed") !== "0");
   scoreCollapseBtn.addEventListener("click", () => setScoreCollapsed(true));
   scoreExpandTab.addEventListener("click", () => setScoreCollapsed(false));
 }

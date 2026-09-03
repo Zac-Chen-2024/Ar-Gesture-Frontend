@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260729-1" />
+    <link rel="stylesheet" href="styles.css?v=20260903-2" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -26,7 +26,7 @@
               <span class="setting-label">Word start</span>
               <select id="input-mode" class="mode-select" aria-label="Input mode">
                 <option value="center">Center</option>
-                <option value="continuous">Continuous</option>
+                <option value="continuous" selected>Continuous</option>
               </select>
             </label>
             <label class="setting">
@@ -40,7 +40,7 @@
               <span class="setting-label">Phone keys</span>
               <select id="mobile-keyboard-mode" class="mode-select" aria-label="Mobile keyboard reference">
                 <option value="show">Show</option>
-                <option value="hide">Hide</option>
+                <option value="hide" selected>Hide</option>
               </select>
             </label>
             <label class="setting">
@@ -110,7 +110,7 @@
         <div id="lan-badge" class="lan-badge" aria-hidden="true">LAN ⚡</div>
         <div id="usb-status" class="usb-status" aria-live="polite" hidden></div>
       </section>
-      <aside id="score-panel" class="score-panel" aria-label="Decode scores">
+      <aside id="score-panel" class="score-panel collapsed" aria-label="Decode scores">
         <div class="score-panel-title">
           <span class="score-panel-text">Decode scores <span class="score-panel-note">top-10 · v3</span></span>
           <button id="score-collapse" class="score-chevron" type="button" aria-label="Collapse score panel">»</button>
@@ -141,10 +141,10 @@
           </div>
         </div>
       </aside>
-      <button id="score-expand" class="score-expand-tab" type="button" aria-label="Expand score panel" hidden>«</button>
+      <button id="score-expand" class="score-expand-tab" type="button" aria-label="Expand score panel">«</button>
     </main>
-    <script src="config.js?v=20260729-1"></script>
-    <script src="vendor/adb.bundle.js?v=20260729-1"></script>
-    <script src="display.js?v=20260729-1"></script>
+    <script src="config.js?v=20260903-2"></script>
+    <script src="vendor/adb.bundle.js?v=20260903-2"></script>
+    <script src="display.js?v=20260903-2"></script>
   </body>
   </html>

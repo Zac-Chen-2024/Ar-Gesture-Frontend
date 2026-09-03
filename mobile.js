@@ -111,8 +111,8 @@ function p2pSend(kind, payload) {
 
 let currentStartKey = "G";
 let currentMappingMode = "relative";
-let currentInputMode = "center";
-let mobileKeyboardVisible = true;
+let currentInputMode = "continuous";
+let mobileKeyboardVisible = false;
 let paired = false;
 let roomCode = null;
 
@@ -505,9 +505,9 @@ function onSocketMessage(event) {
   if (message.type === "state-update") {
     currentStartKey = String(message.cursorKey || "g").toUpperCase();
     currentMappingMode = message.mappingMode || "relative";
-    currentInputMode = message.mode || "center";
+    currentInputMode = message.mode || "continuous";
     applyKeySize();
-    mobileKeyboardVisible = message.mobileKeyboardVisible !== false;
+    mobileKeyboardVisible = message.mobileKeyboardVisible === true;
     const nextLan = message.lanMode === true;
     if (nextLan !== lanMode) {
       lanMode = nextLan;
