@@ -8,8 +8,8 @@
   const sameOrigin = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}`;
 
   window.GESTURE_CONFIG = {
-    // Production backend (nginx + WSS on the tap&say host).
-    backendWsUrl: isLocal ? sameOrigin : "wss://gesture.drziangchen.uk",
+    // Production backend (nginx + WSS on api.gesturetyping.com).
+    backendWsUrl: isLocal ? sameOrigin : "wss://api.gesturetyping.com",
     // Frontend build version, shown in the corner badge. Bump on every push
     // (and keep the ?v= query strings in the HTML in sync).
     version: "v2026-09-03.2",
