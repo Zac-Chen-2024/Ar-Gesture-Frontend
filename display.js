@@ -69,7 +69,11 @@ function resizeCanvas() {
 
   updateKeyboardReference();
   clearCanvas();
-  updateCursorByKey(currentCursorKey);
+  if (touchpadActive) {
+    moveCursor(touchpadCursorPoint());
+  } else {
+    updateCursorByKey(currentCursorKey);
+  }
 }
 
 function updateKeyboardReference() {
@@ -538,14 +542,15 @@ function setUsbStatus(text) {
 }
 
 // ---- Device / Link segmented switches ----
-// Device: Touchpad | Phone (display-local, persisted). Link only applies to the
-// phone, and Connect phone only to Link=USB. Touchpad mode is UI-only for now.
+// Device: Touchpad | Phone. Link only applies to the phone, and Connect phone
+// only to Link=USB. Touchpad is never restored on load: it needs a click to
+// lock the pointer, and Esc always drops back to Phone.
 const deviceSwitch = document.getElementById("device-mode");
 const linkSwitch = document.getElementById("link-mode");
 const linkSetting = document.getElementById("link-setting");
 const linkArrow = document.getElementById("link-arrow");
 const usbArrow = document.getElementById("usb-arrow");
-let deviceMode = localStorage.getItem("deviceMode") === "touchpad" ? "touchpad" : "phone";
+let deviceMode = "phone";
 
 function syncSegmented(group, value) {
   if (!group) {
@@ -573,8 +578,258 @@ deviceSwitch?.addEventListener("click", (event) => {
     return;
   }
   deviceMode = button.dataset.value;
-  localStorage.setItem("deviceMode", deviceMode);
   updateUsbUi();
+  // this click is the user activation that pointer lock requires
+  if (deviceMode === "touchpad") {
+    enterTouchpad();
+  } else {
+    exitTouchpad();
+  }
+});
+
+// ---- Touchpad mode: the laptop touchpad stands in for the phone ----
+// A second socket joins this display's own room as the "mobile", so the server
+// path (decode, candidates, state) is exactly the phone's. The pointer is
+// locked (cursor hidden); moving starts a stroke, a click ends it, and the
+// movement in between is sent as relative keyboard units like mobile.js.
+// Strokes render locally (as the LAN/USB fast paths do). Esc — or losing the
+// lock for any reason — leaves touchpad mode and switches Device back to Phone.
+const TOUCHPAD_GAIN = 1.0; // cursor px per px of pointer travel
+const touchpadHint = document.getElementById("touchpad-hint");
+const TOUCHPAD_IDLE_HINT = "Touchpad · move to start a word · click to finish · Esc to exit";
+let currentRoomCode = null;
+let touchpadSocket = null;
+let touchpadActive = false; // joined the room: strokes are ours to render
+let touchpadStroke = null; // the stroke being drawn (also queued in touchpadOutbox)
+
+// Unlike a phone, the touchpad has a persistent pointer: a new stroke continues
+// exactly where the last one ended instead of snapping to the server's cursor
+// key. The server still builds global points as its own start + relative, so
+// each stroke's moves are held until the server echoes that start point (the
+// display socket's gesture-start), then sent as (true position - server start).
+let touchpadPos = { x: 0, y: 0 }; // hidden pointer, keyboard units (G = 0,0)
+const touchpadOutbox = []; // strokes in order: { start, sentStart, moves, ended }
+
+function setTouchpadHint(text) {
+  if (touchpadHint) {
+    touchpadHint.textContent = text || "";
+    touchpadHint.hidden = !text;
+  }
+}
+
+function touchpadSend(payload) {
+  if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+    touchpadSocket.send(JSON.stringify(payload));
+  }
+}
+
+function pumpTouchpad() {
+  while (touchpadOutbox.length) {
+    const stroke = touchpadOutbox[0];
+    if (!stroke.sentStart) {
+      touchpadSend({ type: "gesture-start", point: { x: 0, y: 0, t: 0 } });
+      stroke.sentStart = true;
+    }
+    if (!stroke.start) {
+      return; // wait for the server to tell us where it anchored this stroke
+    }
+    for (const m of stroke.moves) {
+      touchpadSend({
+        type: "gesture-move",
+        point: { x: m.x - stroke.start.x, y: m.y - stroke.start.y, t: m.t }
+      });
+    }
+    stroke.moves = [];
+    if (!stroke.ended) {
+      return;
+    }
+    touchpadSend({ type: "gesture-end" });
+    touchpadOutbox.shift();
+  }
+}
+
+// called from the display socket's gesture-start echo while touchpad is active
+function touchpadServerStart(point) {
+  const stroke = touchpadOutbox.find((s) => s.sentStart && !s.start);
+  if (stroke && point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+    stroke.start = { x: point.x, y: point.y };
+    pumpTouchpad();
+  }
+}
+
+function touchpadCursorPoint() {
+  return toDisplayPoint(clampTracePoint(touchpadPos));
+}
+
+function enterTouchpad() {
+  if (!currentRoomCode) {
+    exitTouchpad("Touchpad: no session yet — wait for the session code");
+    return;
+  }
+  try {
+    const lock = frame.requestPointerLock();
+    if (lock && typeof lock.catch === "function") {
+      lock.catch(() => exitTouchpad("Touchpad: the browser refused to hide the pointer"));
+    }
+  } catch (e) {
+    exitTouchpad("Touchpad: pointer lock is not supported in this browser");
+    return;
+  }
+
+  setTouchpadHint("Touchpad · connecting…");
+  const ws = new WebSocket(window.GESTURE_CONFIG.backendWsUrl);
+  touchpadSocket = ws;
+  ws.addEventListener("open", () => {
+    ws.send(JSON.stringify({ type: "join", role: "mobile" }));
+    ws.send(JSON.stringify({ type: "join-room", code: currentRoomCode }));
+  });
+  ws.addEventListener("message", (event) => {
+    if (ws !== touchpadSocket) {
+      return;
+    }
+    let message;
+    try {
+      message = JSON.parse(event.data);
+    } catch (e) {
+      return;
+    }
+    if (message.type === "room-joined") {
+      touchpadActive = true;
+      touchpadPos = keyboardUnitsOfKey(currentCursorKey); // pick up where the cursor is
+      moveCursor(touchpadCursorPoint());
+      setTouchpadHint(TOUCHPAD_IDLE_HINT);
+    } else if (message.type === "room-error" || message.type === "room-closed") {
+      exitTouchpad(`Touchpad: ${message.message || "could not join the session"}`);
+    }
+  });
+  ws.addEventListener("close", () => {
+    if (ws === touchpadSocket) {
+      exitTouchpad("Touchpad: connection closed");
+    }
+  });
+}
+
+function exitTouchpad(reason) {
+  const head = touchpadOutbox[0];
+  if (head && head.sentStart) {
+    touchpadSend({ type: "gesture-end" }); // never leave the server mid-stroke
+  }
+  touchpadOutbox.length = 0;
+  touchpadStroke = null;
+  touchpadActive = false;
+  const ws = touchpadSocket;
+  touchpadSocket = null; // clear first: the close/lock events below must not re-enter
+  if (ws) {
+    ws.close();
+  }
+  if (document.pointerLockElement) {
+    document.exitPointerLock();
+  }
+  setTouchpadHint("");
+  clearCanvas();
+  updateCursorByKey(currentCursorKey);
+  if (reason) {
+    setUsbStatus(reason);
+    setTimeout(() => setUsbStatus(""), 4000);
+  }
+  if (deviceMode === "touchpad") {
+    deviceMode = "phone";
+    updateUsbUi();
+  }
+}
+
+function startTouchpadStroke() {
+  if (currentInputMode === "center") {
+    touchpadPos = { x: 0, y: 0 }; // Word start = Center: every word starts at G
+  }
+  touchpadStroke = { start: null, sentStart: false, moves: [], ended: false, t0: performance.now() };
+  touchpadOutbox.push(touchpadStroke);
+  pumpTouchpad();
+
+  updateKeyboardReference();
+  clearCanvas();
+  lastPoint = touchpadCursorPoint();
+  moveCursor(lastPoint);
+  setTouchpadHint("Touchpad · drawing — click to finish · Esc to exit");
+}
+
+function moveTouchpadStroke(dx, dy) {
+  const { keyWidth, keyHeight } = keyboardMetrics;
+  if (!keyWidth || !keyHeight) {
+    return;
+  }
+  // the pointer stays on the keyboard band, like a cursor at a screen edge
+  const next = clampTracePoint({
+    x: touchpadPos.x + (dx * TOUCHPAD_GAIN) / keyWidth,
+    y: touchpadPos.y + (dy * TOUCHPAD_GAIN) / keyHeight
+  });
+  touchpadPos = { x: Math.max(-5.5, Math.min(5.5, next.x)), y: next.y };
+  touchpadStroke.moves.push({
+    x: touchpadPos.x,
+    y: touchpadPos.y,
+    t: Math.round(performance.now() - touchpadStroke.t0)
+  });
+  pumpTouchpad();
+
+  const p = touchpadCursorPoint();
+  moveCursor(p);
+  if (currentVisualMode === "gesture" && lastPoint) {
+    drawSegment(lastPoint, p);
+  }
+  lastPoint = p;
+}
+
+function endTouchpadStroke() {
+  touchpadStroke.ended = true;
+  touchpadStroke = null;
+  pumpTouchpad();
+
+  // a stroke that ended in the candidate bar (pick / backspace) or the bottom
+  // action zone (Clear) starts the next word from G again
+  if (touchpadPos.y <= CANDIDATE_ZONE_Y.relative || touchpadPos.y >= ACTION_ZONE_Y.relative) {
+    touchpadPos = { x: 0, y: 0 };
+  }
+  clearCanvas();
+  moveCursor(touchpadCursorPoint());
+  if (touchpadActive) {
+    setTouchpadHint(TOUCHPAD_IDLE_HINT);
+  }
+}
+
+document.addEventListener("pointerlockchange", () => {
+  if (deviceMode === "touchpad" && document.pointerLockElement !== frame) {
+    exitTouchpad();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  // Esc normally just releases the lock (handled above); this covers the
+  // case where the lock never engaged
+  if (event.key === "Escape" && deviceMode === "touchpad") {
+    exitTouchpad();
+  }
+});
+
+// a click only ever ends the stroke in progress; starting is done by moving
+document.addEventListener("mousedown", (event) => {
+  if (!touchpadActive || document.pointerLockElement !== frame || event.button !== 0) {
+    return;
+  }
+  event.preventDefault();
+  if (touchpadStroke) {
+    endTouchpadStroke();
+  }
+});
+
+document.addEventListener("mousemove", (event) => {
+  if (!touchpadActive || document.pointerLockElement !== frame) {
+    return;
+  }
+  // idle: any movement starts a stroke
+  if (!touchpadStroke) {
+    startTouchpadStroke();
+  }
+  moveTouchpadStroke(event.movementX, event.movementY);
 });
 
 linkSwitch?.addEventListener("click", (event) => {
@@ -799,12 +1054,15 @@ function updateRoomBadge(code, paired) {
     return;
   }
   if (code) {
+    currentRoomCode = code;
     roomCodeBadge.querySelector(".room-code-value").textContent = code;
   }
   roomCodeBadge.classList.toggle("is-paired", Boolean(paired));
   const statusEl = roomCodeBadge.querySelector(".room-code-status");
   if (statusEl) {
-    statusEl.textContent = paired ? "phone paired" : "waiting for phone…";
+    // our own touchpad socket pairs as the "mobile" too
+    const pairedLabel = deviceMode === "touchpad" ? "touchpad active" : "phone paired";
+    statusEl.textContent = paired ? pairedLabel : "waiting for phone…";
   }
 }
 
@@ -854,7 +1112,9 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-cancel") {
-    clearCanvas();
+    if (!touchpadActive) {
+      clearCanvas(); // touchpad clears locally; a late echo must not wipe the next stroke
+    }
     return;
   }
 
@@ -867,6 +1127,10 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-start") {
+    if (touchpadActive) {
+      touchpadServerStart(message.point); // strokes are drawn locally; just learn the anchor
+      return;
+    }
     if (p2pActive || usbActive) {
       return; // a fast-path channel already rendered this stroke locally
     }
@@ -879,7 +1143,7 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "gesture-move" && lastPoint) {
-    if (p2pActive || usbActive) {
+    if (p2pActive || usbActive || touchpadActive) {
       return;
     }
     const nextPoint = toDisplayPoint(clampTracePoint(message.point));
@@ -896,7 +1160,11 @@ socket.addEventListener("message", (event) => {
     // channel's own "end" was lost or raced a stale active-flag, this is the
     // backstop that wipes leftover trace tails. Double-clearing is harmless
     // (clearCanvas nulls lastPoint, so late fast-path moves can't redraw).
-    clearCanvas();
+    // Touchpad is the exception: it clears on its own click, and this echo can
+    // arrive after the next stroke has already started drawing.
+    if (!touchpadActive) {
+      clearCanvas();
+    }
     return;
   }
 
@@ -991,7 +1259,9 @@ socket.addEventListener("message", (event) => {
 
     if (message.cursorKey) {
       currentCursorKey = String(message.cursorKey).toUpperCase();
-      updateCursorByKey(currentCursorKey);
+      if (!touchpadActive) {
+        updateCursorByKey(currentCursorKey); // touchpad keeps its own unsnapped pointer
+      }
     }
 
     if (message.code) {
@@ -1010,6 +1280,10 @@ socket.addEventListener("message", (event) => {
 
     if (typeof message.behavior === "string") {
       currentBehavior = message.behavior;
+    }
+
+    if (message.reset && touchpadActive) {
+      touchpadPos = { x: 0, y: 0 }; // server reset input state: cursor back to G
     }
 
     if (message.reset) {

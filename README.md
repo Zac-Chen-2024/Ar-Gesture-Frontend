@@ -35,7 +35,14 @@ Algorithm (v1 SHARK² / v1.1 / v2 WFST / v2.1 / v3a / v3b — populated from the
 server) · Word start (center/continuous) · **Device (Touchpad/Phone)** ·
 **Link (Direct/LAN/USB)**, shown only for Phone · **Connect phone**, shown only
 for Link=USB. Mapping is fixed to relative, Trace to gesture and Phone keys to
-hidden (selectors commented out in `display.html`); Touchpad is UI-only for now.
+hidden (selectors commented out in `display.html`).
+
+**Touchpad mode** (Device = Touchpad): the laptop touchpad replaces the phone.
+The pointer is locked and hidden; moving starts a word, a click ends it, and
+**Esc** exits back to Phone. The display joins its own session as the "mobile"
+over a second socket, so decoding is unchanged. Unlike the phone, strokes
+continue from where the last one ended; a stroke that ends in the candidate
+bar or the Clear zone sends the pointer back to G.
 
 **Display style**: the small half-filled circle in the bottom-left corner
 cycles the look — **Editorial** (default: serif type, black line-grid keyboard,

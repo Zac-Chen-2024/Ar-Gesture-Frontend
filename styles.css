@@ -859,6 +859,25 @@ select.mode-select {
   text-overflow: ellipsis;
 }
 
+/* Touchpad mode: one-line how-to pill, bottom center (the cursor is hidden) */
+.touchpad-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  z-index: 60;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(20, 22, 28, 0.88);
+  color: #e8eaed;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* Decode-score panel: pre/post-bigram top-k side by side, right of the frame */
 .display-stage {
   display: flex;
@@ -1522,4 +1541,10 @@ body[data-theme="editorial"] {
   border: none;
   background: var(--ed-red);
   box-shadow: 0 0 0 5px rgba(214, 69, 43, 0.16);
+}
+
+[data-theme="editorial"] .touchpad-hint {
+  border-radius: 0;
+  background: var(--ink);
+  color: #ffffff;
 }

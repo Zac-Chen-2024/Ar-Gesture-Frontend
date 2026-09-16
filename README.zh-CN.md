@@ -25,7 +25,9 @@ AR-Gesture 手势输入 demo 的静态前端：手机变成一块空白触摸板
 
 ## 设置（唯一可点击的 UI）
 
-算法（v1 SHARK² / v1.1 / v2 WFST / v2.1 / v3a / v3b——由服务器下发）· 起词（归中/连续）· **设备（Touchpad/Phone）** · **链路（Direct/LAN/USB）**，仅 Phone 时显示 · **Connect phone**，仅链路为 USB 时显示。映射固定为相对、轨迹固定为手势、手机键盘固定为隐藏（`display.html` 中对应选择框均已注释）；Touchpad 目前只有界面。
+算法（v1 SHARK² / v1.1 / v2 WFST / v2.1 / v3a / v3b——由服务器下发）· 起词（归中/连续）· **设备（Touchpad/Phone）** · **链路（Direct/LAN/USB）**，仅 Phone 时显示 · **Connect phone**，仅链路为 USB 时显示。映射固定为相对、轨迹固定为手势、手机键盘固定为隐藏（`display.html` 中对应选择框均已注释）。
+
+**Touchpad 模式**（设备 = Touchpad）：用笔记本触控板代替手机。指针被锁定并隐藏；一移动就开始一个词，点击结束，按 **Esc** 退回 Phone。显示页通过第二条连接以“手机”身份加入自己的会话，解码流程不变。与手机不同，每一笔从上一笔结束的位置接着画；结束在候选栏或 Clear 区域时，指针回到 G。
 
 **显示风格**：左下角半黑半白的小圆图标可循环切换外观——**Editorial**（默认：衬线字体、黑线网格键盘、红色轨迹）与 **Original**（暖色纸感、实心按键）。风格纯 CSS 实现（`body[data-theme]`），布局一致；选择按浏览器保存，每次切换都会重新测量键盘基准。
 
