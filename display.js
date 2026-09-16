@@ -784,9 +784,14 @@ function endTouchpadStroke() {
   touchpadStroke = null;
   pumpTouchpad();
 
-  // a stroke that ended in the candidate bar (pick / backspace) or the bottom
-  // action zone (Clear) starts the next word from G again
-  if (touchpadPos.y <= CANDIDATE_ZONE_Y.relative || touchpadPos.y >= ACTION_ZONE_Y.relative) {
+  // back to G right away when: Word start = Center (every word starts at G),
+  // or the stroke ended in the candidate bar (pick / backspace) or the bottom
+  // action zone (Clear)
+  if (
+    currentInputMode === "center" ||
+    touchpadPos.y <= CANDIDATE_ZONE_Y.relative ||
+    touchpadPos.y >= ACTION_ZONE_Y.relative
+  ) {
     touchpadPos = { x: 0, y: 0 };
   }
   clearCanvas();

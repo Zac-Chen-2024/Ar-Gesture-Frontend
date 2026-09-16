@@ -1400,6 +1400,17 @@ body[data-theme="editorial"] {
 
 [data-theme="editorial"] .segmented button {
   border-radius: 0;
+  background: rgba(17, 17, 17, 0.07);
+  color: var(--ink-faint);
+}
+
+[data-theme="editorial"] .segmented button + button {
+  box-shadow: inset 1px 0 0 rgba(17, 17, 17, 0.12);
+}
+
+[data-theme="editorial"] .segmented button:hover:not(.is-active):not(:disabled) {
+  background: rgba(17, 17, 17, 0.12);
+  color: var(--ink);
 }
 
 [data-theme="editorial"] .segmented button.is-active {
