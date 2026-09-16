@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260916-2" />
+    <link rel="stylesheet" href="styles.css?v=20260916-10" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -63,6 +63,7 @@
                 <button type="button" role="radio" data-value="phone">Phone</button>
               </div>
             </div>
+            <span class="setting-arrow" id="link-arrow" aria-hidden="true">›</span>
             <div class="setting" id="link-setting">
               <span class="setting-label">Link</span>
               <!-- the select stays the source of truth for display.js; the
@@ -78,9 +79,10 @@
                 <button type="button" role="radio" data-value="usb">USB</button>
               </div>
             </div>
+            <span class="setting-arrow" id="usb-arrow" aria-hidden="true">›</span>
             <div class="setting" id="usb-setting">
               <span class="setting-label">USB</span>
-              <button id="usb-connect" class="mode-select usb-connect" type="button">Connect phone</button>
+              <button id="usb-connect" class="mode-select usb-connect" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Connect phone</button>
             </div>
           </div>
           <div id="room-code" class="room-code">
@@ -134,6 +136,7 @@
         <div id="cursor-marker" class="cursor-marker" aria-hidden="true"></div>
         <canvas id="display-canvas"></canvas>
         <div id="build-badge" class="build-badge" aria-hidden="true"></div>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch display style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg></button>
         <div id="lan-badge" class="lan-badge" aria-hidden="true">LAN ⚡</div>
         <div id="usb-status" class="usb-status" aria-live="polite" hidden></div>
       </section>
@@ -170,8 +173,8 @@
       </aside>
       <button id="score-expand" class="score-expand-tab" type="button" aria-label="Expand score panel">«</button>
     </main>
-    <script src="config.js?v=20260903-2"></script>
-    <script src="vendor/adb.bundle.js?v=20260903-2"></script>
-    <script src="display.js?v=20260916-4"></script>
+    <script src="config.js?v=20260916-10"></script>
+    <script src="vendor/adb.bundle.js?v=20260916-10"></script>
+    <script src="display.js?v=20260916-10"></script>
   </body>
   </html>

@@ -153,9 +153,19 @@ function applyModeClasses() {
   });
 }
 
+// trace look comes from the active display style (--trace-color/--trace-width)
+let traceColor = "#111111";
+let traceWidth = 6;
+
+function readTraceStyle() {
+  const styles = getComputedStyle(document.body);
+  traceColor = styles.getPropertyValue("--trace-color").trim() || "#111111";
+  traceWidth = parseFloat(styles.getPropertyValue("--trace-width")) || 6;
+}
+
 function drawSegment(from, to) {
-  context.strokeStyle = "#111111";
-  context.lineWidth = 6;
+  context.strokeStyle = traceColor;
+  context.lineWidth = traceWidth;
   context.lineCap = "round";
   context.lineJoin = "round";
   context.beginPath();
@@ -533,6 +543,8 @@ function setUsbStatus(text) {
 const deviceSwitch = document.getElementById("device-mode");
 const linkSwitch = document.getElementById("link-mode");
 const linkSetting = document.getElementById("link-setting");
+const linkArrow = document.getElementById("link-arrow");
+const usbArrow = document.getElementById("usb-arrow");
 let deviceMode = localStorage.getItem("deviceMode") === "touchpad" ? "touchpad" : "phone";
 
 function syncSegmented(group, value) {
@@ -550,12 +562,9 @@ function updateUsbUi() {
   const isPhone = deviceMode === "phone";
   syncSegmented(deviceSwitch, deviceMode);
   syncSegmented(linkSwitch, linkMode());
-  if (linkSetting) {
-    linkSetting.hidden = !isPhone;
-  }
-  if (usbSetting) {
-    usbSetting.hidden = !(isPhone && linkMode() === "usb");
-  }
+  const showUsb = isPhone && linkMode() === "usb";
+  [linkSetting, linkArrow].forEach((el) => { if (el) el.hidden = !isPhone; });
+  [usbSetting, usbArrow].forEach((el) => { if (el) el.hidden = !showUsb; });
 }
 
 deviceSwitch?.addEventListener("click", (event) => {
@@ -1107,13 +1116,36 @@ if (lanModeSelect) {
   });
 }
 
+// ---- display style (purely visual; geometry is re-measured on switch) ----
+// bottom-left icon cycles through the styles; the choice is kept per browser
+const THEMES = ["original", "editorial"];
+const THEME_NAMES = { original: "Original", editorial: "Editorial" };
+const themeToggle = document.getElementById("theme-toggle");
+
+function applyTheme(theme) {
+  const name = THEMES.includes(theme) ? theme : "original";
+  document.body.dataset.theme = name;
+  if (themeToggle) {
+    themeToggle.title = `Style: ${THEME_NAMES[name]} (click to switch)`;
+  }
+  readTraceStyle();
+  resizeCanvas(); // keys may have moved: re-anchor cursor mapping to G
+}
+
+themeToggle?.addEventListener("click", () => {
+  const current = THEMES.indexOf(document.body.dataset.theme);
+  const next = THEMES[(current + 1) % THEMES.length];
+  localStorage.setItem("displayTheme", next);
+  applyTheme(next);
+});
+
 const buildBadge = document.getElementById("build-badge");
 if (buildBadge) {
   buildBadge.textContent = window.GESTURE_CONFIG.version || "";
 }
 
 window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
+applyTheme(localStorage.getItem("displayTheme") || "editorial"); // Editorial is the default look
 applyModeClasses();
 renderCandidates([]);
 updateUsbUi();

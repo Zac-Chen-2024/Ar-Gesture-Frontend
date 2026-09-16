@@ -37,6 +37,12 @@ server) · Word start (center/continuous) · **Device (Touchpad/Phone)** ·
 for Link=USB. Mapping is fixed to relative, Trace to gesture and Phone keys to
 hidden (selectors commented out in `display.html`); Touchpad is UI-only for now.
 
+**Display style**: the small half-filled circle in the bottom-left corner
+cycles the look — **Editorial** (default: serif type, black line-grid keyboard,
+red trace) and **Original** (warm paper, filled keys). Styles are CSS-only
+(`body[data-theme]`) with the same layout; the choice is saved per browser and
+the keyboard reference is re-measured on every switch.
+
 **LAN mode**: when phone and display share a Wi-Fi network, the phone opens a
 WebRTC data channel straight to the display and the cursor/trace render at
 LAN latency (green **LAN ⚡** badge, bottom-left). The server path keeps
@@ -46,7 +52,8 @@ different networks) everything silently falls back.
 ## Configuration & versioning
 
 - `config.js` — backend WSS URL (localhost falls back to same-origin for local
-  dev) and the frontend build `version`.
+  dev; append `?backend=prod` to use the production backend from localhost)
+  and the frontend build `version`.
 - The build version is shown in the **bottom-right badge**; bump it (and the
   `?v=` query strings in the HTML) on every push so a stale CDN cache is
   immediately visible.

@@ -27,11 +27,13 @@ AR-Gesture 手势输入 demo 的静态前端：手机变成一块空白触摸板
 
 算法（v1 SHARK² / v1.1 / v2 WFST / v2.1 / v3a / v3b——由服务器下发）· 起词（归中/连续）· **设备（Touchpad/Phone）** · **链路（Direct/LAN/USB）**，仅 Phone 时显示 · **Connect phone**，仅链路为 USB 时显示。映射固定为相对、轨迹固定为手势、手机键盘固定为隐藏（`display.html` 中对应选择框均已注释）；Touchpad 目前只有界面。
 
+**显示风格**：左下角半黑半白的小圆图标可循环切换外观——**Editorial**（默认：衬线字体、黑线网格键盘、红色轨迹）与 **Original**（暖色纸感、实心按键）。风格纯 CSS 实现（`body[data-theme]`），布局一致；选择按浏览器保存，每次切换都会重新测量键盘基准。
+
 **LAN 模式**：手机与显示器同在一个 Wi-Fi 时，手机直接向显示器建立 WebRTC 数据通道，光标/轨迹以局域网延迟渲染（左下角绿色 **LAN ⚡** 角标）。服务器路径仍持续负责解码与状态；P2P 建连失败（AP 隔离、不同网络）时静默回落。
 
 ## 配置与版本
 
-- `config.js`——后端 WSS 地址（localhost 下回落到同源，便于本地开发）与前端构建 `version`。
+- `config.js`——后端 WSS 地址（localhost 下回落到同源，便于本地开发；在 localhost 网址后加 `?backend=prod` 可连线上后端）与前端构建 `version`。
 - 构建版本显示在**右下角角标**；每次推送都要提升它（以及 HTML 里的 `?v=` 查询串），这样 CDN 缓存过期与否一眼可见。
 
 ## 部署
