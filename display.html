@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260903-2" />
+    <link rel="stylesheet" href="styles.css?v=20260916-2" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -15,6 +15,8 @@
               <span class="setting-label">Algorithm</span>
               <select id="algo-version" class="mode-select" aria-label="Algorithm version"></select>
             </label>
+            <!-- Mapping is hidden for now: always Relative. Kept for later —
+                 uncomment to bring the selector back (display.js handles both).
             <label class="setting">
               <span class="setting-label">Mapping</span>
               <select id="mapping-mode" class="mode-select" aria-label="Mapping mode">
@@ -22,13 +24,20 @@
                 <option value="absolute">Absolute</option>
               </select>
             </label>
-            <label class="setting">
+            -->
+            <div class="setting">
               <span class="setting-label">Word start</span>
-              <select id="input-mode" class="mode-select" aria-label="Input mode">
+              <select id="input-mode" class="mode-select" aria-label="Input mode" hidden>
                 <option value="center">Center</option>
                 <option value="continuous" selected>Continuous</option>
               </select>
-            </label>
+              <div class="segmented" id="input-mode-switch" role="radiogroup" aria-label="Input mode">
+                <button type="button" role="radio" data-value="center">Center</button>
+                <button type="button" role="radio" data-value="continuous">Continuous</button>
+              </div>
+            </div>
+            <!-- Trace is hidden for now: always Gesture (cursor + drawn trail;
+                 Cursor = dot only). Kept for later — uncomment to bring it back.
             <label class="setting">
               <span class="setting-label">Trace</span>
               <select id="visual-mode" class="mode-select" aria-label="Visualization mode">
@@ -36,6 +45,9 @@
                 <option value="gesture">Gesture</option>
               </select>
             </label>
+            -->
+            <!-- Phone keys is hidden for now: always Hide. Kept for later —
+                 uncomment to bring the selector back (display.js handles both).
             <label class="setting">
               <span class="setting-label">Phone keys</span>
               <select id="mobile-keyboard-mode" class="mode-select" aria-label="Mobile keyboard reference">
@@ -43,18 +55,33 @@
                 <option value="hide" selected>Hide</option>
               </select>
             </label>
-            <label class="setting">
+            -->
+            <div class="setting" id="device-setting">
+              <span class="setting-label">Device</span>
+              <div class="segmented" id="device-mode" role="radiogroup" aria-label="Input device">
+                <button type="button" role="radio" data-value="touchpad">Touchpad</button>
+                <button type="button" role="radio" data-value="phone">Phone</button>
+              </div>
+            </div>
+            <div class="setting" id="link-setting">
               <span class="setting-label">Link</span>
-              <select id="lan-mode" class="mode-select" aria-label="Gesture transport">
-                <option value="server">Server</option>
+              <!-- the select stays the source of truth for display.js; the
+                   segmented buttons just drive it -->
+              <select id="lan-mode" class="mode-select" aria-label="Gesture transport" hidden>
+                <option value="server">Direct</option>
                 <option value="lan">LAN</option>
                 <option value="usb">USB</option>
               </select>
-            </label>
-            <label class="setting" id="usb-setting">
-              <span class="setting-label">USB Device</span>
+              <div class="segmented" id="link-mode" role="radiogroup" aria-label="Gesture transport">
+                <button type="button" role="radio" data-value="server">Direct</button>
+                <button type="button" role="radio" data-value="lan">LAN</button>
+                <button type="button" role="radio" data-value="usb">USB</button>
+              </div>
+            </div>
+            <div class="setting" id="usb-setting">
+              <span class="setting-label">USB</span>
               <button id="usb-connect" class="mode-select usb-connect" type="button">Connect phone</button>
-            </label>
+            </div>
           </div>
           <div id="room-code" class="room-code">
             <span class="room-code-label">Session</span>
@@ -145,6 +172,6 @@
     </main>
     <script src="config.js?v=20260903-2"></script>
     <script src="vendor/adb.bundle.js?v=20260903-2"></script>
-    <script src="display.js?v=20260903-2"></script>
+    <script src="display.js?v=20260916-4"></script>
   </body>
   </html>

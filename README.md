@@ -32,8 +32,10 @@ decoded sentence. Hosted on GitHub Pages; all logic lives in the backend —
 ## Settings (the only clickable UI)
 
 Algorithm (v1 SHARK² / v1.1 / v2 WFST / v2.1 / v3a / v3b — populated from the
-server) · Mapping (relative/absolute) · Word start (center/continuous) ·
-Trace (cursor/gesture) · Phone keys (show/hide) · **Link (Server/LAN)**.
+server) · Word start (center/continuous) · **Device (Touchpad/Phone)** ·
+**Link (Direct/LAN/USB)**, shown only for Phone · **Connect phone**, shown only
+for Link=USB. Mapping is fixed to relative, Trace to gesture and Phone keys to
+hidden (selectors commented out in `display.html`); Touchpad is UI-only for now.
 
 **LAN mode**: when phone and display share a Wi-Fi network, the phone opens a
 WebRTC data channel straight to the display and the cursor/trace render at

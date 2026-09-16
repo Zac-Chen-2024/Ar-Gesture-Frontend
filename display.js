@@ -1,9 +1,13 @@
 const canvas = document.getElementById("display-canvas");
 const frame = document.querySelector(".display-frame");
 const context = canvas.getContext("2d");
+// null while the Mapping selector is commented out in display.html (Relative only)
 const mappingModeSelect = document.getElementById("mapping-mode");
-const inputModeSelect = document.getElementById("input-mode");
+const inputModeSelect = document.getElementById("input-mode"); // hidden; driven by the switch below
+const inputModeSwitch = document.getElementById("input-mode-switch");
+// null while the Trace selector is commented out in display.html (Gesture only)
 const visualModeSelect = document.getElementById("visual-mode");
+// null while the Phone keys selector is commented out in display.html (Hide only)
 const mobileKeyboardModeSelect = document.getElementById("mobile-keyboard-mode");
 const algoVersionSelect = document.getElementById("algo-version");
 const candidateStrip = document.getElementById("candidate-strip");
@@ -143,6 +147,10 @@ function applyModeClasses() {
   document.body.classList.toggle("is-continuous-mode", !isAbsoluteMode && currentInputMode === "continuous");
   document.body.classList.toggle("is-cursor-visual-mode", currentVisualMode === "cursor");
   inputModeSelect.disabled = isAbsoluteMode;
+  syncSegmented(inputModeSwitch, inputModeSelect.value);
+  inputModeSwitch?.querySelectorAll("button").forEach((button) => {
+    button.disabled = isAbsoluteMode;
+  });
 }
 
 function drawSegment(from, to) {
@@ -519,13 +527,55 @@ function setUsbStatus(text) {
   }
 }
 
+// ---- Device / Link segmented switches ----
+// Device: Touchpad | Phone (display-local, persisted). Link only applies to the
+// phone, and Connect phone only to Link=USB. Touchpad mode is UI-only for now.
+const deviceSwitch = document.getElementById("device-mode");
+const linkSwitch = document.getElementById("link-mode");
+const linkSetting = document.getElementById("link-setting");
+let deviceMode = localStorage.getItem("deviceMode") === "touchpad" ? "touchpad" : "phone";
+
+function syncSegmented(group, value) {
+  if (!group) {
+    return;
+  }
+  group.querySelectorAll("button[data-value]").forEach((button) => {
+    const on = button.dataset.value === value;
+    button.classList.toggle("is-active", on);
+    button.setAttribute("aria-checked", on ? "true" : "false");
+  });
+}
+
 function updateUsbUi() {
-  // the USB device button is always available — the ADB tunnel is orthogonal
-  // to the Server/LAN transport choice (Zac: don't hide it behind Link=USB)
+  const isPhone = deviceMode === "phone";
+  syncSegmented(deviceSwitch, deviceMode);
+  syncSegmented(linkSwitch, linkMode());
+  if (linkSetting) {
+    linkSetting.hidden = !isPhone;
+  }
   if (usbSetting) {
-    usbSetting.hidden = false;
+    usbSetting.hidden = !(isPhone && linkMode() === "usb");
   }
 }
+
+deviceSwitch?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-value]");
+  if (!button || button.dataset.value === deviceMode) {
+    return;
+  }
+  deviceMode = button.dataset.value;
+  localStorage.setItem("deviceMode", deviceMode);
+  updateUsbUi();
+});
+
+linkSwitch?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-value]");
+  if (!button || !lanModeSelect || button.dataset.value === lanModeSelect.value) {
+    return;
+  }
+  lanModeSelect.value = button.dataset.value;
+  lanModeSelect.dispatchEvent(new Event("change"));
+});
 
 if (usbButton) {
   usbButton.addEventListener("click", async () => {
@@ -877,10 +927,15 @@ socket.addEventListener("message", (event) => {
       }
     }
 
-    if (message.mappingMode && mappingModeSelect.value !== message.mappingMode) {
+    if (message.mappingMode && mappingModeSelect && mappingModeSelect.value !== message.mappingMode) {
       isApplyingServerMappingMode = true;
       mappingModeSelect.value = message.mappingMode;
       isApplyingServerMappingMode = false;
+    }
+
+    if (!mappingModeSelect && message.mappingMode && message.mappingMode !== "relative") {
+      // no selector to get out of absolute — pin the session back to relative
+      sendMessage({ type: "mapping-mode-set", mappingMode: "relative" });
     }
 
     if (message.mode && inputModeSelect.value !== message.mode) {
@@ -889,18 +944,27 @@ socket.addEventListener("message", (event) => {
       isApplyingServerMode = false;
     }
 
-    if (message.visualMode && visualModeSelect.value !== message.visualMode) {
+    if (message.visualMode && visualModeSelect && visualModeSelect.value !== message.visualMode) {
       isApplyingServerVisualMode = true;
       visualModeSelect.value = message.visualMode;
       isApplyingServerVisualMode = false;
     }
 
+    if (!visualModeSelect && message.visualMode && message.visualMode !== "gesture") {
+      // no selector to get back to the trail — pin the session to gesture
+      sendMessage({ type: "visual-mode-set", visualMode: "gesture" });
+    }
+
     if (typeof message.mobileKeyboardVisible === "boolean") {
       const nextMobileKeyboardMode = message.mobileKeyboardVisible ? "show" : "hide";
-      if (mobileKeyboardModeSelect.value !== nextMobileKeyboardMode) {
+      if (mobileKeyboardModeSelect && mobileKeyboardModeSelect.value !== nextMobileKeyboardMode) {
         isApplyingServerMobileKeyboardMode = true;
         mobileKeyboardModeSelect.value = nextMobileKeyboardMode;
         isApplyingServerMobileKeyboardMode = false;
+      }
+      if (!mobileKeyboardModeSelect && message.mobileKeyboardVisible) {
+        // no selector to turn it off — pin the session back to hidden
+        sendMessage({ type: "mobile-keyboard-set", visible: false });
       }
     }
 
@@ -950,7 +1014,7 @@ socket.addEventListener("message", (event) => {
   }
 });
 
-mappingModeSelect.addEventListener("change", () => {
+mappingModeSelect?.addEventListener("change", () => {
   if (isApplyingServerMappingMode) {
     return;
   }
@@ -959,6 +1023,16 @@ mappingModeSelect.addEventListener("change", () => {
     type: "mapping-mode-set",
     mappingMode: mappingModeSelect.value
   });
+});
+
+inputModeSwitch?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-value]");
+  if (!button || button.disabled || button.dataset.value === inputModeSelect.value) {
+    return;
+  }
+  inputModeSelect.value = button.dataset.value;
+  inputModeSelect.dispatchEvent(new Event("change"));
+  syncSegmented(inputModeSwitch, inputModeSelect.value);
 });
 
 inputModeSelect.addEventListener("change", () => {
@@ -972,7 +1046,7 @@ inputModeSelect.addEventListener("change", () => {
   });
 });
 
-visualModeSelect.addEventListener("change", () => {
+visualModeSelect?.addEventListener("change", () => {
   if (isApplyingServerVisualMode) {
     return;
   }
@@ -983,7 +1057,7 @@ visualModeSelect.addEventListener("change", () => {
   });
 });
 
-mobileKeyboardModeSelect.addEventListener("change", () => {
+mobileKeyboardModeSelect?.addEventListener("change", () => {
   if (isApplyingServerMobileKeyboardMode) {
     return;
   }
