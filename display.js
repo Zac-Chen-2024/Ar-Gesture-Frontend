@@ -1080,6 +1080,7 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "room-created") {
     updateRoomBadge(message.code, false);
+    restoreLexicon();
     return;
   }
 
@@ -1277,6 +1278,10 @@ socket.addEventListener("message", (event) => {
       populateVersions(message.versions);
     }
 
+    if ("lexicon" in message) {
+      applyLexiconState(message);
+    }
+
     if (message.version && algoVersionSelect.value !== message.version) {
       isApplyingServerVersion = true;
       algoVersionSelect.value = message.version;
@@ -1416,6 +1421,101 @@ themeToggle?.addEventListener("click", () => {
   const next = THEMES[(current + 1) % THEMES.length];
   localStorage.setItem("displayTheme", next);
   applyTheme(next);
+});
+
+// ---- dictionary picker (Local-AOM decode lexicon; kept per browser) ----
+const lexiconToggle = document.getElementById("lexicon-toggle");
+const lexiconMenu = document.getElementById("lexicon-menu");
+const lexiconOptions = document.getElementById("lexicon-options");
+const lexiconMenuNote = document.getElementById("lexicon-menu-note");
+let lexiconState = { current: null, options: [], supported: true };
+
+function formatWordCount(words) {
+  return Number.isFinite(words) ? `${words.toLocaleString("en-US")} words` : "";
+}
+
+function renderLexiconPicker() {
+  if (!lexiconToggle || !lexiconMenu) {
+    return;
+  }
+  const { current, options, supported } = lexiconState;
+  const active = options.find((row) => row.id === current);
+  lexiconToggle.classList.toggle("is-inactive", !supported);
+  lexiconToggle.title = supported
+    ? `Dictionary: ${active ? active.name : "…"} (click to change)`
+    : `Dictionary: ${active ? active.name : "…"} (only used by Local-AOM)`;
+  lexiconMenu.classList.toggle("is-inactive", !supported);
+  lexiconMenuNote.textContent = supported ? "Local-AOM" : "Local-AOM only";
+
+  lexiconOptions.innerHTML = "";
+  options.forEach((row) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "lexicon-option";
+    button.setAttribute("role", "menuitemradio");
+    button.setAttribute("aria-checked", row.id === current ? "true" : "false");
+    button.classList.toggle("is-active", row.id === current);
+    button.innerHTML =
+      '<span class="lexicon-option-check"></span>' +
+      '<span class="lexicon-option-name"></span>' +
+      '<span class="lexicon-option-words"></span>';
+    button.querySelector(".lexicon-option-check").textContent = row.id === current ? "✓" : "";
+    button.querySelector(".lexicon-option-name").textContent = row.name;
+    button.querySelector(".lexicon-option-words").textContent = formatWordCount(row.words);
+    button.addEventListener("click", () => selectLexicon(row.id));
+    lexiconOptions.appendChild(button);
+  });
+}
+
+function setLexiconMenuOpen(open) {
+  if (!lexiconToggle || !lexiconMenu) {
+    return;
+  }
+  lexiconMenu.hidden = !open;
+  lexiconToggle.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function selectLexicon(id) {
+  localStorage.setItem("lexicon", id);
+  lexiconState.current = id; // optimistic; the server echoes it in state-update
+  renderLexiconPicker();
+  setLexiconMenuOpen(false);
+  sendMessage({ type: "lexicon-set", lexicon: id });
+}
+
+function applyLexiconState(message) {
+  lexiconState = {
+    current: message.lexicon,
+    options: Array.isArray(message.lexicons) ? message.lexicons : lexiconState.options,
+    supported: message.lexiconSupported !== false,
+  };
+  renderLexiconPicker();
+}
+
+// a fresh room starts on the server default: re-apply this browser's choice
+function restoreLexicon() {
+  const saved = localStorage.getItem("lexicon");
+  if (saved) {
+    sendMessage({ type: "lexicon-set", lexicon: saved });
+  }
+}
+
+lexiconToggle?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setLexiconMenuOpen(lexiconMenu.hidden);
+});
+
+document.addEventListener("click", (event) => {
+  if (lexiconMenu && !lexiconMenu.hidden && !lexiconMenu.contains(event.target)) {
+    setLexiconMenuOpen(false);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && lexiconMenu && !lexiconMenu.hidden) {
+    setLexiconMenuOpen(false);
+    lexiconToggle.focus();
+  }
 });
 
 const buildBadge = document.getElementById("build-badge");
