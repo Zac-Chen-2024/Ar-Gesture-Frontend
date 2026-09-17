@@ -86,17 +86,21 @@ function updateKeyboardReference() {
     y: anchorRect.top - frameRect.top + anchorRect.height / 2
   };
 
+  // one key unit = the pitch between neighbouring keys (G->H, G->B); adjacent
+  // keys share a border, so a key's own box is slightly wider than the pitch
+  const rightRect = document.querySelector('[data-key="H"]').getBoundingClientRect();
+  const belowRect = document.querySelector('[data-key="B"]').getBoundingClientRect();
   keyboardMetrics = {
-    keyWidth: anchorRect.width,
-    keyHeight: anchorRect.height
+    keyWidth: rightRect.left - anchorRect.left || anchorRect.width,
+    keyHeight: belowRect.top - anchorRect.top || anchorRect.height
   };
   layoutActionPill(anchorRect);
 }
 
 // Size the Clear/Undo pill to the server's real action zone: below the zone
 // line (ACTION_ZONE_Y, key heights from G's center) down to where the cursor is
-// clamped (+ BAR_BAND_H), and from the keyboard's left edge to G's center
-// (the server clears when the stroke ends at x < 0).
+// clamped (+ BAR_BAND_H), and across CLEAR_ZONE_X (Q's left edge to Z's left
+// edge), in the same key units the server uses.
 function layoutActionPill(anchorRect) {
   const pill = document.getElementById("action-clear");
   if (!pill || !keyboardShell) {
@@ -106,10 +110,11 @@ function layoutActionPill(anchorRect) {
   const mode = currentMappingMode === "absolute" ? "absolute" : "relative";
   const centerX = anchorRect.left - shellRect.left + anchorRect.width / 2;
   const centerY = anchorRect.top - shellRect.top + anchorRect.height / 2;
-  pill.style.left = "0px";
-  pill.style.width = `${centerX}px`;
-  pill.style.top = `${centerY + ACTION_ZONE_Y[mode] * anchorRect.height}px`;
-  pill.style.height = `${BAR_BAND_H * anchorRect.height}px`;
+  const { keyWidth, keyHeight } = keyboardMetrics;
+  pill.style.left = `${centerX + CLEAR_ZONE_X[0] * keyWidth}px`;
+  pill.style.width = `${(CLEAR_ZONE_X[1] - CLEAR_ZONE_X[0]) * keyWidth}px`;
+  pill.style.top = `${centerY + ACTION_ZONE_Y[mode] * keyHeight}px`;
+  pill.style.height = `${BAR_BAND_H * keyHeight}px`;
 }
 
 function clearCanvas() {
@@ -124,6 +129,7 @@ function clearCanvas() {
 const CANDIDATE_ZONE_Y = { relative: -1.8, absolute: -1.35 };
 const ACTION_ZONE_Y = { relative: 1.8, absolute: 1.35 }; // mirrors server.py
 const BAR_BAND_H = 0.45; // visual height of the bar band above the zone line
+const CLEAR_ZONE_X = [-5, -4]; // Q's left edge to Z's left edge; mirrors server.py
 
 function clampTracePoint(point) {
   const mode = currentMappingMode === "absolute" ? "absolute" : "relative";
