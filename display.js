@@ -90,6 +90,26 @@ function updateKeyboardReference() {
     keyWidth: anchorRect.width,
     keyHeight: anchorRect.height
   };
+  layoutActionPill(anchorRect);
+}
+
+// Size the Clear/Undo pill to the server's real action zone: below the zone
+// line (ACTION_ZONE_Y, key heights from G's center) down to where the cursor is
+// clamped (+ BAR_BAND_H), and from the keyboard's left edge to G's center
+// (the server clears when the stroke ends at x < 0).
+function layoutActionPill(anchorRect) {
+  const pill = document.getElementById("action-clear");
+  if (!pill || !keyboardShell) {
+    return;
+  }
+  const shellRect = keyboardShell.getBoundingClientRect();
+  const mode = currentMappingMode === "absolute" ? "absolute" : "relative";
+  const centerX = anchorRect.left - shellRect.left + anchorRect.width / 2;
+  const centerY = anchorRect.top - shellRect.top + anchorRect.height / 2;
+  pill.style.left = "0px";
+  pill.style.width = `${centerX}px`;
+  pill.style.top = `${centerY + ACTION_ZONE_Y[mode] * anchorRect.height}px`;
+  pill.style.height = `${BAR_BAND_H * anchorRect.height}px`;
 }
 
 function clearCanvas() {
@@ -501,7 +521,8 @@ const lanModeSelect = document.getElementById("lan-mode");
 // on every reload — persist the display-local choice
 if (lanModeSelect) {
   const savedLink = localStorage.getItem("linkMode");
-  if (savedLink === "usb" || savedLink === "lan" || savedLink === "server") {
+  // "lan" is no longer offered (its button is commented out): fall back to Remote
+  if (savedLink === "usb" || savedLink === "server") {
     lanModeSelect.value = savedLink;
   }
 }

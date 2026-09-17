@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260917-1" />
+    <link rel="stylesheet" href="styles.css?v=20260917-2" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -69,13 +69,15 @@
               <!-- the select stays the source of truth for display.js; the
                    segmented buttons just drive it -->
               <select id="lan-mode" class="mode-select" aria-label="Gesture transport" hidden>
-                <option value="server">Direct</option>
+                <option value="server">Remote</option>
                 <option value="lan">LAN</option>
                 <option value="usb">USB</option>
               </select>
               <div class="segmented" id="link-mode" role="radiogroup" aria-label="Gesture transport">
-                <button type="button" role="radio" data-value="server">Direct</button>
+                <button type="button" role="radio" data-value="server">Remote</button>
+                <!-- LAN is hidden for now; the select option stays for later
                 <button type="button" role="radio" data-value="lan">LAN</button>
+                -->
                 <button type="button" role="radio" data-value="usb">USB</button>
               </div>
             </div>
@@ -183,8 +185,8 @@
       <button id="score-expand" class="score-expand-tab" type="button" aria-label="Expand score panel">«</button>
       -->
     </main>
-    <script src="config.js?v=20260917-1"></script>
-    <script src="vendor/adb.bundle.js?v=20260917-1"></script>
-    <script src="display.js?v=20260917-1"></script>
+    <script src="config.js?v=20260917-2"></script>
+    <script src="vendor/adb.bundle.js?v=20260917-2"></script>
+    <script src="display.js?v=20260917-2"></script>
   </body>
   </html>

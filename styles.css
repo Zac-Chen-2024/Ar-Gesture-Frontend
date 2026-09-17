@@ -1467,9 +1467,14 @@ body.score-panel-hidden .score-panel {
   margin-top: 10px;
 }
 
+/* position and size are set by display.js to match the real action zone */
 .action-pill {
-  min-width: 84px;
-  padding: 6px 18px;
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   text-align: center;
   border: 1px solid var(--hairline, rgba(17, 17, 17, 0.16));
   border-radius: 999px;
