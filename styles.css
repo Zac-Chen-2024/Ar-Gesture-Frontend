@@ -720,6 +720,13 @@ select.mode-select {
   user-select: none;
 }
 
+/* display: the badge hides the test-mode switch (four clicks), so it takes clicks
+   but keeps the default cursor and no hover state */
+.display-body .build-badge {
+  pointer-events: auto;
+  cursor: default;
+}
+
 /* ---- v3 letter input: mode badge + insertion caret ---- */
 .letter-badge {
   position: absolute;

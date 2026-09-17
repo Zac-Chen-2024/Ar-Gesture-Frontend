@@ -234,216 +234,219 @@ function renderCandidates(candidates) {
   }
 }
 
-// ---- decode-score panel (staged score pipeline, v2f) ----
-// four slots: path / shape / final / extra — stages arrive from the server as
-// an ordered array, so new score components plug in without frontend changes
-const SCORE_SLOTS = ["path", "shape", "final", "extra"];
-const scoreListEls = {};
-const scoreHeadEls = {};
-for (const slot of SCORE_SLOTS) {
-  scoreListEls[slot] = document.getElementById(`list-${slot}`);
-  scoreHeadEls[slot] = document.getElementById(`head-${slot}`);
-}
-const scorePanelEl = document.getElementById("score-panel");
-const scoreCollapseBtn = document.getElementById("score-collapse");
-const scoreExpandTab = document.getElementById("score-expand");
-
-function scoreRows(container, list, preRankByWord) {
-  container.innerHTML = "";
-  if (!Array.isArray(list) || list.length === 0) {
-    return; // lists render only when there are words; the frame stays put
-  }
-  const scores = list.map((r) => r.score);
-  const max = Math.max(...scores);
-  const min = Math.min(...scores);
-  const span = max - min || 1;
-  list.forEach((r, i) => {
-    const row = document.createElement("div");
-    row.className = "score-row" + (i === 0 ? " is-top1" : "");
-    // bar length: best score fills, worst nearly empty (floor keeps it visible)
-    row.style.setProperty("--w", `${8 + 92 * ((r.score - min) / span)}%`);
-    const rank = document.createElement("span");
-    rank.className = "score-rank";
-    rank.textContent = String(i + 1);
-    const word = document.createElement("span");
-    word.className = "score-word";
-    word.textContent = r.word;
-    const val = document.createElement("span");
-    val.className = "score-val";
-    val.textContent = r.score.toFixed(2);
-    row.append(rank, word, val);
-    if (preRankByWord) {
-      const delta = document.createElement("span");
-      const was = preRankByWord.get(r.word);
-      if (was === undefined) {
-        delta.className = "score-delta up";
-        delta.textContent = "new";
-      } else if (was > i) {
-        delta.className = "score-delta up";
-        delta.textContent = `↑${was - i}`;
-      } else if (was < i) {
-        delta.className = "score-delta down";
-        delta.textContent = `↓${i - was}`;
-      } else {
-        delta.className = "score-delta same";
-        delta.textContent = "=";
-      }
-      row.appendChild(delta);
-    }
-    container.appendChild(row);
-  });
-}
-
-function renderScoreDebug(debug) {
-  const stages = (debug && debug.stages) || [];
-  const bySlot = {};
-  const overflow = [];
-  for (const st of stages) {
-    if (SCORE_SLOTS.includes(st.id) && !bySlot[st.id]) {
-      bySlot[st.id] = st;
-    } else {
-      overflow.push(st);
-    }
-  }
-  if (!bySlot.extra && overflow.length) {
-    bySlot.extra = overflow[0];
-  }
-  let prevList = null; // each stage's deltas compare against the stage before it
-  for (const slot of SCORE_SLOTS) {
-    const el = scoreListEls[slot];
-    if (!el) continue;
-    const st = bySlot[slot];
-    if (!st) {
-      // live slots stay blank until there are words; future slots say so
-      const reservedText = { shape: "reserved · shape score", extra: "reserved" }[slot];
-      if (reservedText) {
-        el.classList.add("is-placeholder");
-        el.textContent = reservedText;
-      } else {
-        el.classList.remove("is-placeholder");
-        el.innerHTML = "";
-      }
-      continue;
-    }
-    el.classList.remove("is-placeholder");
-    if (scoreHeadEls[slot] && st.label) {
-      const prevWord = slot === "final" && debug.prev ? ` · prev "${debug.prev}"` : "";
-      const nums = { path: "①", shape: "②", final: "③", extra: "④" };
-      scoreHeadEls[slot].textContent = `${nums[slot]} ${st.label}${prevWord}`;
-    }
-    const rankMap = prevList
-      ? new Map(prevList.map((r, i) => [r.word, i]))
-      : null;
-    scoreRows(el, st.list || [], rankMap);
-    if (st.list && st.list.length) {
-      prevList = st.list;
-    }
-  }
-}
-
-function renderScoreParams(params) {
-  const runtimeEl = document.getElementById("params-runtime");
-  const compiledEl = document.getElementById("params-compiled");
-  if (!runtimeEl || !compiledEl) {
-    return;
-  }
-  // never clobber an input the user is typing into
-  if (runtimeEl.contains(document.activeElement)) {
-    return;
-  }
-  const fill = (el, tag, rows, editable) => {
-    el.innerHTML = `<div class="score-param-tag">${tag}</div>`;
-    for (const [k, v] of rows || []) {
-      const row = document.createElement("div");
-      row.className = "score-param-row";
-      const key = document.createElement("span");
-      key.className = "k";
-      key.textContent = k;
-      row.appendChild(key);
-      if (editable) {
-        const PARAM_STEPS = {
-          bigram_table: 1, lambda_bi: 0.1, lambda_shape: 1, junk_cost: 0.1,
-          emission_sigma: 0.05, beam_delta: 1, max_active: 50,
-        };
-        const ctrl = document.createElement("span");
-        ctrl.className = "score-param-ctrl";
-        const input = document.createElement("input");
-        input.className = "v score-param-input";
-        input.type = "number";
-        input.step = "any";
-        input.value = v === null || v === undefined ? "" : String(v);
-        const send = (num) => sendMessage({ type: "param-set", key: k, value: num });
-        const stepBy = (dir) => {
-          const cur = parseFloat(input.value);
-          const step = PARAM_STEPS[k] || 0.1;
-          if (!Number.isFinite(cur)) return;
-          const next = Math.round((cur + dir * step) * 10000) / 10000;
-          input.value = String(next);
-          send(next);
-        };
-        const mkStep = (label, dir) => {
-          const b = document.createElement("button");
-          b.type = "button";
-          b.className = "score-param-step";
-          b.textContent = label;
-          b.setAttribute("aria-label", `${label === "−" ? "Decrease" : "Increase"} ${k}`);
-          b.addEventListener("click", () => stepBy(dir));
-          return b;
-        };
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            const num = parseFloat(input.value);
-            if (Number.isFinite(num)) send(num);
-            input.blur();
-          }
-        });
-        input.addEventListener("blur", () => {
-          const num = parseFloat(input.value);
-          if (Number.isFinite(num) && String(num) !== String(v)) {
-            send(num);
-          }
-        });
-        ctrl.append(mkStep("−", -1), input, mkStep("+", 1));
-        row.appendChild(ctrl);
-      } else {
-        const val = document.createElement("span");
-        val.className = "v";
-        val.textContent = v === null || v === undefined ? "—" : String(v);
-        row.appendChild(val);
-      }
-      el.appendChild(row);
-    }
-  };
-  if (!params) {
-    fill(runtimeEl, "runtime", [["n/a", "v3 only"]], false);
-    compiledEl.innerHTML = "";
-    return;
-  }
-  fill(runtimeEl, "runtime · edit + Enter to apply", params.runtime, true);
-  fill(compiledEl, "compiled (rebuild to change)", params.compiled, false);
-}
-
-// Collapsible: hidden by default, with a slim tab on the right screen edge to
-// expand it. An explicit user choice remains persisted across visits.
-function applyScoreCollapsed(collapsed) {
-  if (scorePanelEl) {
-    scorePanelEl.classList.toggle("collapsed", collapsed);
-  }
-  if (scoreExpandTab) {
-    scoreExpandTab.hidden = !collapsed;
-  }
-}
-
-function setScoreCollapsed(collapsed) {
-  localStorage.setItem("scorePanelCollapsed", collapsed ? "1" : "0");
-  applyScoreCollapsed(collapsed);
-}
-
-if (scoreCollapseBtn && scoreExpandTab) {
-  applyScoreCollapsed(localStorage.getItem("scorePanelCollapsed") !== "0");
-  scoreCollapseBtn.addEventListener("click", () => setScoreCollapsed(true));
-  scoreExpandTab.addEventListener("click", () => setScoreCollapsed(false));
-}
+// Decode-score panel: commented out (kept for later). The server still sends
+// scoreDebug / scoreParams; restore by uncommenting this block, the state-update
+// hooks, the startup calls and the <aside> in display.html.
+// // ---- decode-score panel (staged score pipeline, v2f) ----
+// // four slots: path / shape / final / extra — stages arrive from the server as
+// // an ordered array, so new score components plug in without frontend changes
+// const SCORE_SLOTS = ["path", "shape", "final", "extra"];
+// const scoreListEls = {};
+// const scoreHeadEls = {};
+// for (const slot of SCORE_SLOTS) {
+//   scoreListEls[slot] = document.getElementById(`list-${slot}`);
+//   scoreHeadEls[slot] = document.getElementById(`head-${slot}`);
+// }
+// const scorePanelEl = document.getElementById("score-panel");
+// const scoreCollapseBtn = document.getElementById("score-collapse");
+// const scoreExpandTab = document.getElementById("score-expand");
+//
+// function scoreRows(container, list, preRankByWord) {
+//   container.innerHTML = "";
+//   if (!Array.isArray(list) || list.length === 0) {
+//     return; // lists render only when there are words; the frame stays put
+//   }
+//   const scores = list.map((r) => r.score);
+//   const max = Math.max(...scores);
+//   const min = Math.min(...scores);
+//   const span = max - min || 1;
+//   list.forEach((r, i) => {
+//     const row = document.createElement("div");
+//     row.className = "score-row" + (i === 0 ? " is-top1" : "");
+//     // bar length: best score fills, worst nearly empty (floor keeps it visible)
+//     row.style.setProperty("--w", `${8 + 92 * ((r.score - min) / span)}%`);
+//     const rank = document.createElement("span");
+//     rank.className = "score-rank";
+//     rank.textContent = String(i + 1);
+//     const word = document.createElement("span");
+//     word.className = "score-word";
+//     word.textContent = r.word;
+//     const val = document.createElement("span");
+//     val.className = "score-val";
+//     val.textContent = r.score.toFixed(2);
+//     row.append(rank, word, val);
+//     if (preRankByWord) {
+//       const delta = document.createElement("span");
+//       const was = preRankByWord.get(r.word);
+//       if (was === undefined) {
+//         delta.className = "score-delta up";
+//         delta.textContent = "new";
+//       } else if (was > i) {
+//         delta.className = "score-delta up";
+//         delta.textContent = `↑${was - i}`;
+//       } else if (was < i) {
+//         delta.className = "score-delta down";
+//         delta.textContent = `↓${i - was}`;
+//       } else {
+//         delta.className = "score-delta same";
+//         delta.textContent = "=";
+//       }
+//       row.appendChild(delta);
+//     }
+//     container.appendChild(row);
+//   });
+// }
+//
+// function renderScoreDebug(debug) {
+//   const stages = (debug && debug.stages) || [];
+//   const bySlot = {};
+//   const overflow = [];
+//   for (const st of stages) {
+//     if (SCORE_SLOTS.includes(st.id) && !bySlot[st.id]) {
+//       bySlot[st.id] = st;
+//     } else {
+//       overflow.push(st);
+//     }
+//   }
+//   if (!bySlot.extra && overflow.length) {
+//     bySlot.extra = overflow[0];
+//   }
+//   let prevList = null; // each stage's deltas compare against the stage before it
+//   for (const slot of SCORE_SLOTS) {
+//     const el = scoreListEls[slot];
+//     if (!el) continue;
+//     const st = bySlot[slot];
+//     if (!st) {
+//       // live slots stay blank until there are words; future slots say so
+//       const reservedText = { shape: "reserved · shape score", extra: "reserved" }[slot];
+//       if (reservedText) {
+//         el.classList.add("is-placeholder");
+//         el.textContent = reservedText;
+//       } else {
+//         el.classList.remove("is-placeholder");
+//         el.innerHTML = "";
+//       }
+//       continue;
+//     }
+//     el.classList.remove("is-placeholder");
+//     if (scoreHeadEls[slot] && st.label) {
+//       const prevWord = slot === "final" && debug.prev ? ` · prev "${debug.prev}"` : "";
+//       const nums = { path: "①", shape: "②", final: "③", extra: "④" };
+//       scoreHeadEls[slot].textContent = `${nums[slot]} ${st.label}${prevWord}`;
+//     }
+//     const rankMap = prevList
+//       ? new Map(prevList.map((r, i) => [r.word, i]))
+//       : null;
+//     scoreRows(el, st.list || [], rankMap);
+//     if (st.list && st.list.length) {
+//       prevList = st.list;
+//     }
+//   }
+// }
+//
+// function renderScoreParams(params) {
+//   const runtimeEl = document.getElementById("params-runtime");
+//   const compiledEl = document.getElementById("params-compiled");
+//   if (!runtimeEl || !compiledEl) {
+//     return;
+//   }
+//   // never clobber an input the user is typing into
+//   if (runtimeEl.contains(document.activeElement)) {
+//     return;
+//   }
+//   const fill = (el, tag, rows, editable) => {
+//     el.innerHTML = `<div class="score-param-tag">${tag}</div>`;
+//     for (const [k, v] of rows || []) {
+//       const row = document.createElement("div");
+//       row.className = "score-param-row";
+//       const key = document.createElement("span");
+//       key.className = "k";
+//       key.textContent = k;
+//       row.appendChild(key);
+//       if (editable) {
+//         const PARAM_STEPS = {
+//           bigram_table: 1, lambda_bi: 0.1, lambda_shape: 1, junk_cost: 0.1,
+//           emission_sigma: 0.05, beam_delta: 1, max_active: 50,
+//         };
+//         const ctrl = document.createElement("span");
+//         ctrl.className = "score-param-ctrl";
+//         const input = document.createElement("input");
+//         input.className = "v score-param-input";
+//         input.type = "number";
+//         input.step = "any";
+//         input.value = v === null || v === undefined ? "" : String(v);
+//         const send = (num) => sendMessage({ type: "param-set", key: k, value: num });
+//         const stepBy = (dir) => {
+//           const cur = parseFloat(input.value);
+//           const step = PARAM_STEPS[k] || 0.1;
+//           if (!Number.isFinite(cur)) return;
+//           const next = Math.round((cur + dir * step) * 10000) / 10000;
+//           input.value = String(next);
+//           send(next);
+//         };
+//         const mkStep = (label, dir) => {
+//           const b = document.createElement("button");
+//           b.type = "button";
+//           b.className = "score-param-step";
+//           b.textContent = label;
+//           b.setAttribute("aria-label", `${label === "−" ? "Decrease" : "Increase"} ${k}`);
+//           b.addEventListener("click", () => stepBy(dir));
+//           return b;
+//         };
+//         input.addEventListener("keydown", (e) => {
+//           if (e.key === "Enter") {
+//             const num = parseFloat(input.value);
+//             if (Number.isFinite(num)) send(num);
+//             input.blur();
+//           }
+//         });
+//         input.addEventListener("blur", () => {
+//           const num = parseFloat(input.value);
+//           if (Number.isFinite(num) && String(num) !== String(v)) {
+//             send(num);
+//           }
+//         });
+//         ctrl.append(mkStep("−", -1), input, mkStep("+", 1));
+//         row.appendChild(ctrl);
+//       } else {
+//         const val = document.createElement("span");
+//         val.className = "v";
+//         val.textContent = v === null || v === undefined ? "—" : String(v);
+//         row.appendChild(val);
+//       }
+//       el.appendChild(row);
+//     }
+//   };
+//   if (!params) {
+//     fill(runtimeEl, "runtime", [["n/a", "v3 only"]], false);
+//     compiledEl.innerHTML = "";
+//     return;
+//   }
+//   fill(runtimeEl, "runtime · edit + Enter to apply", params.runtime, true);
+//   fill(compiledEl, "compiled (rebuild to change)", params.compiled, false);
+// }
+//
+// // Collapsible: hidden by default, with a slim tab on the right screen edge to
+// // expand it. An explicit user choice remains persisted across visits.
+// function applyScoreCollapsed(collapsed) {
+//   if (scorePanelEl) {
+//     scorePanelEl.classList.toggle("collapsed", collapsed);
+//   }
+//   if (scoreExpandTab) {
+//     scoreExpandTab.hidden = !collapsed;
+//   }
+// }
+//
+// function setScoreCollapsed(collapsed) {
+//   localStorage.setItem("scorePanelCollapsed", collapsed ? "1" : "0");
+//   applyScoreCollapsed(collapsed);
+// }
+//
+// if (scoreCollapseBtn && scoreExpandTab) {
+//   applyScoreCollapsed(localStorage.getItem("scorePanelCollapsed") !== "0");
+//   scoreCollapseBtn.addEventListener("click", () => setScoreCollapsed(true));
+//   scoreExpandTab.addEventListener("click", () => setScoreCollapsed(false));
+// }
 
 function highlightCandidate(index) {
   Array.from(candidateStrip.children).forEach((seg, i) => {
@@ -1179,13 +1182,14 @@ socket.addEventListener("message", (event) => {
     decodedText.textContent = plainText;
     decodedText.scrollLeft = decodedText.scrollWidth; // keep the newest words visible
 
-    if ("scoreDebug" in message) {
-      renderScoreDebug(message.scoreDebug);
-    }
-
-    if ("scoreParams" in message) {
-      renderScoreParams(message.scoreParams);
-    }
+    // decode-score panel is commented out
+    // if ("scoreDebug" in message) {
+    //   renderScoreDebug(message.scoreDebug);
+    // }
+    //
+    // if ("scoreParams" in message) {
+    //   renderScoreParams(message.scoreParams);
+    // }
 
     if ("letters" in message && message.letters !== currentLetters) {
       currentLetters = message.letters;
@@ -1280,6 +1284,11 @@ socket.addEventListener("message", (event) => {
 
     if ("lexicon" in message) {
       applyLexiconState(message);
+    }
+
+    if ("testMode" in message && message.testMode !== testMode) {
+      testMode = message.testMode === true;
+      renderBuildBadge();
     }
 
     if (message.version && algoVersionSelect.value !== message.version) {
@@ -1519,14 +1528,37 @@ document.addEventListener("keydown", (event) => {
 });
 
 const buildBadge = document.getElementById("build-badge");
-if (buildBadge) {
-  buildBadge.textContent = window.GESTURE_CONFIG.version || "";
+
+// Hidden test-mode switch: four quick clicks on the version badge toggle the
+// experimental scoring for this session only (not remembered across reloads).
+const TEST_MODE_CLICKS = 4;
+const TEST_MODE_WINDOW_MS = 1500;
+let testMode = false;
+let badgeClicks = [];
+
+function renderBuildBadge() {
+  if (buildBadge) {
+    const version = window.GESTURE_CONFIG.version || "";
+    buildBadge.textContent = testMode ? `${version} · TEST` : version;
+  }
 }
+
+buildBadge?.addEventListener("click", () => {
+  const now = performance.now();
+  badgeClicks = badgeClicks.filter((t) => now - t < TEST_MODE_WINDOW_MS);
+  badgeClicks.push(now);
+  if (badgeClicks.length >= TEST_MODE_CLICKS) {
+    badgeClicks = [];
+    sendMessage({ type: "test-mode-set", enabled: !testMode });
+  }
+});
+
+renderBuildBadge();
 
 window.addEventListener("resize", resizeCanvas);
 applyTheme(localStorage.getItem("displayTheme") || "editorial"); // Editorial is the default look
 applyModeClasses();
 renderCandidates([]);
 updateUsbUi();
-renderScoreDebug(null);
-renderScoreParams(null);
+// renderScoreDebug(null);   // decode-score panel is commented out
+// renderScoreParams(null);
