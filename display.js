@@ -1110,7 +1110,7 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "room-created") {
     updateRoomBadge(message.code, false);
-    restoreLexicon();
+    // restoreLexicon();  // dictionary picker is hidden: keep the server default
     return;
   }
 

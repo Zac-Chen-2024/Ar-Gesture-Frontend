@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gesture Display</title>
-    <link rel="stylesheet" href="styles.css?v=20260917-3" />
+    <link rel="stylesheet" href="styles.css?v=20260917-4" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -139,6 +139,7 @@
         <canvas id="display-canvas"></canvas>
         <div id="build-badge" class="build-badge" aria-hidden="true"></div>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch display style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg></button>
+        <!-- Dictionary picker: hidden for now (server default lexicon is used)
         <div class="lexicon-picker">
           <button id="lexicon-toggle" class="lexicon-toggle" type="button" aria-label="Local-AOM dictionary" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/><path d="M9.5 12.5l2-5 2 5M10.2 10.8h2.6"/></svg></button>
           <div id="lexicon-menu" class="lexicon-menu" role="menu" aria-label="Local-AOM dictionary" hidden>
@@ -146,6 +147,7 @@
             <div id="lexicon-options" class="lexicon-options"></div>
           </div>
         </div>
+        -->
         <div id="lan-badge" class="lan-badge" aria-hidden="true">LAN ⚡</div>
         <div id="usb-status" class="usb-status" aria-live="polite" hidden></div>
         <div id="touchpad-hint" class="touchpad-hint" aria-live="polite" hidden></div>
@@ -185,8 +187,8 @@
       <button id="score-expand" class="score-expand-tab" type="button" aria-label="Expand score panel">«</button>
       -->
     </main>
-    <script src="config.js?v=20260917-3"></script>
-    <script src="vendor/adb.bundle.js?v=20260917-3"></script>
-    <script src="display.js?v=20260917-3"></script>
+    <script src="config.js?v=20260917-4"></script>
+    <script src="vendor/adb.bundle.js?v=20260917-4"></script>
+    <script src="display.js?v=20260917-4"></script>
   </body>
   </html>
