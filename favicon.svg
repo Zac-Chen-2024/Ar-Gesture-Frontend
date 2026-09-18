@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Waypoints: key centroids joined by the gesture path. Ink flips to paper on dark chrome. -->
+  <style>
+    .ink { fill: #111111; }
+    .trace { stroke: #d6452b; }
+    @media (prefers-color-scheme: dark) {
+      .ink { fill: #faf8f3; }
+      .trace { stroke: #e8613f; }
+    }
+  </style>
+  <path class="trace" d="M6.2 22.4L14 10.2L25.8 18.2" fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle class="ink" cx="6.2" cy="22.4" r="3.5"/>
+  <circle class="ink" cx="14" cy="10.2" r="3.5"/>
+  <circle class="ink" cx="25.8" cy="18.2" r="3.5"/>
+</svg>
