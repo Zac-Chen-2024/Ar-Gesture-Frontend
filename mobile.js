@@ -19,7 +19,7 @@ let gestureStartTime = 0;
 // When the display enables it, the phone opens a WebRTC data channel straight
 // to the display (host/mDNS ICE candidates keep it on the local network) and
 // MIRRORS every gesture message onto it. The WebSocket path to the server is
-// untouched, so decoding, recording and all logic behave exactly as before;
+// untouched, so everything behaves exactly as before;
 // the channel only lets the display render the cursor without the WAN hop.
 let lanMode = false;
 let rtcPeer = null;
@@ -351,8 +351,7 @@ function moveGesture(event) {
   const point = getPoint(event);
   drawSegment(lastPoint, point);
 
-  // t = ms since gesture start; used server-side for data recording and
-  // (later) dwell/speed-aware decoding
+  // t = ms since gesture start
   const payload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : toKeyboardUnits(point);
   payload.t = Math.round(performance.now() - gestureStartTime);
   sendMessage({ type: "gesture-move", point: payload });

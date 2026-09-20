@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20260917-4" />
+    <link rel="stylesheet" href="styles.css?v=20260920-1" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -142,56 +142,13 @@
         <canvas id="display-canvas"></canvas>
         <div id="build-badge" class="build-badge" aria-hidden="true"></div>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch display style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg></button>
-        <!-- Dictionary picker: hidden for now (server default lexicon is used)
-        <div class="lexicon-picker">
-          <button id="lexicon-toggle" class="lexicon-toggle" type="button" aria-label="Local-AOM dictionary" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/><path d="M9.5 12.5l2-5 2 5M10.2 10.8h2.6"/></svg></button>
-          <div id="lexicon-menu" class="lexicon-menu" role="menu" aria-label="Local-AOM dictionary" hidden>
-            <div class="lexicon-menu-title">Dictionary <span id="lexicon-menu-note" class="lexicon-menu-note">Local-AOM</span></div>
-            <div id="lexicon-options" class="lexicon-options"></div>
-          </div>
-        </div>
-        -->
         <div id="lan-badge" class="lan-badge" aria-hidden="true">LAN ⚡</div>
         <div id="usb-status" class="usb-status" aria-live="polite" hidden></div>
         <div id="touchpad-hint" class="touchpad-hint" aria-live="polite" hidden></div>
       </section>
-      <!-- Decode-score panel: commented out (kept for later)
-      <aside id="score-panel" class="score-panel collapsed" aria-label="Decode scores">
-        <div class="score-panel-title">
-          <span class="score-panel-text">Decode scores <span class="score-panel-note">top-10 · v3</span></span>
-          <button id="score-collapse" class="score-chevron" type="button" aria-label="Collapse score panel">»</button>
-        </div>
-        <div class="score-body">
-          <div class="score-grid">
-            <div class="score-cell">
-              <div class="score-col-head" id="head-path">① Path score</div>
-              <div id="list-path" class="score-list"></div>
-            </div>
-            <div class="score-cell">
-              <div class="score-col-head" id="head-shape">② + Shape (SHARK²)</div>
-              <div id="list-shape" class="score-list"></div>
-            </div>
-            <div class="score-cell">
-              <div class="score-col-head" id="head-final">③ + Bigram (final)</div>
-              <div id="list-final" class="score-list"></div>
-            </div>
-            <div class="score-cell">
-              <div class="score-col-head" id="head-extra">④ Reserved</div>
-              <div id="list-extra" class="score-list"></div>
-            </div>
-          </div>
-          <div class="score-params">
-            <div class="score-col-head">Parameters</div>
-            <div id="params-runtime" class="score-param-group"></div>
-            <div id="params-compiled" class="score-param-group"></div>
-          </div>
-        </div>
-      </aside>
-      <button id="score-expand" class="score-expand-tab" type="button" aria-label="Expand score panel">«</button>
-      -->
     </main>
-    <script src="config.js?v=20260917-4"></script>
-    <script src="vendor/adb.bundle.js?v=20260917-4"></script>
-    <script src="display.js?v=20260917-4"></script>
+    <script src="config.js?v=20260920-1"></script>
+    <script src="vendor/adb.bundle.js?v=20260920-1"></script>
+    <script src="display.js?v=20260920-1"></script>
   </body>
   </html>
