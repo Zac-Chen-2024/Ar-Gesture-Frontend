@@ -11,6 +11,11 @@ let pointerId = null;
 let startPoint = null;
 let lastPoint = null;
 let gestureStartTime = 0;
+let collectionState = null;
+const collectionHint = document.createElement("div");
+collectionHint.className = "mobile-collection-hint";
+collectionHint.hidden = true;
+document.body.appendChild(collectionHint);
 
 // Long-press / dwell detection for v3 letter input lives entirely on the
 // SERVER (keyboard units + its own clock); the phone stays a dumb touchpad.
@@ -311,7 +316,7 @@ function toKeyboardUnits(point) {
 }
 
 function startGesture(event) {
-  if (isDrawing || !paired) {
+  if (isDrawing || !paired || (collectionState?.enabled && (!collectionState.attempt || collectionState.error))) {
     return;
   }
 
@@ -338,7 +343,10 @@ function startGesture(event) {
 
   const startPayload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : { x: 0, y: 0 };
   startPayload.t = 0;
-  sendMessage({ type: "gesture-start", point: startPayload });
+  sendMessage({ type: "gesture-start", point: startPayload, rawPoint: point,
+    deviceInfo: { width: innerWidth, height: innerHeight, pixelRatio: devicePixelRatio,
+      keyWidth: getOverlayMetrics().keyWidth, keyHeight: getOverlayMetrics().keyHeight,
+      cursorSpeed } });
   p2pSend("start", startPayload);
 }
 
@@ -354,7 +362,7 @@ function moveGesture(event) {
   // t = ms since gesture start
   const payload = isAbsoluteMode() ? toAbsoluteKeyboardPoint(point) : toKeyboardUnits(point);
   payload.t = Math.round(performance.now() - gestureStartTime);
-  sendMessage({ type: "gesture-move", point: payload });
+  sendMessage({ type: "gesture-move", point: payload, rawPoint: point });
   p2pSend("move", payload);
 
   lastPoint = point;
@@ -374,7 +382,7 @@ function endGesture(event) {
 
   drawIdleState();
   applyModeClasses();
-  sendMessage({ type: "gesture-end" });
+  sendMessage({ type: "gesture-end", t: Math.round(performance.now() - gestureStartTime) });
   p2pSend("end", {});
 }
 
@@ -434,7 +442,9 @@ if (pickerRefresh) {
 }
 
 function onSocketOpen() {
-  sendMessage({ type: "join", role: "mobile" });
+  sendMessage({ type: "join", role: "mobile", inputDevice: "phone",
+    deviceInfo: { width: innerWidth, height: innerHeight, pixelRatio: devicePixelRatio,
+      userAgent: navigator.userAgent } });
 }
 
 function onSocketClose() {
@@ -502,6 +512,11 @@ function onSocketMessage(event) {
   }
 
   if (message.type === "state-update") {
+    collectionState = message.collection || null;
+    collectionHint.hidden = !collectionState?.enabled;
+    collectionHint.textContent = collectionState?.error || (collectionState?.attempt
+      ? "Collection · swipe here, then save the sentence on the computer."
+      : "Collection · choose a mode and start a sentence on the computer.");
     currentStartKey = String(message.cursorKey || "g").toUpperCase();
     currentMappingMode = message.mappingMode || "relative";
     currentInputMode = message.mode || "continuous";

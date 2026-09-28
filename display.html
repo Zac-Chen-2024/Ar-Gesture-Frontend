@@ -7,13 +7,14 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20260920-1" />
+    <link rel="stylesheet" href="styles.css?v=20260928-1" />
   </head>
   <body class="display-body">
     <main class="display-stage">
       <section class="display-frame" aria-label="Gesture display area">
         <header class="top-bar">
           <div class="settings-row">
+            <button id="collection-toggle" class="mode-select" type="button" aria-expanded="false" aria-controls="collection-panel">Collection</button>
             <label class="setting">
               <span class="setting-label">Algorithm</span>
               <select id="algo-version" class="mode-select" aria-label="Algorithm version"></select>
@@ -96,6 +97,21 @@
             <span class="room-code-status">waiting for phone…</span>
           </div>
         </header>
+        <section id="collection-panel" class="collection-panel" aria-label="Sentence collection" hidden>
+          <div class="collection-heading"><strong>Sentence collection</strong><span id="collection-count">0 sentences saved this visit</span></div>
+          <p class="collection-help">Use your phone. Target text, input and gestures are saved on the server with an anonymous browser ID.</p>
+          <div class="collection-controls">
+            <label for="collection-mode">Word start</label>
+            <select id="collection-mode" class="mode-select"><option value="center">Center</option><option value="continuous">Continuous</option></select>
+            <button id="collection-start" class="mode-select" type="button">Start sentence</button>
+            <button id="collection-save" class="mode-select" type="button" disabled>Save sentence</button>
+            <button id="collection-skip" class="mode-select" type="button" disabled>Skip</button>
+            <button id="collection-exit" class="mode-select" type="button">Exit collection</button>
+          </div>
+          <p id="collection-target" class="collection-target">Your next phrase will appear here.</p>
+          <p id="collection-status" class="collection-status" role="status" aria-live="polite">Connecting…</p>
+          <small>MacKenzie &amp; Soukoreff · 500 phrases · lowercase</small>
+        </section>
         <div class="text-row">
           <div id="decoded-text" class="decoded-text" aria-live="polite"></div>
           <div id="letter-badge" class="letter-badge" aria-hidden="true"></div>
@@ -147,8 +163,9 @@
         <div id="touchpad-hint" class="touchpad-hint" aria-live="polite" hidden></div>
       </section>
     </main>
-    <script src="config.js?v=20260920-1"></script>
-    <script src="vendor/adb.bundle.js?v=20260920-1"></script>
-    <script src="display.js?v=20260920-1"></script>
+    <script src="config.js?v=20260928-1"></script>
+    <script src="vendor/adb.bundle.js?v=20260928-1"></script>
+    <script src="display.js?v=20260928-1"></script>
+    <script src="collection.js?v=20260928-1"></script>
   </body>
   </html>

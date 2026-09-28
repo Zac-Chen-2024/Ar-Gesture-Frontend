@@ -387,7 +387,7 @@ function updateUsbUi() {
 
 deviceSwitch?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-value]");
-  if (!button || button.dataset.value === deviceMode) {
+  if (!button || button.disabled || button.dataset.value === deviceMode) {
     return;
   }
   deviceMode = button.dataset.value;
@@ -493,7 +493,7 @@ function enterTouchpad() {
   const ws = new WebSocket(window.GESTURE_CONFIG.backendWsUrl);
   touchpadSocket = ws;
   ws.addEventListener("open", () => {
-    ws.send(JSON.stringify({ type: "join", role: "mobile" }));
+    ws.send(JSON.stringify({ type: "join", role: "mobile", inputDevice: "touchpad" }));
     ws.send(JSON.stringify({ type: "join-room", code: currentRoomCode }));
   });
   ws.addEventListener("message", (event) => {
@@ -652,7 +652,7 @@ document.addEventListener("mousemove", (event) => {
 
 linkSwitch?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-value]");
-  if (!button || !lanModeSelect || button.dataset.value === lanModeSelect.value) {
+  if (!button || button.disabled || !lanModeSelect || button.dataset.value === lanModeSelect.value) {
     return;
   }
   lanModeSelect.value = button.dataset.value;
@@ -1261,4 +1261,3 @@ applyTheme(localStorage.getItem("displayTheme") || "editorial"); // Editorial is
 applyModeClasses();
 renderCandidates([]);
 updateUsbUi();
-

@@ -1208,3 +1208,30 @@ body[data-theme="editorial"] {
   background: var(--ink);
   color: #ffffff;
 }
+
+/* Collection sits above the input without covering the keyboard. */
+.collection-panel[hidden] { display: none; }
+.collection-panel { position: relative; z-index: 3; order: -2; width: min(94%, 960px); margin: 16px auto 8px; padding: 14px 18px; border: 1px solid #b9b7ad; border-radius: 12px; background: #fffdf7; color: #252820; flex-shrink: 0; }
+.is-collection .top-bar { order: -3; }
+.collection-heading, .collection-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.collection-heading { justify-content: space-between; }
+.collection-heading span, .collection-help, .collection-status { font-size: 13px; }
+.collection-help { margin: 8px 0; line-height: 1.4; }
+.collection-target { font-size: clamp(20px, 2.3vw, 30px); line-height: 1.35; margin: 14px 0 8px; overflow-wrap: anywhere; }
+.collection-status { min-height: 1.4em; margin: 8px 0; }
+.collection-panel small { color: #64665d; }
+.collection-controls button:disabled, .settings-row button:disabled { opacity: .45; cursor: default; }
+#collection-save { background: #244e3d; color: white; }
+.is-collection .display-frame { overflow-y: auto; }
+.is-collection .keyboard-shell, .is-collection .text-row { flex-shrink: 0; }
+.is-collection .text-row { margin-bottom: 12px; }
+.is-collection .decoded-text { min-height: 54px; height: 54px; font-size: clamp(24px, 4vmin, 40px); }
+.is-collection .keyboard-shell { --key-height: min(7vmin, 70px); }
+@media (max-height: 800px) {
+  .collection-panel { padding: 8px 14px; margin-block: 8px; }
+  .collection-help, .collection-status { margin-block: 5px; font-size: 12px; }
+  .collection-target { margin-block: 8px 4px; font-size: 24px; }
+  .collection-panel small { font-size: 11px; }
+  .collection-controls .mode-select { height: 32px; }
+}
+.mobile-collection-hint { position: fixed; z-index: 8; bottom: 65px; left: 5%; width: 90%; text-align: center; pointer-events: none; font-size: 14px; color: #333; background: #fffdf7e8; padding: 10px; border-radius: 8px; }
