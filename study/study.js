@@ -62,6 +62,8 @@
     mode: null, // collections with modes (funny): "blocks" | "endless"
     run: null, // the endless run number (server-assigned)
     lives: 0,
+    confirmStop: false, // endless: a Stop was asked once
+    endReason: "", // endless: lives | stopped | complete
     matchTimer: null,
     ratingIdx: 0,
     answers: {},
@@ -99,14 +101,18 @@
 
   // Next pill: the whole bottom bar (Q's left edge to P's right edge), or the
   // mirror of Back on the rating screens.
-  const nextIsFull = () => S.screen !== "rating";
+  const nextIsFull = () => S.screen !== "rating" && !halves();
+  // an endless run while typing: Stop on the left half, Next on the right
+  const halves = () => S.screen === "trial" && endless();
 
   function layoutNextPill() {
     if (!clearPill.style.left) return;
     const { keyWidth } = keyboardMetrics;
     const clearLeft = parseFloat(clearPill.style.left);
     const full = nextIsFull();
-    nextPill.style.left = `${full ? clearLeft : clearLeft + (NEXT_ZONE_X_MIN - CLEAR_ZONE_X[0]) * keyWidth}px`;
+    const half = halves();
+    clearPill.style.width = `${(half ? 5 : CLEAR_ZONE_X[1] - CLEAR_ZONE_X[0]) * keyWidth}px`;
+    nextPill.style.left = `${full ? clearLeft : clearLeft + (half ? 5 : NEXT_ZONE_X_MIN - CLEAR_ZONE_X[0]) * keyWidth}px`;
     nextPill.style.width = full ? `${10 * keyWidth}px` : clearPill.style.width;
     nextPill.style.top = clearPill.style.top;
     nextPill.style.height = clearPill.style.height;
@@ -171,6 +177,7 @@
   document.addEventListener("click", (event) => {
     if (S.paused) return;
     if (S.screen === "trial" && event.target.closest("#action-next")) return nextFromParticipant();
+    if (halves() && event.target.closest("#action-clear")) return stopFromParticipant();
     const t = targets.find((x) => x.el.contains(event.target));
     if (t) pick(t);
   });
@@ -217,6 +224,10 @@
         break;
       case "action-hover":
         nextPill.classList.toggle("is-hover", m.active !== true && m.slot === "next");
+        clearPill.classList.toggle("is-hover", halves() && m.slot === "stop");
+        break;
+      case "study-stop":
+        stopFromParticipant();
         break;
       case "study-next":
         // a swipe down to Next is not a typing stroke
@@ -320,7 +331,12 @@
     render();
   }
 
-  function gameOver() {
+  const runLength = () => S.cfg.endless.length || 500;
+
+  // an endless run ends: out of lives, stopped, or every phrase done
+  function runOver(reason) {
+    S.endReason = reason;
+    emit("run-over", { reason });
     S.screen = "gameover";
     S.pointer = { x: 0, y: 0 };
     setPhase("pointer", "gameover", true);
@@ -428,8 +444,9 @@
     emit("text", { text: plainText.trim(), target: target() });
     clearTimeout(S.matchTimer);
     body.classList.remove("is-matched");
-    if (S.confirmNext) {
+    if (S.confirmNext || S.confirmStop) {
       S.confirmNext = false;
+      S.confirmStop = false;
       render();
     }
     if (!S.cfg.auto_advance || S.pending || S.paused || !matches()) return;
@@ -440,8 +457,25 @@
     }, 450);
   }
 
+  // endless: Stop ends the run, asked once more like a mismatching Next
+  function stopFromParticipant() {
+    if (!halves() || S.paused || S.pending || !S.trial) return;
+    if (!S.confirmStop) {
+      S.confirmStop = true;
+      S.confirmNext = false;
+      render();
+      shake(clearPill);
+      return;
+    }
+    finishTrial("stopped");
+  }
+
   function nextFromParticipant() {
     if (S.screen !== "trial" || S.paused || S.pending || !S.trial) return;
+    if (S.confirmStop) {
+      S.confirmStop = false;
+      render();
+    }
     if (matches()) return finishTrial("matched");
     if (!plainText.trim()) return shake(nextPill);
     if (!S.confirmNext) {
@@ -489,6 +523,10 @@
       startTrial(); // same phrase, next attempt
       return;
     }
+    if (status === "stopped") {
+      S.confirmStop = false;
+      return runOver("stopped");
+    }
     S.done.add(key(saved.step, saved.trial));
     if (endless() && status !== "matched") {
       S.lives--; // a phrase not typed to the end costs a life
@@ -511,7 +549,8 @@
       return;
     }
     if (endless()) {
-      if (S.lives <= 0) return gameOver();
+      if (S.lives <= 0) return runOver("lives");
+      if (S.trialIdx + 1 >= runLength()) return runOver("complete");
       S.trialIdx++;
       return startTrial();
     }
@@ -680,7 +719,8 @@
         title: "Ready?",
         sub: !S.phone
           ? `Open <strong>Mobile</strong> on the phone and choose session <strong>${currentRoomCode || "····"}</strong>.`
-          : `Phrases keep coming. A phrase you submit with errors costs a life; lose ${S.lives} and the run is over.`
+          : `Up to ${runLength()} phrases. Swipe down-right for <strong>Next</strong>, down-left to <strong>Stop</strong> the run. `
+            + `A phrase you submit with errors costs a life; lose ${S.lives} and the run is over.`
       });
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "Start", { target: true, enabled: S.phone });
@@ -700,8 +740,13 @@
       list = [{ id: "start", el: nextPill, enabled: S.phone }];
     } else if (screen === "trial") {
       show({ kickerHtml: progressHtml(step), title: phraseText() });
-      pill(clearPill, "", { hidden: true });
-      pill(nextPill, S.confirmNext ? "Does not match yet · swipe down again to submit as it is" : "Next", { target: true });
+      if (endless()) {
+        pill(clearPill, S.confirmStop ? "Swipe to Stop again to end the run" : "Stop", { target: true });
+        clearPill.classList.toggle("is-confirm", S.confirmStop);
+      } else {
+        pill(clearPill, "", { hidden: true });
+      }
+      pill(nextPill, S.confirmNext ? (endless() ? "Not matching · Next again to submit" : "Does not match yet · swipe down again to submit as it is") : "Next", { target: true });
       nextPill.classList.toggle("is-confirm", S.confirmNext);
     } else if (screen === "feedback") {
       // the phrase stays; the output line shows how it went
@@ -772,14 +817,18 @@
       }
     } else if (screen === "gameover") {
       const b = runSummary();
-      show({ kicker: `Endless · run ${S.run}`, title: "Game over", sub: `${b.n} phrase${b.n === 1 ? "" : "s"}` });
+      const title = { lives: "Game over", stopped: "Run ended", complete: `All ${runLength()} done!` }[S.endReason] || "Run over";
+      show({ kicker: `Endless · run ${S.run}`, title, sub: `${b.n} phrase${b.n === 1 ? "" : "s"}` });
       sheet.innerHTML = summaryHtml(b);
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "Continue", { target: true });
       list = [{ id: "back-to-modes", el: nextPill }];
     }
     flash.hidden = !flash.innerHTML;
-    if (screen !== "trial") nextPill.classList.remove("is-confirm");
+    if (screen !== "trial") {
+      nextPill.classList.remove("is-confirm");
+      clearPill.classList.remove("is-confirm");
+    }
     layoutNextPill();
     setTargets(list);
     if (pointer) placePointer();
@@ -939,7 +988,7 @@
     if (!endless()) return esc(`${blockLabel(step)} · Phrase ${S.trialIdx + 1} of ${step.phrases.length}`);
     const total = S.cfg.endless.lives || 3;
     const hearts = Array.from({ length: total }, (_, i) => (i < S.lives ? ICON.heartFull : ICON.heart)).join("");
-    return `Endless · Phrase ${S.trialIdx + 1} <span class="study-lives" aria-label="${S.lives} lives">${hearts}</span>`;
+    return `Endless · Phrase ${S.trialIdx + 1} of ${runLength()} <span class="study-lives" aria-label="${S.lives} lives">${hearts}</span>`;
   }
 
   // the two modes, side by side over the keyboard
@@ -951,7 +1000,7 @@
     return `<div class="study-modes">
       <div class="study-mode" data-mode="blocks"><b>Blocks</b><span>Practice, then ${S.cfg.blocks_per_condition} blocks for each word start</span>
         <em>${done >= planned ? "Completed" : done ? `${done} of ${planned} phrases done` : `${planned} phrases`}</em></div>
-      <div class="study-mode" data-mode="endless"><b>Endless</b><span>Phrases keep coming until you lose ${S.cfg.endless.lives || 3} lives</span>
+      <div class="study-mode" data-mode="endless"><b>Endless</b><span>Up to ${runLength()} phrases, ${S.cfg.endless.lives || 3} lives, stop any time</span>
         <em>${runs ? `${runs} run${runs === 1 ? "" : "s"} · best ${num(best)} WPM` : "New"}</em></div>
     </div>`;
   }

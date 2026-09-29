@@ -282,8 +282,8 @@
   // adds them up); the perfect bonus is settled here, when the phrase is saved
   window.STUDY_HOOKS = {
     clientExtra: (r) => {
-      if (r.status === "redo") {
-        // a redone attempt scores nothing
+      if (r.status === "redo" || r.status === "stopped") {
+        // a redone or stopped attempt scores nothing
         S.score -= S.trial.points;
         S.shown = S.score;
         paintScore();
@@ -298,6 +298,15 @@
     flashExtra: () => (S.trial.points > 0 ? [`<b>+${fmt(S.trial.points)}</b><small>points</small>`] : []),
     summaryExtra: () => [[fmt(S.block.points), "points"], [`×${S.blockBest}`, "best combo"]]
   };
+
+  // endless: every phrase of the run done - the big finish
+  document.addEventListener("study:run-over", (e) => {
+    if (e.detail.reason !== "complete") return;
+    inkFlash(4);
+    speedLines(4);
+    sound.grade("S");
+    haptic([60, 40, 60, 40, 60, 40, 240]);
+  });
 
   // endless: a life lost - red flash, a heavy thud, a long buzz
   document.addEventListener("study:life-lost", () => {

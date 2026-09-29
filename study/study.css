@@ -225,7 +225,8 @@
 }
 
 .study-body.is-pointer .action-pill.is-hover,
-.study-body .action-next.is-hover {
+.study-body .action-next.is-hover,
+.study-body #action-clear.is-hover {
   background: rgba(17, 17, 17, 0.07);
   color: var(--ink);
 }
@@ -337,8 +338,9 @@
   visibility: hidden;
 }
 
-/* a mismatching Next asks once more */
-.study-body .action-next.is-confirm {
+/* a mismatching Next (and, in endless, Stop) asks once more */
+.study-body .action-next.is-confirm,
+.study-body #action-clear.is-confirm {
   color: var(--ed-red, #d6452b);
 }
 
