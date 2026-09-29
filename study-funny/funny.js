@@ -24,6 +24,13 @@
    that grows with the combo, and at milestones an ink flash with speed
    lines. The phone vibrates with every hit (Android; iOS where allowed).
 
+   Fever: at 20 in a row the page turns to ink (white on black) and points
+   double, with an extra layer on the beat; it ends when the combo breaks or
+   decays below 20. Decay: a bar under the combo empties in 5 s (4.5 s from
+   10, 4 s in fever); every right word refills it, and when it runs out the
+   combo halves. The clock stops while a stroke is in the air, while paused
+   and off the typing screen.
+
    Everything else reacts to the "study:*" events from study.js. Motion stays
    off the text itself, and prefers-reduced-motion drops the shake, the punch,
    the flash and most of the ink. */
@@ -46,7 +53,10 @@
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const TIERS = [5, 10, 20, 40];
-  const SHOUTS = { 5: "Sharp.", 10: "Fluent.", 20: "Unstoppable.", 40: "Inkstorm." };
+  const SHOUTS = { 5: "Sharp.", 10: "Fluent.", 40: "Inkstorm." }; // 20 is the fever
+  const FEVER_AT = 20;
+  const windowFor = (combo) => (S.fever ? 4000 : combo >= 10 ? 4500 : 5000); // ms before the combo halves
+  const timerBar = comboEl.querySelector(".funny-timer i");
   const RED = "#d6452b";
   const INK = "#111111";
   const tierOf = (n) => TIERS.filter((t) => n >= t).length; // 0..4
@@ -61,12 +71,15 @@
     lastHitAt: 0,
     block: null, // { n, perfect, cer: [], breaks, points }
     combo: 0,
+    fever: false,
+    clock: 0, // ms left before the combo halves
+    stroking: false,
     frozen: false, // a wrong word is waiting to be fixed
     blockBest: 0,
     target: [],
     prev: [],
     hit: new Set(), // indices of target words already stamped
-    trial: { hits: 0, saves: 0, breaks: 0, max: 0, points: 0, bonus: 0 }
+    trial: { hits: 0, saves: 0, breaks: 0, decays: 0, max: 0, points: 0, bonus: 0 }
   };
   const newBlock = () => ({ n: 0, perfect: 0, cer: [], breaks: 0, points: 0 });
   S.block = newBlock();
@@ -76,8 +89,14 @@
   socket.addEventListener("message", (event) => {
     let m;
     try { m = JSON.parse(event.data); } catch (_) { return; }
-    if (m.type === "gesture-start" && m.point) path = [toDisplayPoint(m.point)];
-    else if (m.type === "gesture-move" && m.point && path.length < 400) path.push(toDisplayPoint(m.point));
+    if (m.type === "gesture-start" && m.point) {
+      path = [toDisplayPoint(m.point)];
+      S.stroking = true; // the decay clock waits while a stroke is in the air
+    } else if (m.type === "gesture-move" && m.point && path.length < 400) {
+      path.push(toDisplayPoint(m.point));
+    } else if (m.type === "gesture-end" || m.type === "gesture-cancel") {
+      S.stroking = false;
+    }
   });
 
   const haptic = (pattern) => sendMessage({ type: "study-haptic", pattern });
@@ -91,8 +110,9 @@
     S.prev = [];
     S.hit = new Set();
     S.frozen = false;
-    S.trial = { hits: 0, saves: 0, breaks: 0, max: S.combo, points: 0, bonus: 0 };
+    S.trial = { hits: 0, saves: 0, breaks: 0, decays: 0, max: S.combo, points: 0, bonus: 0 };
     S.lastHitAt = performance.now();
+    S.clock = windowFor(S.combo); // reading a new phrase costs nothing
     titleEl.classList.remove("funny-sweep");
     wrapTitle();
     paintCombo();
@@ -136,7 +156,9 @@
     const now = performance.now();
     const perMinute = 60000 / Math.max(1, now - S.lastHitAt);
     S.lastHitAt = now;
-    const points = 100 * MULT[tier] + Math.max(0, Math.min(100, Math.round((perMinute - 20) * 2)));
+    if (!S.fever && S.combo >= FEVER_AT) enterFever();
+    const points = (100 * MULT[tier] + Math.max(0, Math.min(100, Math.round((perMinute - 20) * 2)))) * (S.fever ? 2 : 1);
+    S.clock = windowFor(S.combo);
     S.trial.points += points;
     stampWord(word, tier);
     flashKeys(word);
@@ -169,6 +191,7 @@
   function onSave(i, word) {
     S.frozen = false;
     S.trial.saves++;
+    S.clock = windowFor(S.combo);
     S.hit.add(i);
     stampWord(word, 0);
     paintTitle();
@@ -192,6 +215,7 @@
     setHotInk(0);
     comboNum.textContent = `×${lost}`;
     restartClass(comboEl, "is-break");
+    if (S.fever) exitFever();
     heat(0);
     sound.crash();
     sound.bed(0, true);
@@ -243,6 +267,7 @@
     if (!["trial", "feedback"].includes(screen)) {
       sound.bed(0);
       heat(0);
+      if (S.fever) exitFever(true);
     }
     scoreEl.hidden = screen === "setup" || !screen;
     if (screen === "summary") stampGrade();
@@ -266,7 +291,8 @@
         S.trial.bonus = PERFECT_BONUS;
         S.trial.points += PERFECT_BONUS;
       }
-      return { combo: { score: S.trial.points, max: S.trial.max, hits: S.trial.hits, saves: S.trial.saves, breaks: S.trial.breaks } };
+      return { combo: { score: S.trial.points, max: S.trial.max, hits: S.trial.hits, saves: S.trial.saves,
+                        breaks: S.trial.breaks, decays: S.trial.decays, fever: S.fever } };
     },
     flashExtra: () => (S.trial.points > 0 ? [`<b>+${fmt(S.trial.points)}</b><small>points</small>`] : []),
     summaryExtra: () => [[fmt(S.block.points), "points"], [`×${S.blockBest}`, "best combo"]]
@@ -364,6 +390,79 @@
     sheet.appendChild(el);
     if (b.me && b.me.rank <= 3) sound.grade("S");
   });
+
+  // ---------------------------------------------------------------- fever
+
+  function enterFever() {
+    S.fever = true;
+    body.classList.add("is-fever");
+    shout("Fever ×2", 4);
+    inkFlash(4);
+    speedLines(4);
+    sound.fever(true);
+    haptic([60, 40, 60, 40, 200]);
+  }
+
+  function exitFever(quiet = false) {
+    S.fever = false;
+    body.classList.remove("is-fever");
+    if (!quiet) {
+      sound.fever(false);
+      haptic([90, 60, 90]);
+    } else {
+      sound.fever(false, true);
+    }
+  }
+
+  // ---------------------------------------------------------------- decay
+
+  let lastFrame = performance.now();
+  let ticked = 0;
+
+  function clockRuns() {
+    return S.combo > 0 && body.dataset.screen === "trial" && !body.classList.contains("is-paused") && !S.stroking;
+  }
+
+  function tickClock(now) {
+    const dt = Math.min(100, now - lastFrame);
+    lastFrame = now;
+    if (clockRuns()) {
+      const before = S.clock;
+      S.clock -= dt;
+      // a tick in the last second, twice
+      if ((before > 1000 && S.clock <= 1000) || (before > 500 && S.clock <= 500)) sound.tick();
+      if (S.clock <= 0) decay();
+    }
+    const full = windowFor(S.combo);
+    const left = Math.max(0, Math.min(1, S.clock / full));
+    timerBar.style.transform = `scaleX(${S.combo > 0 ? left : 0})`;
+    comboEl.classList.toggle("is-hurry", S.combo > 0 && left < 0.3);
+    comboEl.classList.toggle("is-last", S.combo > 0 && S.clock < 1000 && clockRuns());
+    requestAnimationFrame(tickClock);
+  }
+  requestAnimationFrame(tickClock);
+
+  // time ran out: the combo halves (and fever ends below 20)
+  function decay() {
+    const was = S.combo;
+    S.combo = Math.floor(S.combo / 2);
+    S.trial.decays++;
+    if (S.fever && S.combo < FEVER_AT) exitFever();
+    const tier = tierOf(S.combo);
+    setHotInk(tier);
+    heat(tier);
+    sound.decay();
+    sound.bed(tier);
+    haptic([50]);
+    if (S.combo === 0) {
+      comboNum.textContent = `×${was}`;
+      restartClass(comboEl, "is-break");
+    } else {
+      S.clock = windowFor(S.combo);
+      paintCombo();
+      restartClass(comboEl, "is-decay");
+    }
+  }
 
   // ---------------------------------------------------------------- the prompt
 
@@ -807,6 +906,7 @@
 
     // ---- the beat under the combo
     let bedTier = 0;
+    let feverOn = false;
     let bedTimer = null;
     let nextBeat = 0;
     let sixteenth = 0;
@@ -824,6 +924,11 @@
           noiseHit({ t: t + 0.012, type: "bandpass", freq: 1800, q: 0.7, decay: 0.1, gain: 0.14 });
         }
         if (bedTier >= 4) pluck(hz(chord[pos % 3] + 12 * (1 + ((pos >> 2) % 2))), { t, gain: 0.05, decay: 0.12, send: 0.2, pan: pos % 2 ? 0.4 : -0.4, bright: 0.6 });
+        if (feverOn) {
+          // fever: sixteenth hats and an octave-bouncing sub bass
+          noiseHit({ t, freq: 9500, decay: 0.025, gain: 0.035, pan: pos % 2 ? 0.3 : -0.3 });
+          if (pos % 2 === 0) tone(hz(chord[0] - 24 + (pos % 4 === 2 ? 12 : 0)), { type: "square", t, decay: BEAT * 0.4, gain: 0.05 });
+        }
         nextBeat += BEAT / 4;
         sixteenth++;
       }
@@ -893,6 +998,43 @@
 
       save() {
         pluck(hz(CHORDS[chordIndex][2] + 12), { gain: 0.08, decay: 0.2, bright: 0.4 });
+      },
+
+      // fever: a power-up sweep into a hit / a power-down when it ends
+      fever(onNow, quiet = false) {
+        if (!ready()) return;
+        feverOn = onNow;
+        if (quiet) return;
+        const t0 = ac.currentTime;
+        const o = ac.createOscillator();
+        const f = ac.createBiquadFilter();
+        const g = ac.createGain();
+        o.type = "sawtooth";
+        f.type = "lowpass";
+        f.Q.value = 8;
+        o.frequency.setValueAtTime(onNow ? 110 : 440, t0);
+        o.frequency.exponentialRampToValueAtTime(onNow ? 880 : 55, t0 + 0.45);
+        f.frequency.setValueAtTime(onNow ? 400 : 4000, t0);
+        f.frequency.exponentialRampToValueAtTime(onNow ? 6000 : 200, t0 + 0.45);
+        env(g, t0, 0.14, 0.02, 0.5);
+        o.connect(f).connect(g);
+        route(g, 0, 0.4);
+        o.start(t0);
+        o.stop(t0 + 0.6);
+        if (onNow) {
+          kick(0.45, 0.9);
+          crashCymbal(0.45, 0.22);
+        }
+      },
+
+      // the combo halves: two notes falling
+      decay() {
+        const root = CHORDS[chordIndex][0];
+        pluck(hz(root + 12), { gain: 0.09, decay: 0.18, bright: 0.3 });
+        pluck(hz(root + 5), { t: 0.09, gain: 0.09, decay: 0.3, bright: 0.2 });
+      },
+      tick() {
+        noiseHit({ type: "bandpass", freq: 2400, q: 6, decay: 0.03, gain: 0.12 });
       },
       miss() {
         tone(150, { type: "sine", decay: 0.09, gain: 0.14, bend: 0.8 });

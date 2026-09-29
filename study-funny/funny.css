@@ -468,6 +468,62 @@
   }
 }
 
+/* ---------------------------------------------------------------- decay clock */
+
+.funny-timer {
+  display: block;
+  width: 100%;
+  height: 2px;
+  margin-top: 5px;
+  background: rgba(17, 17, 17, 0.12);
+}
+
+.funny-timer i {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transform-origin: left center;
+}
+
+.funny-combo.is-hurry .funny-timer i {
+  background: var(--ed-red, #d6452b);
+}
+
+/* the last second: the number trembles */
+.funny-combo.is-last b {
+  animation: funny-tremble 90ms linear infinite;
+}
+
+@keyframes funny-tremble {
+  25% { transform: translate(-1px, 1px) rotate(-1deg); }
+  75% { transform: translate(1px, -1px) rotate(1deg); }
+}
+
+/* the combo halved: it sinks a little */
+.funny-combo.is-decay b {
+  animation: funny-decay 380ms ease-out;
+}
+
+@keyframes funny-decay {
+  0% { transform: translateY(8px) scale(0.85); color: var(--ink-faint); }
+  100% { transform: none; }
+}
+
+/* ---------------------------------------------------------------- fever */
+
+/* the page turns to ink: everything inverts, red stays red */
+.funny-body .display-frame {
+  transition: filter 260ms ease;
+}
+
+.funny-body.is-fever .display-frame {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.funny-body.is-fever .funny-combo span::after {
+  content: " · fever ×2";
+}
+
 /* ---------------------------------------------------------------- sound toggle */
 
 .funny-sound {
