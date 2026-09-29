@@ -61,22 +61,22 @@
   //           beat, soft), rainbow (the accent cycles)
   //   bg:     dots, stripes, grid, stars (behind the keyboard)
   const LEVELS = [
-    { name: "", accent: "#d6452b", light: "214,69,43", lights: [], bg: "", add: [], prog: "A", key: 0, voice: "pluck", padCut: 500 },
-    { name: "Warm up", accent: "#d6452b", light: "214,69,43", lights: ["glow"], bg: "", add: ["kick"], prog: "A", key: 0, voice: "pluck", padCut: 500 },
-    { name: "Groove", accent: "#d6452b", light: "214,69,43", lights: ["glow"], bg: "", add: ["hat", "pad"], prog: "A", key: 0, voice: "pluck", padCut: 600 },
-    { name: "Sharp", accent: "#e0582a", light: "224,88,42", lights: ["glow", "pulse"], bg: "", add: ["clap"], prog: "A", key: 0, voice: "square", padCut: 900 },
-    { name: "Fluent", accent: "#e8772e", light: "232,119,46", lights: ["glow", "pulse"], bg: "dots", add: ["bass"], prog: "A", key: 0, voice: "square", padCut: 1300 },
-    { name: "Heat", accent: "#e8772e", light: "232,119,46", lights: ["pulse", "beams"], bg: "dots", add: ["arp"], prog: "B", key: 0, voice: "square", padCut: 1800 },
-    { name: "Blaze", accent: "#d6337a", light: "214,51,122", lights: ["pulse", "beams"], bg: "dots", add: ["open", "hat16"], prog: "B", key: 0, voice: "bell", padCut: 2400 },
-    { name: "Fever", accent: "#d6337a", light: "214,51,122", lights: ["beams", "strobe"], bg: "stripes", add: ["roll", "sub", "crash"], prog: "C", key: 0, voice: "bell", padCut: 4200, fever: true },
-    { name: "Neon", accent: "#1fb5cc", light: "31,181,204", lights: ["beams", "spot"], bg: "stripes", add: ["hook"], prog: "C", key: 0, voice: "bell", padCut: 4600 },
-    { name: "Overdrive", accent: "#1fb5cc", light: "31,181,204", lights: ["spot", "lasers"], bg: "grid", add: ["stab"], prog: "C", key: 2, voice: "stab", padCut: 4800 },
-    { name: "Lightspeed", accent: "#8a5cf6", light: "138,92,246", lights: ["beams", "lasers"], bg: "grid", add: ["ride"], prog: "B", key: 2, voice: "stab", padCut: 5000 },
-    { name: "Unstoppable", accent: "#8a5cf6", light: "138,92,246", lights: ["beams", "lasers", "strobe"], bg: "grid", add: [], prog: "D", key: 2, voice: "stab", padCut: 5200 },
-    { name: "Supernova", accent: "#e9b21f", light: "233,178,31", lights: ["beams", "spot", "strobe"], bg: "stars", add: [], prog: "D", key: 4, voice: "glass", padCut: 5400 },
-    { name: "Stellar", accent: "#e9b21f", light: "233,178,31", lights: ["beams", "spot", "lasers", "strobe"], bg: "stars", add: ["perc"], prog: "A", key: 4, voice: "glass", padCut: 5600 },
-    { name: "Mythic", accent: "rainbow", light: "", lights: ["beams", "spot", "lasers", "strobe", "rainbow"], bg: "stars", add: [], prog: "B", key: 5, voice: "stab", padCut: 5800 },
-    { name: "Inkstorm", accent: "rainbow", light: "", lights: ["beams", "spot", "lasers", "strobe", "rainbow", "fast"], bg: "stars", add: [], prog: "C", key: 7, voice: "glass", padCut: 6000 }
+    { name: "", accent: "#d6452b", light: "214,69,43", lights: [], bg: "", add: [], progs: ["A", "E"], key: 0, voice: "pluck", padCut: 500 },
+    { name: "Warm up", accent: "#d6452b", light: "214,69,43", lights: ["glow"], bg: "", add: ["kick"], progs: ["A", "E"], key: 0, voice: "pluck", padCut: 500 },
+    { name: "Groove", accent: "#d6452b", light: "214,69,43", lights: ["glow"], bg: "", add: ["hat", "pad"], progs: ["A", "E"], key: 0, voice: "pluck", padCut: 600 },
+    { name: "Sharp", accent: "#e0582a", light: "224,88,42", lights: ["glow", "pulse"], bg: "", add: ["clap", "build"], progs: ["A", "E"], key: 0, voice: "square", padCut: 900 },
+    { name: "Fluent", accent: "#e8772e", light: "232,119,46", lights: ["glow", "pulse"], bg: "dots", add: ["bass"], progs: ["A", "E", "H"], key: 0, voice: "square", padCut: 1300 },
+    { name: "Heat", accent: "#e8772e", light: "232,119,46", lights: ["pulse", "beams"], bg: "dots", add: ["arp"], progs: ["B", "H", "E"], key: 0, voice: "square", padCut: 1800 },
+    { name: "Blaze", accent: "#d6337a", light: "214,51,122", lights: ["pulse", "beams"], bg: "dots", add: ["open", "hat16"], progs: ["B", "F", "H"], key: 0, voice: "bell", padCut: 2400 },
+    { name: "Fever", accent: "#d6337a", light: "214,51,122", lights: ["beams", "strobe"], bg: "stripes", add: ["roll", "sub", "crash", "kick2"], progs: ["F", "G", "B"], key: 0, voice: "bell", padCut: 4200, fever: true },
+    { name: "Neon", accent: "#1fb5cc", light: "31,181,204", lights: ["beams", "spot"], bg: "stripes", add: ["hook"], progs: ["G", "F", "C"], key: 0, voice: "bell", padCut: 4600 },
+    { name: "Overdrive", accent: "#1fb5cc", light: "31,181,204", lights: ["spot", "lasers"], bg: "grid", add: ["stab"], progs: ["C", "G", "D"], key: 2, voice: "stab", padCut: 4800 },
+    { name: "Lightspeed", accent: "#8a5cf6", light: "138,92,246", lights: ["beams", "lasers"], bg: "grid", add: ["ride"], progs: ["D", "B", "C"], key: 2, voice: "stab", padCut: 5000 },
+    { name: "Unstoppable", accent: "#8a5cf6", light: "138,92,246", lights: ["beams", "lasers", "strobe"], bg: "grid", add: [], progs: ["G", "F", "D"], key: 2, voice: "stab", padCut: 5200 },
+    { name: "Supernova", accent: "#e9b21f", light: "233,178,31", lights: ["beams", "spot", "strobe"], bg: "stars", add: [], progs: ["H", "D", "G"], key: 4, voice: "glass", padCut: 5400 },
+    { name: "Stellar", accent: "#e9b21f", light: "233,178,31", lights: ["beams", "spot", "lasers", "strobe"], bg: "stars", add: ["perc"], progs: ["H", "C", "G", "B"], key: 4, voice: "glass", padCut: 5600 },
+    { name: "Mythic", accent: "rainbow", light: "", lights: ["beams", "spot", "lasers", "strobe", "rainbow"], bg: "stars", add: [], progs: ["G", "H", "D", "F"], key: 5, voice: "stab", padCut: 5800 },
+    { name: "Inkstorm", accent: "rainbow", light: "", lights: ["beams", "spot", "lasers", "strobe", "rainbow", "fast"], bg: "stars", add: [], progs: ["C", "G", "H", "B"], key: 7, voice: "glass", padCut: 6000 }
   ];
   // the track's layers accumulate level by level
   LEVELS.forEach((l, i) => { l.layers = new Set([...(i ? LEVELS[i - 1].layers : []), ...l.add]); });
@@ -184,31 +184,42 @@
     const now = performance.now();
     const perMinute = 60000 / Math.max(1, now - S.lastHitAt);
     S.lastHitAt = now;
-    if (!S.fever && S.combo >= FEVER_AT) enterFever();
+    const feverNow = !S.fever && S.combo >= FEVER_AT;
+    if (feverNow) S.fever = true; // points double from this word on
     const points = (100 * multOf(S.combo) + Math.max(0, Math.min(100, Math.round((perMinute - 20) * 2)))) * (S.fever ? 2 : 1);
     S.clock = windowFor(S.combo);
     S.trial.points += points;
-    stampWord(word, tier);
-    flashKeys(word);
+    // everything the participant sees and hears lands on the grid: the next
+    // eighth note of the track (the score is counted now; only the show waits)
+    const combo = S.combo;
+    const pathNow = path.slice();
     const p = cursorPoint();
-    burstAlong(path, tier);
-    splash(p.x, p.y, tier, 1);
-    ring(p.x, p.y, 40 + tier * 22, tier >= 3 ? RED : INK);
-    floatPoints(p.x, p.y, `+${points}`, tier);
-    addScore(points);
-    shake(tier);
-    punch(0.006 + tier * 0.003);
-    paintTitle();
-    paintCombo(true);
-    setHotInk(tier);
-    heat(tier);
-    const pan = Math.max(-1, Math.min(1, (p.x / frameEl.clientWidth) * 2 - 1));
-    sound.hit(S.combo, tier, pan);
-    haptic([14 + tier * 7]);
-    if (levelOf(S.combo) !== S.level) {
-      setLevel(levelOf(S.combo), true);
-      ring(p.x, p.y, 220, RED);
-    }
+    const land = () => {
+      stampWord(word, tier);
+      flashKeys(word);
+      burstAlong(pathNow, tier);
+      splash(p.x, p.y, tier, 1);
+      ring(p.x, p.y, 40 + tier * 22, tier >= 3 ? RED : INK);
+      floatPoints(p.x, p.y, `+${points}`, tier);
+      addScore(points);
+      shake(tier);
+      punch(0.006 + tier * 0.003);
+      paintTitle();
+      paintCombo(true);
+      setHotInk(tier);
+      heat(tier);
+      const pan = Math.max(-1, Math.min(1, (p.x / frameEl.clientWidth) * 2 - 1));
+      sound.hit(combo, tier, pan);
+      haptic([14 + tier * 7]);
+      if (feverNow) enterFever();
+      if (levelOf(combo) !== S.level && S.combo >= combo) {
+        setLevel(levelOf(combo), true);
+        ring(p.x, p.y, 220, RED);
+      }
+    };
+    const wait = sound.quantize();
+    if (wait) setTimeout(land, wait);
+    else land();
   }
 
   function onSave(i, word) {
@@ -262,7 +273,11 @@
       addScore(S.trial.bonus);
     }
     if (e.detail.status !== "matched") return;
-    // the finisher: the phrase ripples, a red line sweeps under it, big ink
+    // the finisher (on the grid too): the phrase ripples, a line sweeps, big ink
+    setTimeout(finisher, sound.quantize() + 60);
+  });
+
+  function finisher() {
     const tier = tierOf(S.combo);
     restartClass(titleEl, "funny-sweep");
     titleEl.querySelectorAll(".funny-w").forEach((w) => restartClass(w, "is-wave"));
@@ -276,7 +291,7 @@
     punch(0.02);
     sound.finish(tier);
     haptic([20, 30, 20, 30, 70]);
-  });
+  }
 
   document.addEventListener("study:screen", (e) => {
     const screen = e.detail.screen;
@@ -476,7 +491,7 @@
     lightsEl.dataset.lights = L.lights.join(" ");
     bgEl.dataset.bg = L.bg;
     setHotInk(tierOf(S.combo));
-    sound.level({ layers: L.layers, prog: L.prog, key: L.key, voice: L.voice, padCut: L.padCut, fever: !!L.fever });
+    sound.level({ layers: L.layers, progs: L.progs, key: L.key, voice: L.voice, padCut: L.padCut, fever: !!L.fever, level: lv });
     if (up && lv > 0 && !L.fever) { // fever announces itself
       shout(L.name, lv);
       if (lv % 3 === 0) speedLines(tierOf(S.combo));
@@ -920,11 +935,20 @@
   // ---------------------------------------------------------------- sound
 
   // A small synth on Web Audio (no files). The level (see LEVELS) sets what
-  // the music does: which layers of the track play, the chord progression,
-  // the key and the instrument of the hits. Hits are notes of the current
-  // chord climbing with the combo, over a sub kick, panned by where the stroke
-  // ended; the track is four on the floor at 124 BPM with a pad side-chained
-  // to the kick, and the chord moves once a bar. A break tape-stops it.
+  // the music does: which layers of the track play, the pool of chord
+  // progressions, the key and the instrument of the hits.
+  //
+  // The track: 124 BPM, four on the floor, swung sixteenths, a four-voice pad
+  // side-chained to the kick. It runs in 8-bar sections; each section plays
+  // the next progression of the level's pool (sevenths, sus and add9 chords,
+  // some moving every half bar); key changes wait for a section start. The
+  // last bar of a section builds (snare roll, a riser, and from level 5 a
+  // half-beat of silence) into a crash on the next downbeat.
+  //
+  // Hits land on the grid: while the track plays, a right word's sound (and
+  // its whole hit) waits for the next eighth note, unless the last one was
+  // under 50 ms ago. On-beat hits play chord tones, off-beat hits scale tones,
+  // rising and falling over two octaves with the combo. A break tape-stops.
   const sound = (() => {
     let ac = null;
     let out = null; // dry bus
@@ -936,26 +960,42 @@
 
     const BPM = 124;
     const BEAT = 60 / BPM;
-    // chord progressions as semitones from A3 (220 Hz)
+    const SIXTEENTH = BEAT / 4;
+    const SWING = SIXTEENTH * 0.14; // late off-sixteenths
+    // chord progressions as semitones from A3 (220 Hz); `per` = sixteenths per chord
     const PROGS = {
-      A: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]], // Am F C G
-      B: [[-4, 0, 3], [-2, 2, 5], [0, 3, 7], [3, 7, 10]], // F G Am C
-      C: [[5, 8, 12], [1, 5, 8], [-4, 0, 3], [3, 7, 10]], // Dm Bb F C
-      D: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-5, -1, 2]] // Am G F E
+      A: { per: 16, chords: [[0, 3, 7], [-4, 0, 3, 7], [3, 7, 10], [-2, 2, 5]] }, // Am Fmaj7 C G
+      B: { per: 16, chords: [[-4, 0, 3, 7], [-2, 2, 5], [0, 3, 7, 10], [0, 3, 7]] }, // Fmaj7 G Am7 Am
+      C: { per: 16, chords: [[0, 3, 7, 10], [5, 8, 12, 15], [-2, 2, 5, 8], [3, 7, 10, 14]] }, // Am7 Dm7 G7 Cmaj7
+      D: { per: 16, chords: [[-4, 0, 3, 7], [-5, -2, 2, 5], [-7, -4, 0, 3], [-9, -5, -2, 2]] }, // Fmaj7 Em7 Dm7 Cmaj7
+      E: { per: 16, chords: [[0, 3, 7], [-5, -2, 2], [-4, 0, 3], [3, 7, 10]] }, // Am Em F C
+      F: { per: 16, chords: [[5, 8, 12], [0, 3, 7], [1, 5, 8], [3, 7, 10]] }, // Dm Am Bb C
+      G: { per: 8, chords: [[0, 3, 7], [0, 3, 7, 10], [-2, 2, 5], [-2, 2, 5, 7], [-4, 0, 3, 7], [-4, 0, 3], [-5, 0, 2], [-5, -1, 2]] }, // Am Am7 | G Gsus | Fmaj7 F | Esus4 E
+      H: { per: 16, chords: [[-4, 0, 3, 5], [3, 5, 10], [-2, 2, 5], [0, 3, 7, 10]] } // Fadd9 Csus2 G Am7
     };
+    const SCALE = [0, 2, 3, 5, 7, 8, 10]; // A natural minor, for off-beat melody notes
     const hz = (semi) => 220 * 2 ** (semi / 12);
     // the hook: chord-tone indices per sixteenth (null = rest), one bar
     const HOOK = [4, null, 3, null, 2, null, 3, 4, null, 5, 4, null, 3, null, 2, null];
 
-    let cfg = { layers: new Set(), prog: "A", key: 0, voice: "pluck", padCut: 500, fever: false };
+    let cfg = { layers: new Set(), progs: ["A"], key: 0, voice: "pluck", padCut: 500, fever: false, level: 0 };
     let bar = 0;
     let timer = null;
     let nextBeat = 0;
+    let trackStart = 0; // audio time of sixteenth 0 (the grid)
     let sixteenth = 0;
+    let section = 0; // 8-bar sections
+    let progName = "A";
+    let key = 0; // the key in use (level changes apply at a section start)
     let pad = null;
     let onBeat = null;
     const has = (layer) => cfg.layers.has(layer);
-    const chordNow = () => PROGS[cfg.prog][bar % 4].map((n) => n + cfg.key);
+    const progNow = () => PROGS[progName];
+    const chordAt = (six) => {
+      const p = progNow();
+      return p.chords[Math.floor(six / p.per) % p.chords.length].map((n) => n + key);
+    };
+    const chordNow = () => chordAt(Math.max(0, sixteenth - 1));
 
     function audio() {
       if (!ac) {
@@ -1151,9 +1191,10 @@
       g.gain.exponentialRampToValueAtTime(0.085, t0 + 0.8);
       f.connect(g);
       route(g, 0, 0.35, { bus: "bed" });
+      // four chord voices, each a detuned pair, plus the top note an octave up
       const voices = [];
-      for (let n = 0; n < 3; n++) {
-        for (const cents of [-14, 0, 14]) {
+      for (let n = 0; n < 5; n++) {
+        for (const cents of [-12, 12]) {
           const o = ac.createOscillator();
           o.type = "sawtooth";
           o.detune.value = cents;
@@ -1163,12 +1204,12 @@
         }
       }
       pad = { voices, f, g };
-      padChord(t0);
+      padChord(t0, chordNow());
     }
 
-    function padChord(t) {
-      const c = chordNow();
-      pad.voices.forEach((o, k) => o.frequency.setValueAtTime(hz(c[Math.floor(k / 3)]), t));
+    function padChord(t, c) {
+      const notes = [0, 1, 2, 3].map((i) => c[i] ?? c[0] + 12).concat([c[c.length - 1] + 12]);
+      pad.voices.forEach((o, k) => o.frequency.setValueAtTime(hz(notes[Math.floor(k / 2)]), t));
     }
 
     function stopPad(tape) {
@@ -1197,46 +1238,104 @@
 
     function schedule() {
       while (nextBeat < ac.currentTime + 0.12) {
-        const t = nextBeat - ac.currentTime;
         const pos = sixteenth % 16;
+        const barNow = Math.floor(sixteenth / 16);
+        const inSection = barNow % 8;
+        const swing = pos % 2 ? SWING : 0;
+        const t = nextBeat - ac.currentTime;
+        const ts = t + swing; // swung time for hats, bass and the like
         if (pos === 0) {
-          bar = Math.floor(sixteenth / 16);
-          if (pad) padChord(ac.currentTime + t);
-          if (has("crash") && bar % 4 === 0) crashCymbal(t, 0.1);
+          bar = barNow;
+          if (inSection === 0) {
+            // a new section: the next progression of the level, the level's key
+            if (barNow > 0) section++;
+            progName = cfg.progs[section % cfg.progs.length];
+            key = cfg.key;
+            if (barNow > 0 && has("crash")) crashCymbal(t, 0.14);
+            if (barNow > 0 && has("kick")) kick(t, 0.8);
+          }
         }
-        const c = chordNow();
+        const c = chordAt(sixteenth);
+        if (pad && sixteenth % progNow().per === 0) padChord(ac.currentTime + t, c);
+        const next = chordAt(sixteenth + (progNow().per - (sixteenth % progNow().per)));
         const tones = [c[0], c[1], c[2], c[0] + 12, c[1] + 12, c[2] + 12];
-        if (pos % 4 === 0) {
+        const building = inSection === 7 && has("build");
+        const gap = building && cfg.level >= 5 && pos >= 14; // the breath before the drop
+        if (pos % 4 === 0 && !gap) {
           if (has("kick")) kick(t, 0.55);
           pump(t);
           if (onBeat) setTimeout(() => onBeat(pos, bar), Math.max(0, t * 1000));
         }
-        if (pos % 4 === 2 && (has("hat") || has("open"))) noiseHit({ t, freq: 8500, decay: has("open") ? 0.16 : 0.05, gain: has("open") ? 0.07 : 0.05, send: 0.1 });
-        if (has("hat16") && pos % 2 === 1) noiseHit({ t, freq: 9500, decay: 0.025, gain: 0.03, pan: pos % 4 === 1 ? -0.3 : 0.3 });
-        if (has("ride") && pos % 2 === 0) noiseHit({ t, type: "bandpass", freq: 7000, q: 2, decay: 0.3, gain: 0.025, send: 0.3 });
-        if (has("bass") && (pos % 4 === 2 || (has("roll") && pos % 4 === 3))) bass(hz(c[0] - 12), t, BEAT * 0.22);
-        if (has("sub") && pos % 8 === 0) tone(hz(c[0] - 24), { type: "sine", t, decay: BEAT * 1.6, gain: 0.14, bus: "bed" });
-        if (has("clap") && (pos === 4 || pos === 12)) {
-          noiseHit({ t, type: "bandpass", freq: 1400, q: 0.8, decay: 0.16, gain: 0.2, send: 0.35 });
-          noiseHit({ t: t + 0.011, type: "bandpass", freq: 1700, q: 0.8, decay: 0.12, gain: 0.14 });
+        if (has("kick2") && pos === 14 && barNow % 2 === 1 && !gap) kick(t, 0.35); // a pickup kick
+        if (!gap) {
+          if (pos % 4 === 2 && (has("hat") || has("open"))) noiseHit({ t: ts, freq: 8500, decay: has("open") ? 0.16 : 0.05, gain: has("open") ? 0.07 : 0.05, send: 0.1 });
+          if (has("hat16") && pos % 2 === 1) noiseHit({ t: ts, freq: 9500, decay: 0.025, gain: pos % 4 === 3 ? 0.035 : 0.022, pan: pos % 4 === 1 ? -0.3 : 0.3 });
+          if (has("ride") && pos % 2 === 0) noiseHit({ t, type: "bandpass", freq: 7000, q: 2, decay: 0.3, gain: 0.025, send: 0.3 });
+          // bass: offbeat roots, a passing note into the next chord; rolling octaves in fever
+          if (has("bass")) {
+            const root = c[0] - 12;
+            if (has("roll")) {
+              if (pos % 2 === 0 ? pos % 4 === 2 : true) bass(hz(root + (pos % 4 === 3 ? 12 : 0)), ts, SIXTEENTH * 0.9);
+            } else if (pos % 4 === 2) {
+              const approach = pos === 14 && next[0] !== c[0] ? next[0] - 12 + (next[0] > c[0] ? -1 : 1) : root;
+              bass(hz(approach), ts, SIXTEENTH * 1.6);
+            }
+          }
+          if (has("sub") && pos === 0) tone(hz(c[0] - 24), { type: "sine", t, decay: BEAT * 3.2, gain: 0.13, bus: "bed" });
+          if (has("clap") && (pos === 4 || pos === 12) && !building) {
+            noiseHit({ t, type: "bandpass", freq: 1400, q: 0.8, decay: 0.16, gain: 0.2, send: 0.35 });
+            noiseHit({ t: t + 0.011, type: "bandpass", freq: 1700, q: 0.8, decay: 0.12, gain: 0.14 });
+          }
+          if (has("stab") && (pos === 3 || pos === 6 || pos === 11)) c.forEach((n) => pluck(hz(n + 12), { t: ts, gain: 0.035, decay: 0.12, bright: 1.1, send: 0.2 }));
+          if (has("perc") && pos >= 12 && barNow % 2 === 1) tone(140 - (pos - 12) * 12, { type: "sine", t, decay: 0.12, gain: 0.18, bend: 0.6 });
+          if (has("arp")) {
+            const up = [0, 1, 2, 3, 4, 5, 4, 3][pos % 8];
+            pluck(hz(tones[up] + 12), { t: ts, gain: 0.045, decay: 0.13, bright: 0.7, send: 0.15, delay: 0.35, pan: pos % 2 ? 0.35 : -0.35 });
+          }
+          if (has("hook") && HOOK[pos] !== null) pluck(hz(tones[HOOK[pos]] + 12), { t: ts, gain: 0.07, decay: 0.28, bright: 1, send: 0.3, delay: 0.4, type: "square" });
         }
-        if (has("stab") && (pos === 3 || pos === 6 || pos === 11)) c.forEach((n) => pluck(hz(n + 12), { t, gain: 0.035, decay: 0.12, bright: 1.1, send: 0.2 }));
-        if (has("perc") && pos >= 12 && bar % 2 === 1) tone(140 - (pos - 12) * 12, { type: "sine", t, decay: 0.12, gain: 0.18, bend: 0.6 });
-        if (has("arp")) {
-          const up = [0, 1, 2, 3, 4, 5, 4, 3][pos % 8];
-          pluck(hz(tones[up] + 12), { t, gain: 0.045, decay: 0.13, bright: 0.7, send: 0.15, delay: 0.35, pan: pos % 2 ? 0.35 : -0.35 });
+        // the build: a snare roll thickening through the bar and a riser under it
+        if (building && !gap) {
+          const every = pos < 8 ? 2 : 1;
+          if (pos % every === 0) noiseHit({ t, type: "bandpass", freq: 1800 + pos * 60, q: 0.9, decay: 0.08, gain: 0.05 + pos * 0.01, send: 0.2 });
+          if (pos === 0) riser(t, BEAT * 3.5);
         }
-        if (has("hook") && HOOK[pos] !== null) pluck(hz(tones[HOOK[pos]] + 12), { t, gain: 0.07, decay: 0.28, bright: 1, send: 0.3, delay: 0.4, type: "square" });
-        nextBeat += BEAT / 4;
+        nextBeat += SIXTEENTH;
         sixteenth++;
       }
+    }
+
+    // white noise swept up through a band-pass, for the build
+    function riser(t, len) {
+      if (!ready()) return;
+      const t0 = ac.currentTime + t;
+      const src = ac.createBufferSource();
+      src.buffer = noise;
+      src.loop = true;
+      const f = ac.createBiquadFilter();
+      f.type = "bandpass";
+      f.Q.value = 2.5;
+      f.frequency.setValueAtTime(400, t0);
+      f.frequency.exponentialRampToValueAtTime(9000, t0 + len);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.09, t0 + len);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + len + 0.05);
+      src.connect(f).connect(g);
+      route(g, 0, 0.3);
+      src.start(t0);
+      src.stop(t0 + len + 0.1);
     }
 
     function startTrack() {
       if (timer) return;
       nextBeat = ac.currentTime + 0.05;
+      trackStart = nextBeat;
       sixteenth = 0;
+      section = 0;
       bar = 0;
+      progName = cfg.progs[0];
+      key = cfg.key;
       timer = setInterval(schedule, 25);
     }
 
@@ -1261,6 +1360,14 @@
       set onBeat(fn) { onBeat = fn; },
       get playing() { return !!timer; },
 
+      // ms until the next eighth note (0 if the last one just passed, or no track)
+      quantize() {
+        if (!timer || !ac) return 0;
+        const eighth = BEAT / 2;
+        const since = (ac.currentTime - trackStart) % eighth;
+        return since < 0.05 ? 0 : Math.round((eighth - since) * 1000);
+      },
+
       // a level's music: layers, progression, key, voice; the track starts
       // with the first layer and stops when there is none
       level(c) {
@@ -1279,8 +1386,16 @@
       hit(combo, tier, pan = 0) {
         if (!ready()) return;
         const c = chordNow();
-        const step = (combo - 1) % 8;
-        const note = c[step % 3] + 12 * Math.floor(step / 3);
+        // up and down over two octaves as the combo grows
+        const wave = [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1][(combo - 1) % 14];
+        const onBeat = !timer || Math.round((ac.currentTime - trackStart) / (BEAT / 2)) % 2 === 0;
+        let note;
+        if (onBeat) {
+          note = c[wave % c.length] + 12 * Math.floor(wave / c.length); // a chord tone
+        } else {
+          const deg = wave + 1; // a scale step between chord tones
+          note = SCALE[deg % 7] + key + 12 * Math.floor(deg / 7);
+        }
         noiseHit({ freq: 3500, decay: 0.018, gain: 0.22 + tier * 0.03, pan });
         voice(hz(note + 12), pan, tier * 0.012);
         kick(0, 0.45 + tier * 0.08);
