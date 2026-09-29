@@ -1,0 +1,298 @@
+/* Study display: the main display in its Editorial style, plus a prompt above
+   the output line, a Next pill mirroring Clear, and a sheet over the keyboard
+   for the rating scale. Layout boxes are fixed so G never moves between
+   screens (display.js only re-measures it on resize). */
+
+/* the study fixes every setting: hide the settings row and style switch */
+.study-body .settings-row,
+.study-body .theme-toggle,
+.study-body .touchpad-hint,
+.study-body .lan-badge,
+.study-body .letter-badge {
+  display: none !important;
+}
+
+.study-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.study-info-title {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-style: italic;
+  line-height: 1.1;
+}
+
+.study-info-detail {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* prompt: fixed height, so the output line and keyboard stay put. Screens
+   without typing have an empty output line, so their longer content may run
+   on into it (overflow stays visible). */
+.study-prompt {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: min(95%, 1260px);
+  height: clamp(80px, 11vh, 140px);
+  text-align: center;
+}
+
+/* the prompt takes vertical room from the page, so the output line sits a
+   little closer to the keyboard than on the main display */
+.study-body .text-row {
+  margin-bottom: 4vmin;
+}
+
+.study-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  min-height: 1em;
+}
+
+.study-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.9rem, 5vmin, 3.2rem);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+/* while typing, the target phrase reads as the page's headline, set a touch
+   softer than the typed line below it */
+.study-body.is-trial .study-title {
+  color: var(--ink-soft);
+}
+
+.study-sub {
+  max-width: 44rem;
+  font-family: var(--font-serif);
+  font-size: 1.12rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.study-sub:empty,
+.study-status:empty {
+  display: none;
+}
+
+.study-sub strong {
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.study-status {
+  font-size: 13px;
+  color: var(--ed-red, #d6452b);
+}
+
+.study-stats {
+  display: inline-flex;
+  gap: 2.4em;
+}
+
+.study-stats b {
+  font-weight: 400;
+}
+
+.study-stats span {
+  margin-left: 0.35em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* participant setup (experimenter, keyboard and mouse) */
+.study-setup[hidden] {
+  display: none;
+}
+
+.study-setup {
+  display: flex;
+  border: 1px solid var(--ink);
+}
+
+.study-pid {
+  width: 8.5rem;
+  height: 48px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.study-begin {
+  height: 48px;
+  padding: 0 22px;
+  border: none;
+  border-left: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--ink);
+  color: #ffffff;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.study-begin:hover:not(:disabled) {
+  background: #2b2b2b;
+}
+
+.study-begin:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* screens without typing: the keyboard stays as a quiet backdrop */
+.study-body.is-dim .keyboard-row,
+.study-body.is-dim .candidate-strip {
+  opacity: 0.22;
+  transition: opacity 200ms ease;
+}
+
+/* Next: the mirror of Clear under the right edge (x from 4 key units) */
+.action-next {
+  cursor: default;
+}
+
+.action-pill[hidden] {
+  display: none;
+}
+
+.action-pill.is-target {
+  cursor: pointer;
+}
+
+.action-pill.is-disabled {
+  opacity: 0.35;
+}
+
+.study-body.is-pointer .action-pill.is-hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.study-body .action-next.is-hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.action-pill.is-shake {
+  animation: study-shake 280ms ease;
+}
+
+@keyframes study-shake {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* rating sheet: lies over the keyboard rows; the scale is a row of ruled
+   cells in the key grid's hairline style */
+.study-sheet[hidden] {
+  display: none;
+}
+
+.study-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  background: var(--ed-paper, #faf8f3);
+}
+
+.study-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.study-scale {
+  display: flex;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+.study-cell {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  height: var(--key-height, 10vmin);
+  max-height: 112px;
+  font-family: var(--font-serif);
+  font-size: clamp(1.3rem, 3.6vmin, 2.3rem);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.study-cell + .study-cell {
+  border-left: 1px solid rgba(17, 17, 17, 0.15);
+}
+
+.study-cell.is-hover {
+  background: rgba(17, 17, 17, 0.08);
+}
+
+.study-cell.is-selected {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+/* pause: a plain paper veil over the prompt */
+.study-body.is-paused .study-prompt::after {
+  content: "Paused";
+  position: absolute;
+  inset: 0 0 -60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ed-paper, #faf8f3);
+  font-family: var(--font-serif);
+  font-size: clamp(1.9rem, 5vmin, 3.2rem);
+  font-style: italic;
+}
+
+.study-body.is-paused .keyboard-shell {
+  opacity: 0.22;
+}

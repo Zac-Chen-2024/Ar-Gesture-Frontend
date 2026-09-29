@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ar-Gesture Study</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="../favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+    <style>
+      /* Editorial look, matching the display's default style: paper, serif
+         type, black hairlines, one red accent (the gesture trace). */
+      :root {
+        --paper: #faf8f3;
+        --ink: #111111;
+        --ink-soft: rgba(17, 17, 17, 0.62);
+        --ink-faint: rgba(17, 17, 17, 0.45);
+        --red: #d6452b;
+        --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino,
+          "Book Antiqua", Georgia, serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 20px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-ui);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 34rem;
+        text-align: center;
+      }
+
+      .kicker {
+        margin: 0;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-faint);
+      }
+
+      h1 {
+        margin: 14px 0 0;
+        font-family: var(--font-serif);
+        font-size: clamp(2.8rem, 11vw, 4.4rem);
+        font-weight: 400;
+        letter-spacing: -0.01em;
+        line-height: 1;
+      }
+
+      /* a swipe drawn under the title, in the display's trace red */
+      .trace {
+        display: block;
+        width: min(15rem, 70%);
+        height: 26px;
+        margin: 10px auto 0;
+        overflow: visible;
+      }
+
+      .trace path {
+        fill: none;
+        stroke: var(--red);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+      }
+
+      .trace circle {
+        fill: var(--red);
+      }
+
+      /* the one addition to the main landing page: "Study" under the title */
+      .edition {
+        margin: 8px 0 0;
+        font-family: var(--font-serif);
+        font-size: 1.5rem;
+        font-style: italic;
+        line-height: 1.2;
+        color: var(--ink);
+      }
+
+      .lede {
+        margin: 22px auto 0;
+        max-width: 28rem;
+        font-family: var(--font-serif);
+        font-size: 1.12rem;
+        line-height: 1.6;
+        color: var(--ink-soft);
+      }
+
+      .lede strong {
+        font-weight: 400;
+        font-style: italic;
+        color: var(--ink);
+      }
+
+      .links {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin-top: 34px;
+        border: 1px solid var(--ink);
+      }
+
+      a.btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 20px 16px;
+        text-decoration: none;
+        color: var(--ink);
+        transition: background-color 140ms ease, color 140ms ease;
+      }
+
+      a.btn + a.btn {
+        border-left: 1px solid var(--ink);
+      }
+
+      a.btn.primary {
+        background: var(--ink);
+        color: #ffffff;
+      }
+
+      .btn-title {
+        font-family: var(--font-serif);
+        font-size: 1.6rem;
+        line-height: 1.1;
+      }
+
+      .btn-sub {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        opacity: 0.6;
+      }
+
+      a.btn:hover {
+        background: rgba(17, 17, 17, 0.06);
+      }
+
+      a.btn.primary:hover {
+        background: #2b2b2b;
+      }
+
+      a.btn:focus-visible {
+        outline: 2px solid var(--red);
+        outline-offset: -4px;
+      }
+
+      @media (max-width: 420px) {
+        .links {
+          grid-template-columns: 1fr;
+        }
+
+        a.btn + a.btn {
+          border-left: none;
+          border-top: 1px solid var(--ink);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <p class="kicker">AR text entry</p>
+      <h1>Ar-Gesture</h1>
+      <svg class="trace" viewBox="0 0 240 26" aria-hidden="true">
+        <path d="M6 18 C 40 2, 62 24, 96 12 S 150 2, 176 16 S 214 20, 232 8" />
+        <circle cx="232" cy="8" r="4" />
+      </svg>
+      <p class="edition">Study</p>
+      <p class="lede">
+        A gesture typing demo. Open <strong>Display</strong> on the computer,
+        then swipe on your phone with <strong>Mobile</strong>.
+      </p>
+      <nav class="links">
+        <a class="btn primary" href="display.html">
+          <span class="btn-title">Display</span>
+          <span class="btn-sub">on the computer</span>
+        </a>
+        <a class="btn" href="../mobile.html">
+          <span class="btn-title">Mobile</span>
+          <span class="btn-sub">on the phone</span>
+        </a>
+      </nav>
+    </main>
+  </body>
+</html>
