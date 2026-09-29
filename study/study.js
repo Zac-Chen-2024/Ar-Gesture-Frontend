@@ -268,6 +268,7 @@
     S.rated = new Set(session.rated);
     S.results = (session.results || []).map(fromServer);
     setActivePid(session.pid);
+    emit("session", { session });
     if (S.pending === "open") S.pending = null;
     if (S.pending === "rating" && S.rated.has(cur().cond)) {
       S.pending = null;
@@ -427,7 +428,7 @@
         perfect: S.lastResult.perfect,
         wpm: +S.lastResult.wpm.toFixed(3),
         cer: +S.lastResult.cer.toFixed(4),
-        ...(hooks().clientExtra ? hooks().clientExtra() : {})
+        ...(hooks().clientExtra ? hooks().clientExtra(S.lastResult) : {})
       }
     }, `finish:${status}`);
   }

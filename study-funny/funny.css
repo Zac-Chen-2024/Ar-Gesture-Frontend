@@ -216,6 +216,189 @@
   100% { opacity: 0; transform: translateY(-190%) rotate(-7deg) scale(1); }
 }
 
+/* ---------------------------------------------------------------- score */
+
+.funny-score[hidden],
+.funny-grade[hidden] {
+  display: none;
+}
+
+/* top centre, between the study label and the session box */
+.funny-score {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.funny-score b {
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 5vmin, 3rem);
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.funny-score span {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.funny-score.is-bump b {
+  animation: funny-bump 240ms cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes funny-bump {
+  0% { transform: scale(1.18); color: var(--ed-red, #d6452b); }
+  100% { transform: scale(1); }
+}
+
+/* "+240" rising from the end of the stroke */
+.funny-points {
+  position: absolute;
+  z-index: 9;
+  font-family: var(--font-serif);
+  font-size: clamp(1.1rem, 3vmin, 1.8rem);
+  font-style: italic;
+  white-space: nowrap;
+  color: var(--ink);
+  pointer-events: none;
+  animation: funny-rise 800ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+.funny-points[data-tier="2"],
+.funny-points[data-tier="3"],
+.funny-points[data-tier="4"] {
+  color: var(--ed-red, #d6452b);
+}
+
+.funny-points.is-big {
+  font-size: clamp(1.6rem, 4.6vmin, 2.8rem);
+}
+
+@keyframes funny-rise {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.6); }
+  20% { opacity: 1; transform: translate(-50%, -28px) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -80px) scale(1); }
+}
+
+/* ---------------------------------------------------------------- grade stamp */
+
+.funny-grade {
+  position: absolute;
+  right: 4.5vw;
+  top: 36%;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.1em 0.35em 0.2em;
+  border: 3px solid currentColor;
+  color: var(--ink);
+  pointer-events: none;
+  transform: translateY(-50%) rotate(-9deg);
+}
+
+.funny-grade b {
+  font-family: var(--font-serif);
+  font-size: clamp(4rem, 15vmin, 9rem);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.funny-grade span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.funny-grade[data-grade="S"],
+.funny-grade[data-grade="A"] {
+  color: var(--ed-red, #d6452b);
+}
+
+.funny-grade.is-on {
+  animation: funny-grade 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes funny-grade {
+  0% { opacity: 0; transform: translateY(-50%) rotate(-9deg) scale(3); }
+  45% { opacity: 1; transform: translateY(-50%) rotate(-9deg) scale(0.9); }
+  70% { transform: translateY(-50%) rotate(-9deg) scale(1.04); }
+  100% { opacity: 1; transform: translateY(-50%) rotate(-9deg) scale(1); }
+}
+
+/* ---------------------------------------------------------------- leaderboard */
+
+.funny-board {
+  width: min(520px, 90%);
+}
+
+.funny-board h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.funny-board h3 em {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ed-red, #d6452b);
+}
+
+.funny-board ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ink);
+}
+
+.funny-board li {
+  display: grid;
+  grid-template-columns: 2.4em 1fr auto 6em;
+  align-items: baseline;
+  gap: 12px;
+  padding: 5px 4px;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.15);
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+}
+
+.funny-board li .rank,
+.funny-board li .combo {
+  color: var(--ink-faint);
+}
+
+.funny-board li b {
+  font-weight: 400;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.funny-board li.is-me {
+  color: var(--ed-red, #d6452b);
+}
+
 /* ---------------------------------------------------------------- sound toggle */
 
 .funny-sound {
