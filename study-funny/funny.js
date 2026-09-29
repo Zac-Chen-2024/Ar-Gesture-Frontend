@@ -270,9 +270,10 @@
       if (S.fever) exitFever(true);
     }
     scoreEl.hidden = screen === "setup" || !screen;
-    if (screen === "summary") stampGrade();
+    if (screen === "summary" || screen === "gameover") stampGrade();
     else gradeEl.hidden = true;
     if (screen === "end") sendMessage({ type: "study-leaderboard" });
+    if (screen === "gameover") sendMessage({ type: "study-leaderboard", mode: "endless" });
     if (screen === "trial" || screen === "feedback") wrapTitle();
     paintCombo();
   });
@@ -297,6 +298,15 @@
     flashExtra: () => (S.trial.points > 0 ? [`<b>+${fmt(S.trial.points)}</b><small>points</small>`] : []),
     summaryExtra: () => [[fmt(S.block.points), "points"], [`×${S.blockBest}`, "best combo"]]
   };
+
+  // endless: a life lost - red flash, a heavy thud, a long buzz
+  document.addEventListener("study:life-lost", () => {
+    inkFlash(4);
+    punch(0.03);
+    shake(4);
+    sound.crash();
+    haptic([220]);
+  });
 
   // resume: the session's points so far
   document.addEventListener("study:session", (e) => {
@@ -377,7 +387,7 @@
   socket.addEventListener("message", (event) => {
     let m;
     try { m = JSON.parse(event.data); } catch (_) { return; }
-    if (m.type !== "study-update" || !m.leaderboard || body.dataset.screen !== "end") return;
+    if (m.type !== "study-update" || !m.leaderboard || !["end", "gameover"].includes(body.dataset.screen)) return;
     const b = m.leaderboard;
     const rows = b.top.slice();
     if (b.me && !rows.some((r) => r.me)) rows.push(b.me); // outside the top: show own row last
@@ -385,7 +395,7 @@
     sheet.querySelector(".funny-board")?.remove();
     const el = document.createElement("div");
     el.className = "funny-board";
-    el.innerHTML = `<h3>Leaderboard${b.me ? ` <em>you are #${b.me.rank} of ${b.total}</em>` : ""}</h3>
+    el.innerHTML = `<h3>${b.mode === "endless" ? "Endless · best runs" : "Leaderboard"}${b.me ? ` <em>you are #${b.me.rank} of ${b.total}</em>` : ""}</h3>
       <ol>${rows.map((r) => `<li class="${r.me ? "is-me" : ""}"><span class="rank">${r.rank}</span><span class="pid">${r.pid}</span><span class="combo">×${r.best_combo}</span><b>${fmt(r.score)}</b></li>`).join("")}</ol>`;
     sheet.appendChild(el);
     if (b.me && b.me.rank <= 3) sound.grade("S");

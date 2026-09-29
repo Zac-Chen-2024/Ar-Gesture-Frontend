@@ -59,6 +59,9 @@
     lastResult: null,
     results: [], // finished trials: { step, cond, practice, block, status, target, text, wpm, cer, strokes, words, perfect }
     confirmNext: false, // a mismatching Next was asked once
+    mode: null, // collections with modes (funny): "blocks" | "endless"
+    run: null, // the endless run number (server-assigned)
+    lives: 0,
     matchTimer: null,
     ratingIdx: 0,
     answers: {},
@@ -71,9 +74,13 @@
   let breakTimer = null;
   let pendingTimer = null;
 
-  const cur = () => S.session && S.session.steps[S.step];
+  const hasModes = () => !!(S.cfg && S.cfg.endless && (S.cfg.modes || []).includes("endless"));
+  const endless = () => S.mode === "endless";
+  // an endless run looks like one open-ended block to the rest of the page
+  const endlessStep = () => ({ kind: "block", cond: S.cfg.endless.id, practice: false, block: S.run, phrases: [] });
+  const cur = () => (endless() ? endlessStep() : S.session && S.session.steps[S.step]);
   const key = (step, trial) => `${step}:${trial}`;
-  const condOf = (id) => (S.cfg.conditions || []).find((c) => c.id === id) || { id, label: id };
+  const condOf = (id) => [...(S.cfg.conditions || []), ...(S.cfg.endless ? [S.cfg.endless] : [])].find((c) => c.id === id) || { id, label: id };
 
   // ---------------------------------------------------------------- fixed settings
 
@@ -249,10 +256,14 @@
     if (S.pending === "start" && m.trial) {
       S.pending = null;
       S.trial = m.trial;
+      if (endless()) {
+        S.run = m.trial.block;
+        S.trialIdx = m.trial.trial;
+      }
       S.timing = { shown: performance.now(), first: null, last: null, strokes: 0, text: "" };
       S.screen = "trial";
       render();
-      emit("trial-start", { target: target(), practice: cur().practice });
+      emit("trial-start", { target: target(), practice: cur().practice, mode: S.mode });
     } else if (S.pending && S.pending.startsWith("finish:") && m.saved) {
       const status = S.pending.slice(7);
       S.pending = null;
@@ -276,9 +287,44 @@
       return;
     }
     if (first) {
+      if (hasModes()) return chooseMode();
       S.step = resumeStep();
       enterStep();
     }
+  }
+
+  // ---------------------------------------------------------------- modes
+
+  function chooseMode() {
+    clearTimeout(feedbackTimer);
+    S.mode = null;
+    S.screen = "mode";
+    S.pointer = { x: 0, y: 0 };
+    setPhase("pointer", "mode", true);
+    render();
+  }
+
+  function startMode(mode) {
+    S.mode = mode;
+    if (mode === "blocks") {
+      S.step = resumeStep();
+      enterStep();
+      return;
+    }
+    S.run = null;
+    S.lives = S.cfg.endless.lives || 3;
+    S.trialIdx = 0;
+    S.screen = "ready";
+    S.pointer = { x: 0, y: 0 };
+    setPhase("pointer", "ready", true);
+    render();
+  }
+
+  function gameOver() {
+    S.screen = "gameover";
+    S.pointer = { x: 0, y: 0 };
+    setPhase("pointer", "gameover", true);
+    render();
   }
 
   // first step with work left; the break before it is shown again if that
@@ -349,7 +395,7 @@
       setPhase("pointer", "break", true);
     } else {
       S.screen = "end";
-      setPhase("locked", "end");
+      setPhase(hasModes() ? "pointer" : "locked", "end", true); // with modes the end leads back to them
       setActivePid(null);
     }
     render();
@@ -367,11 +413,14 @@
       render();
       return;
     }
-    request({ type: "study-trial-start", step: S.step, trial: S.trialIdx,
+    const where = endless() ? { endless: true, run: S.run } : { step: S.step, trial: S.trialIdx };
+    request({ type: "study-trial-start", ...where,
               frontendVersion: window.GESTURE_CONFIG.version, display: displayInfo() }, "start");
   }
 
-  const target = () => cur().phrases[S.trialIdx].text;
+  // the phrase being typed (an endless phrase is known once the server picks it)
+  const phraseText = () => (endless() ? (S.trial ? S.trial.target : S.lastResult ? S.lastResult.target : "") : cur().phrases[S.trialIdx].text);
+  const target = phraseText;
   const matches = () => plainText.trim() === target();
 
   // the text equals the phrase: green for a moment, then save as matched
@@ -414,7 +463,7 @@
     const ms = t.first != null && t.last != null ? t.last - t.first : 0;
     const words = phrase.split(" ").length;
     S.lastResult = {
-      step: S.step, trial: S.trialIdx, cond: step.cond, practice: step.practice, block: step.block,
+      step: endless() ? -1 : S.step, trial: S.trialIdx, cond: step.cond, practice: step.practice, block: step.block,
       status, target: phrase, text: typed, ms,
       wpm: wpm(typed, ms), cer: cer(phrase, typed), strokes: t.strokes, words,
       perfect: status === "matched" && t.strokes === words
@@ -441,6 +490,10 @@
       return;
     }
     S.done.add(key(saved.step, saved.trial));
+    if (endless() && status !== "matched") {
+      S.lives--; // a phrase not typed to the end costs a life
+      emit("life-lost", { lives: S.lives });
+    }
     S.feedback = status === "forced" ? null : phraseSummary(S.lastResult);
     emit("trial-end", { status, result: S.lastResult });
     S.results.push(S.lastResult);
@@ -456,6 +509,11 @@
     if (S.paused) {
       feedbackTimer = setTimeout(afterFeedback, 300);
       return;
+    }
+    if (endless()) {
+      if (S.lives <= 0) return gameOver();
+      S.trialIdx++;
+      return startTrial();
     }
     const step = cur();
     const next = step.phrases.findIndex((_, t) => !S.done.has(key(S.step, t)));
@@ -474,10 +532,11 @@
 
   // ---------------------------------------------------------------- pointer screens
 
-  const POINTER_SCREENS = ["ready", "rating", "break", "summary"];
+  const POINTER_SCREENS = ["ready", "rating", "break", "summary", "mode", "gameover"];
+  const isPointer = (screen) => POINTER_SCREENS.includes(screen) || (screen === "end" && hasModes());
 
   function onPointer(m) {
-    if (!POINTER_SCREENS.includes(S.screen) || S.paused) return;
+    if (!isPointer(S.screen) || S.paused) return;
     S.pointer = { x: m.x, y: m.y };
     placePointer();
     paintHover();
@@ -488,6 +547,8 @@
     if (S.pending || S.paused) return;
     if (id === "start") return startTrial();
     if (id === "break-next" || id === "summary-next") return advanceStep();
+    if (id.startsWith("mode:")) return startMode(id.slice(5));
+    if (id === "back-to-modes") return chooseMode();
     if (S.screen !== "rating") return;
     const items = S.cfg.rating_items;
     const item = items[S.ratingIdx];
@@ -516,7 +577,7 @@
     switch (cmd) {
       case "pause":
         S.paused = !S.paused;
-        if (POINTER_SCREENS.includes(S.screen)) {
+        if (isPointer(S.screen)) {
           setPhase(S.paused ? "locked" : "pointer", S.paused ? "paused" : S.screen);
         }
         render();
@@ -562,8 +623,9 @@
     el.classList.remove("is-hover");
   }
 
-  function show({ kicker = "", title = "", titleHtml = "", sub = "" }) {
-    kickerEl.textContent = kicker;
+  function show({ kicker = "", kickerHtml = "", title = "", titleHtml = "", sub = "" }) {
+    if (kickerHtml) kickerEl.innerHTML = kickerHtml;
+    else kickerEl.textContent = kicker;
     if (titleHtml) titleEl.innerHTML = titleHtml;
     else titleEl.textContent = title;
     subEl.innerHTML = sub;
@@ -572,7 +634,7 @@
   function render() {
     const screen = S.screen;
     const step = cur();
-    const pointer = POINTER_SCREENS.includes(screen) && !S.paused;
+    const pointer = isPointer(screen) && !S.paused;
     body.classList.toggle("is-trial", screen === "trial");
     body.classList.toggle("is-pointer", pointer);
     body.classList.toggle("is-dim", screen !== "trial" && screen !== "feedback");
@@ -581,12 +643,12 @@
     body.dataset.screen = screen;
     emit("screen", { screen, step });
     setupForm.hidden = screen !== "setup";
-    sheet.hidden = !["rating", "summary", "end"].includes(screen);
+    sheet.hidden = !["rating", "summary", "end", "mode", "gameover"].includes(screen);
     sheet.className = `study-sheet is-${screen}`;
     sheet.innerHTML = "";
     statusEl.textContent = S.error;
     infoEl.textContent = S.session
-      ? [S.session.pid, step && step.cond ? `Condition ${step.cond} · ${condOf(step.cond).label}` : ""].filter(Boolean).join(" · ")
+      ? [S.session.pid, screen === "mode" ? "" : endless() ? "Endless" : step && step.cond ? `Condition ${step.cond} · ${condOf(step.cond).label}` : ""].filter(Boolean).join(" · ")
       : "";
     pill(clearPill, "Clear");
     pill(nextPill, "Next");
@@ -606,6 +668,23 @@
       resumeBtn.textContent = resume ? `Continue ${resume}` : "";
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
+    } else if (screen === "mode") {
+      show({ kicker: S.session.pid, title: "Choose a mode" });
+      sheet.innerHTML = modesHtml();
+      pill(clearPill, "", { hidden: true });
+      pill(nextPill, "", { hidden: true });
+      list = [...sheet.querySelectorAll("[data-mode]")].map((el) => ({ id: `mode:${el.dataset.mode}`, el }));
+    } else if (screen === "ready" && endless()) {
+      show({
+        kicker: `Endless · ${S.cfg.endless.input_mode === "center" ? "Center" : "Continuous"} word start`,
+        title: "Ready?",
+        sub: !S.phone
+          ? `Open <strong>Mobile</strong> on the phone and choose session <strong>${currentRoomCode || "····"}</strong>.`
+          : `Phrases keep coming. A phrase you submit with errors costs a life; lose ${S.lives} and the run is over.`
+      });
+      pill(clearPill, "", { hidden: true });
+      pill(nextPill, "Start", { target: true, enabled: S.phone });
+      list = [{ id: "start", el: nextPill, enabled: S.phone }];
     } else if (screen === "ready") {
       const left = step.phrases.length - S.trialIdx;
       show({
@@ -620,21 +699,14 @@
       pill(nextPill, "Start", { target: true, enabled: S.phone });
       list = [{ id: "start", el: nextPill, enabled: S.phone }];
     } else if (screen === "trial") {
-      const n = step.phrases.length;
-      show({
-        kicker: `${blockLabel(step)} · Phrase ${S.trialIdx + 1} of ${n}`,
-        title: step.phrases[S.trialIdx].text
-      });
+      show({ kickerHtml: progressHtml(step), title: phraseText() });
       pill(clearPill, "", { hidden: true });
       pill(nextPill, S.confirmNext ? "Does not match yet · swipe down again to submit as it is" : "Next", { target: true });
       nextPill.classList.toggle("is-confirm", S.confirmNext);
     } else if (screen === "feedback") {
       // the phrase stays; the output line shows how it went
       const f = S.cfg.show_trial_feedback ? S.feedback : null;
-      show({
-        kicker: `${blockLabel(step)} · Phrase ${S.trialIdx + 1} of ${step.phrases.length}`,
-        title: step.phrases[S.trialIdx].text
-      });
+      show({ kickerHtml: progressHtml(step), title: phraseText() });
       sheet.hidden = true;
       flash.innerHTML = f ? feedbackHtml(f) : "";
       pill(clearPill, "", { hidden: true });
@@ -689,10 +761,22 @@
       clearTimeout(breakTimer);
       if (left > 0) breakTimer = setTimeout(() => S.screen === "break" && render(), Math.min(left, 1000));
     } else if (screen === "end") {
-      show({ kicker: S.session.pid, title: "All done — thank you!", sub: "You can put the phone down." });
+      show({ kicker: S.session.pid, title: "All done — thank you!", sub: hasModes() ? "" : "You can put the phone down." });
       sheet.innerHTML = endHtml();
       pill(clearPill, "", { hidden: true });
-      pill(nextPill, "", { hidden: true });
+      if (hasModes()) {
+        pill(nextPill, "Back to modes", { target: true });
+        list = [{ id: "back-to-modes", el: nextPill }];
+      } else {
+        pill(nextPill, "", { hidden: true });
+      }
+    } else if (screen === "gameover") {
+      const b = runSummary();
+      show({ kicker: `Endless · run ${S.run}`, title: "Game over", sub: `${b.n} phrase${b.n === 1 ? "" : "s"}` });
+      sheet.innerHTML = summaryHtml(b);
+      pill(clearPill, "", { hidden: true });
+      pill(nextPill, "Continue", { target: true });
+      list = [{ id: "back-to-modes", el: nextPill }];
     }
     flash.hidden = !flash.innerHTML;
     if (screen !== "trial") nextPill.classList.remove("is-confirm");
@@ -766,14 +850,22 @@
     };
   }
 
+  // an endless run summarized like a block
+  function runSummary() {
+    return summarize(S.results.filter((x) => x.step === -1 && x.block === S.run), [], "");
+  }
+
   function blockSummary(step) {
     const rows = S.results.filter((x) => x.step === step);
-    const ok = rows.filter(scored);
-    const bestRow = ok.reduce((a, x) => (!a || x.wpm > a.wpm ? x : a), null);
-    // the block before it in the same condition (practice counts)
     const prevStep = S.session.steps.slice(0, step).map((s, i) => ({ s, i }))
       .filter(({ s }) => s.kind === "block" && s.cond === S.session.steps[step].cond).pop();
     const prev = prevStep ? S.results.filter((x) => x.step === prevStep.i && scored(x)) : [];
+    return summarize(rows, prev, prevStep ? (prevStep.s.practice ? "practice" : `block ${prevStep.s.block}`) : "");
+  }
+
+  function summarize(rows, prev, prevLabel) {
+    const ok = rows.filter(scored);
+    const bestRow = ok.reduce((a, x) => (!a || x.wpm > a.wpm ? x : a), null);
     const avg = mean(ok.map((x) => x.wpm));
     const prevAvg = mean(prev.map((x) => x.wpm));
     return {
@@ -782,7 +874,7 @@
       series: rows.map((x) => (scored(x) ? x.wpm : 0)),
       best: bestRow,
       change: prev.length && ok.length ? avg / prevAvg - 1 : null,
-      prevLabel: prevStep ? (prevStep.s.practice ? "practice" : `block ${prevStep.s.block}`) : ""
+      prevLabel
     };
   }
 
@@ -793,6 +885,8 @@
     up: svg("is-up", '<path d="M12 19V5M6 11l6-6 6 6"/>'),
     down: svg("is-down", '<path d="M12 5v14M6 13l6 6 6-6"/>'),
     star: svg("is-star", '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>'),
+    heart: svg("is-heart", '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'),
+    heartFull: svg("is-heart is-full", '<path fill="currentColor" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'),
     flame: svg("is-flame", '<path d="M12 21c-3.6 0-6-2.4-6-5.6 0-3.3 2.4-5 3.4-7.9.5 1.6 1.4 2.6 2.4 3 .1-3.2 1.7-5.8 4-7.5-.6 2.7.3 4.4 1.5 6.2 1 1.4 1.7 2.9 1.7 4.6C19 18.6 16 21 12 21z"/>')
   };
 
@@ -840,8 +934,30 @@
       ${b.best ? `<p class="study-best">${ICON.star}<span>Fastest · “${esc(b.best.target)}” · ${num(b.best.wpm)} WPM</span></p>` : ""}`;
   }
 
+  // the kicker while typing: where we are, and in endless the lives left
+  function progressHtml(step) {
+    if (!endless()) return esc(`${blockLabel(step)} · Phrase ${S.trialIdx + 1} of ${step.phrases.length}`);
+    const total = S.cfg.endless.lives || 3;
+    const hearts = Array.from({ length: total }, (_, i) => (i < S.lives ? ICON.heartFull : ICON.heart)).join("");
+    return `Endless · Phrase ${S.trialIdx + 1} <span class="study-lives" aria-label="${S.lives} lives">${hearts}</span>`;
+  }
+
+  // the two modes, side by side over the keyboard
+  function modesHtml() {
+    const planned = S.session.steps.filter((x) => x.kind === "block").reduce((a, x) => a + x.phrases.length, 0);
+    const done = S.session.steps.reduce((a, x, i) => a + (x.kind === "block" ? x.phrases.filter((_, t) => S.done.has(key(i, t))).length : 0), 0);
+    const runs = new Set(S.results.filter((x) => x.step === -1).map((x) => x.block)).size;
+    const best = Math.max(0, ...S.results.filter((x) => x.step === -1 && scored(x)).map((x) => x.wpm));
+    return `<div class="study-modes">
+      <div class="study-mode" data-mode="blocks"><b>Blocks</b><span>Practice, then ${S.cfg.blocks_per_condition} blocks for each word start</span>
+        <em>${done >= planned ? "Completed" : done ? `${done} of ${planned} phrases done` : `${planned} phrases`}</em></div>
+      <div class="study-mode" data-mode="endless"><b>Endless</b><span>Phrases keep coming until you lose ${S.cfg.endless.lives || 3} lives</span>
+        <em>${runs ? `${runs} run${runs === 1 ? "" : "s"} · best ${num(best)} WPM` : "New"}</em></div>
+    </div>`;
+  }
+
   function endHtml() {
-    const real = S.results.filter((x) => !x.practice);
+    const real = S.results.filter((x) => !x.practice && x.step >= 0);
     const rows = S.session.order.map((id) => {
       const rs = real.filter((x) => x.cond === id);
       return `<tr><td>${esc(`Condition ${id} · ${condOf(id).label}`)}</td><td>${num(mean(rs.filter(scored).map((x) => x.wpm)))}</td><td>${pct(1 - mean(rs.filter((x) => x.status !== "forced").map((x) => x.cer)))}</td><td>${rs.filter((x) => x.perfect).length}/${rs.length}</td></tr>`;
