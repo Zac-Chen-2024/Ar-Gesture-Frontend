@@ -428,11 +428,16 @@
 
 .funny-body .display-stage[data-heat="1"] { box-shadow: inset 0 0 9vmin rgba(214, 69, 43, 0.06); }
 .funny-body .display-stage[data-heat="2"] { box-shadow: inset 0 0 12vmin rgba(214, 69, 43, 0.12); }
-.funny-body .display-stage[data-heat="3"] { box-shadow: inset 0 0 15vmin rgba(214, 69, 43, 0.2); animation: funny-heat 484ms ease-out infinite; }
-.funny-body .display-stage[data-heat="4"] { box-shadow: inset 0 0 18vmin rgba(214, 69, 43, 0.3); animation: funny-heat 484ms ease-out infinite; }
+.funny-body .display-stage[data-heat="3"] { box-shadow: inset 0 0 15vmin rgba(214, 69, 43, 0.2); }
+.funny-body .display-stage[data-heat="4"] { box-shadow: inset 0 0 18vmin rgba(214, 69, 43, 0.3); }
+
+/* on every kick of the track (fever): the edges flare */
+.funny-body .display-stage.on-beat {
+  animation: funny-heat 300ms ease-out;
+}
 
 @keyframes funny-heat {
-  0% { box-shadow: inset 0 0 22vmin rgba(214, 69, 43, 0.38); }
+  0% { box-shadow: inset 0 0 26vmin rgba(214, 69, 43, 0.5); }
 }
 
 /* the milestone flash: the page inverts for an instant, or flares red */
@@ -463,7 +468,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .display-frame.funny-punch,
-  .funny-body .display-stage[data-heat] {
+  .funny-body .display-stage.on-beat {
     animation: none;
   }
 }
@@ -522,6 +527,62 @@
 
 .funny-body.is-fever .funny-combo span::after {
   content: " · fever ×2";
+}
+
+/* ---------------------------------------------------------------- the beat */
+
+/* the combo nods on every kick of the track */
+.funny-combo.on-beat b {
+  animation: funny-nod 200ms ease-out;
+}
+
+@keyframes funny-nod {
+  0% { transform: scale(1.12); }
+}
+
+/* fever: the keys' lines flash red on the kick */
+.funny-body .key {
+  transition: border-color 180ms ease;
+}
+
+.funny-body .keyboard-shell.beat-flash .key {
+  border-color: var(--ed-red, #d6452b);
+  transition: none;
+}
+
+/* fever: slow diagonal stripes behind everything, text with a red glow */
+.funny-stripes {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(115deg, rgba(17, 17, 17, 0.06) 0 2px, transparent 2px 34px);
+  background-size: 200% 200%;
+  transition: opacity 400ms ease;
+}
+
+.funny-body.is-fever .funny-stripes {
+  opacity: 1;
+  animation: funny-stripes 1.94s linear infinite;
+}
+
+@keyframes funny-stripes {
+  from { background-position: 0 0; }
+  to { background-position: -145px 0; }
+}
+
+.funny-body.is-fever .decoded-text,
+.funny-body.is-fever .study-title,
+.funny-body.is-fever .funny-score b,
+.funny-body.is-fever .funny-combo b {
+  text-shadow: 0 0 18px rgba(214, 69, 43, 0.55), 0 0 2px rgba(214, 69, 43, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .funny-body.is-fever .funny-stripes {
+    animation: none;
+  }
 }
 
 /* ---------------------------------------------------------------- sound toggle */

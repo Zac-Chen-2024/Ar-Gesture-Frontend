@@ -396,6 +396,7 @@
   function enterFever() {
     S.fever = true;
     body.classList.add("is-fever");
+    animate(); // the motes need the loop
     shout("Fever ×2", 4);
     inkFlash(4);
     speedLines(4);
@@ -606,6 +607,7 @@
   let drops = []; // particles
   let waves = []; // shockwave rings
   let lines = []; // speed lines
+  let motes = []; // fever: glowing motes drifting up the page edges
   let running = false;
 
   function sizeInk() {
@@ -688,8 +690,41 @@
     animate();
   }
 
+  // a mote rises from an edge strip (left, right or bottom), swaying
+  function spawnMote(burst = false) {
+    const w = frameEl.clientWidth;
+    const h = frameEl.clientHeight;
+    const side = Math.random();
+    const x = side < 0.4 ? Math.random() * w * 0.08 : side < 0.8 ? w - Math.random() * w * 0.08 : Math.random() * w;
+    const y = side < 0.8 ? h * (0.3 + Math.random() * 0.75) : h + 4;
+    const tier = tierOf(S.combo);
+    motes.push({
+      x, y, vy: -(0.5 + Math.random() * (burst ? 2.6 : 1.2)), phase: Math.random() * 6.3,
+      sway: 0.3 + Math.random() * 0.9, r: 0.8 + Math.random() * (1.6 + tier * 0.4),
+      life: 1, decay: 0.004 + Math.random() * 0.008,
+      color: Math.random() < 0.35 + (tier >= 4 ? 0.2 : 0) ? RED : INK
+    });
+  }
+
   function step() {
     ctx.clearRect(0, 0, ink.width, ink.height);
+    if (S.fever && !reduced && motes.length < 140) {
+      const rate = tierOf(S.combo) >= 4 ? 1.6 : 0.8;
+      for (let i = 0; i < Math.floor(rate + Math.random()); i++) spawnMote();
+    }
+    motes = motes.filter((m) => (m.life -= m.decay) > 0 && m.y > -10);
+    ctx.shadowBlur = 10;
+    for (const m of motes) {
+      m.phase += 0.05;
+      m.y += m.vy;
+      m.x += Math.sin(m.phase) * m.sway;
+      ctx.globalAlpha = Math.min(1, m.life * 1.6) * 0.85;
+      ctx.fillStyle = ctx.shadowColor = m.color;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
     lines = lines.filter((l) => (l.life -= 0.06) > 0);
     for (const l of lines) {
       ctx.globalAlpha = l.life * 0.7;
@@ -734,7 +769,7 @@
       }
     }
     ctx.globalAlpha = 1;
-    if (drops.length || waves.length || lines.length) requestAnimationFrame(step);
+    if (drops.length || waves.length || lines.length || motes.length || S.fever) requestAnimationFrame(step);
     else running = false;
   }
 
@@ -752,6 +787,12 @@
   function heat(tier) {
     stageEl.dataset.heat = tier;
   }
+
+  // fever: slow diagonal stripes scrolling behind everything
+  const stripesEl = document.createElement("div");
+  stripesEl.className = "funny-stripes";
+  stripesEl.setAttribute("aria-hidden", "true");
+  frameEl.prepend(stripesEl);
 
   // a flash that inverts the page for an instant at a milestone (red above 20)
   const flashEl = document.createElement("div");
@@ -774,6 +815,8 @@
     let ac = null;
     let out = null; // dry bus
     let verb = null; // reverb send
+    let bedBus = null; // the track's pads and bass, ducked by the kick (side-chain)
+    let echo = null; // a dotted-eighth echo for arps and leads
     let noise = null;
     let on = (() => { try { return localStorage.getItem("funnySound") !== "off"; } catch (_) { return true; } })();
 
@@ -811,6 +854,22 @@
         verb = ac.createGain();
         verb.gain.value = 0.35;
         verb.connect(conv).connect(master);
+        bedBus = ac.createGain();
+        bedBus.connect(out);
+        // echo: dotted eighth, filtered feedback
+        const delay = ac.createDelay(1.5);
+        delay.delayTime.value = BEAT * 0.75;
+        const fb = ac.createGain();
+        fb.gain.value = 0.38;
+        const lp = ac.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 2600;
+        const wet = ac.createGain();
+        wet.gain.value = 0.55;
+        delay.connect(lp).connect(fb).connect(delay);
+        lp.connect(wet).connect(master);
+        echo = ac.createGain();
+        echo.connect(delay);
         noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
         const data = noise.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -829,22 +888,28 @@
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
     }
 
-    function route(node, pan = 0, send = 0) {
+    function route(node, pan = 0, send = 0, { bus = null, delay = 0 } = {}) {
+      const dest = bus === "bed" ? bedBus : out;
       const p = ac.createStereoPanner ? ac.createStereoPanner() : null;
       if (p) {
         p.pan.value = pan;
-        node.connect(p).connect(out);
+        node.connect(p).connect(dest);
       } else {
-        node.connect(out);
+        node.connect(dest);
       }
       if (send) {
         const s = ac.createGain();
         s.gain.value = send;
         node.connect(s).connect(verb);
       }
+      if (delay) {
+        const d = ac.createGain();
+        d.gain.value = delay;
+        node.connect(d).connect(echo);
+      }
     }
 
-    function tone(freq, { type = "triangle", t = 0, attack = 0.002, decay = 0.2, gain = 0.3, bend = 0, pan = 0, send = 0 } = {}) {
+    function tone(freq, { type = "triangle", t = 0, attack = 0.002, decay = 0.2, gain = 0.3, bend = 0, pan = 0, send = 0, bus = null, delay = 0 } = {}) {
       if (!ready()) return;
       const t0 = ac.currentTime + t;
       const o = ac.createOscillator();
@@ -854,13 +919,13 @@
       if (bend) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq * bend), t0 + attack + decay);
       env(g, t0, gain, attack, decay);
       o.connect(g);
-      route(g, pan, send);
+      route(g, pan, send, { bus, delay });
       o.start(t0);
       o.stop(t0 + attack + decay + 0.05);
     }
 
     // a plucked synth: two detuned saws through a closing low-pass
-    function pluck(freq, { t = 0, gain = 0.16, decay = 0.35, pan = 0, send = 0.3, bright = 1 } = {}) {
+    function pluck(freq, { t = 0, gain = 0.16, decay = 0.35, pan = 0, send = 0.3, bright = 1, bus = null, delay = 0, type = "sawtooth" } = {}) {
       if (!ready()) return;
       const t0 = ac.currentTime + t;
       const f = ac.createBiquadFilter();
@@ -872,7 +937,7 @@
       env(g, t0, gain, 0.003, decay);
       [-8, 8].forEach((cents) => {
         const o = ac.createOscillator();
-        o.type = "sawtooth";
+        o.type = type;
         o.frequency.value = freq;
         o.detune.value = cents;
         o.connect(f);
@@ -880,7 +945,7 @@
         o.stop(t0 + decay + 0.05);
       });
       f.connect(g);
-      route(g, pan, send);
+      route(g, pan, send, { bus, delay });
     }
 
     function noiseHit({ t = 0, type = "highpass", freq = 3000, q = 0.8, decay = 0.05, gain = 0.2, pan = 0, send = 0 } = {}) {
@@ -904,30 +969,115 @@
     const kick = (t = 0, gain = 0.5) => tone(160, { type: "sine", t, decay: 0.16, gain, bend: 0.28 });
     const crashCymbal = (t = 0, gain = 0.18) => noiseHit({ t, freq: 6500, decay: 1.4, gain, send: 0.5 });
 
-    // ---- the beat under the combo
+    // ---- the track under the combo: four on the floor that builds by tier
+    //   1 (5+):  kick, hats, a filtered supersaw pad breathing with the kick
+    //   2 (10+): offbeat bass, claps, the pad opens
+    //   3 (20+, fever): the drop - open hats, a rolling arp with echo, rolling
+    //            bass, deeper pumping, a crash every 4 bars
+    //   4 (40+): a lead hook on top
+    // The chord moves once a bar (Am F C G); hits play on the bar's chord.
     let bedTier = 0;
     let feverOn = false;
     let bedTimer = null;
     let nextBeat = 0;
     let sixteenth = 0;
+    let pad = null;
+    let barChord = 0;
+    let onBeat = null; // visual callback, set from outside
+    // the hook: chord-tone indices per sixteenth (null = rest), one bar
+    const HOOK = [4, null, 3, null, 2, null, 3, 4, null, 5, 4, null, 3, null, 2, null];
+
+    function startPad() {
+      const t0 = ac.currentTime;
+      const f = ac.createBiquadFilter();
+      f.type = "lowpass";
+      f.Q.value = 3;
+      f.frequency.value = 500;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.085, t0 + 0.8);
+      f.connect(g);
+      route(g, 0, 0.35, { bus: "bed" });
+      const voices = [];
+      for (let n = 0; n < 3; n++) {
+        for (const cents of [-14, 0, 14]) {
+          const o = ac.createOscillator();
+          o.type = "sawtooth";
+          o.detune.value = cents;
+          o.connect(f);
+          o.start(t0);
+          voices.push(o);
+        }
+      }
+      pad = { voices, f, g };
+      padChord(barChord, t0);
+    }
+
+    function padChord(i, t) {
+      const c = CHORDS[i];
+      pad.voices.forEach((o, k) => o.frequency.setValueAtTime(hz(c[Math.floor(k / 3)]), t));
+    }
+
+    function stopPad(tape) {
+      const t0 = ac.currentTime;
+      const end = tape ? 0.7 : 0.4;
+      if (tape) pad.voices.forEach((o) => o.frequency.exponentialRampToValueAtTime(18, t0 + end)); // tape stop
+      pad.g.gain.cancelScheduledValues(t0);
+      pad.g.gain.setValueAtTime(Math.max(0.0001, pad.g.gain.value), t0);
+      pad.g.gain.exponentialRampToValueAtTime(0.0001, t0 + end);
+      pad.voices.forEach((o) => o.stop(t0 + end + 0.05));
+      pad = null;
+    }
+
+    // side-chain: the bed ducks on every kick and swells back
+    function pump(t) {
+      const depth = feverOn ? 0.12 : bedTier >= 2 ? 0.3 : 0.45;
+      const at = ac.currentTime + t;
+      bedBus.gain.cancelScheduledValues(at);
+      bedBus.gain.setValueAtTime(depth, at);
+      bedBus.gain.linearRampToValueAtTime(1, at + BEAT * 0.6);
+    }
+
+    function bass(freq, t, len) {
+      tone(freq, { type: "sawtooth", t, attack: 0.004, decay: len, gain: 0.09, bus: "bed" });
+      tone(freq / 2, { type: "sine", t, attack: 0.004, decay: len, gain: 0.16, bus: "bed" });
+    }
 
     function scheduleBed() {
       while (nextBeat < ac.currentTime + 0.12) {
         const t = nextBeat - ac.currentTime;
         const pos = sixteenth % 16;
-        const chord = CHORDS[chordIndex];
-        if (pos % 4 === 0) kick(t, 0.28 + bedTier * 0.04);
-        if (bedTier >= 2 && pos % 2 === 0) noiseHit({ t, freq: 8000, decay: pos % 4 === 2 ? 0.09 : 0.03, gain: pos % 4 === 2 ? 0.07 : 0.04 });
-        if (bedTier >= 2 && pos % 4 === 0) tone(hz(chord[0] - 24), { type: "sawtooth", t, decay: BEAT * 0.8, gain: 0.07 });
-        if (bedTier >= 3 && (pos === 4 || pos === 12)) {
-          noiseHit({ t, type: "bandpass", freq: 1500, q: 0.7, decay: 0.14, gain: 0.22, send: 0.25 });
-          noiseHit({ t: t + 0.012, type: "bandpass", freq: 1800, q: 0.7, decay: 0.1, gain: 0.14 });
+        const bar = Math.floor(sixteenth / 16);
+        if (pos === 0) {
+          barChord = bar % CHORDS.length;
+          if (pad) padChord(barChord, ac.currentTime + t);
+          if (feverOn && bar % 4 === 0) crashCymbal(t, 0.1);
         }
-        if (bedTier >= 4) pluck(hz(chord[pos % 3] + 12 * (1 + ((pos >> 2) % 2))), { t, gain: 0.05, decay: 0.12, send: 0.2, pan: pos % 2 ? 0.4 : -0.4, bright: 0.6 });
+        const c = CHORDS[barChord];
+        const tones = [c[0], c[1], c[2], c[0] + 12, c[1] + 12, c[2] + 12];
+        if (pos % 4 === 0) {
+          kick(t, 0.5 + bedTier * 0.05);
+          pump(t);
+          if (onBeat) setTimeout(() => onBeat(pos), Math.max(0, t * 1000));
+        }
+        // hats: offbeat eighths, then sixteenths, then open hats in the drop
+        if (pos % 4 === 2) noiseHit({ t, freq: 8500, decay: feverOn ? 0.16 : 0.05, gain: feverOn ? 0.07 : 0.05, send: 0.1 });
+        else if (bedTier >= 2 && pos % 2 === 1) noiseHit({ t, freq: 9500, decay: 0.025, gain: 0.03, pan: pos % 4 === 1 ? -0.3 : 0.3 });
+        // bass: offbeat, rolling in the drop
+        if (bedTier >= 2 && (pos % 4 === 2 || (feverOn && pos % 4 === 3))) bass(hz(c[0] - 12), t, BEAT * 0.22);
+        // claps on 2 and 4
+        if (bedTier >= 2 && (pos === 4 || pos === 12)) {
+          noiseHit({ t, type: "bandpass", freq: 1400, q: 0.8, decay: 0.16, gain: 0.2, send: 0.35 });
+          noiseHit({ t: t + 0.011, type: "bandpass", freq: 1700, q: 0.8, decay: 0.12, gain: 0.14 });
+        }
+        // the drop's arp, up and down the chord, with echo
         if (feverOn) {
-          // fever: sixteenth hats and an octave-bouncing sub bass
-          noiseHit({ t, freq: 9500, decay: 0.025, gain: 0.035, pan: pos % 2 ? 0.3 : -0.3 });
-          if (pos % 2 === 0) tone(hz(chord[0] - 24 + (pos % 4 === 2 ? 12 : 0)), { type: "square", t, decay: BEAT * 0.4, gain: 0.05 });
+          const up = [0, 1, 2, 3, 4, 5, 4, 3][pos % 8];
+          pluck(hz(tones[up] + 12), { t, gain: 0.045, decay: 0.13, bright: 0.7, send: 0.15, delay: 0.35, pan: pos % 2 ? 0.35 : -0.35 });
+        }
+        // the hook at 40+
+        if (bedTier >= 4 && HOOK[pos] !== null) {
+          pluck(hz(tones[HOOK[pos]] + 12), { t, gain: 0.07, decay: 0.28, bright: 1, send: 0.3, delay: 0.4, type: "square" });
         }
         nextBeat += BEAT / 4;
         sixteenth++;
@@ -946,7 +1096,7 @@
       // the melody: chord tones climbing with the combo; the chord moves every 4 hits
       hit(combo, tier, pan = 0) {
         if (!ready()) return;
-        chordIndex = Math.floor((combo - 1) / 4) % CHORDS.length;
+        chordIndex = bedTier > 0 ? barChord : Math.floor((combo - 1) / 4) % CHORDS.length;
         const chord = CHORDS[chordIndex];
         const step = (combo - 1) % 8;
         const note = chord[step % 3] + 12 * Math.floor(step / 3);
@@ -956,14 +1106,19 @@
         kick(0, 0.45 + tier * 0.08); // the weight
       },
 
-      // the beat: none below 5, then more layers per tier; a break tape-stops it
+      set onBeat(fn) { onBeat = fn; },
+      get playing() { return bedTier > 0; },
+
+      // the track: none below 5, more layers per tier; a break tape-stops it
       bed(tier, tapeStop = false) {
         if (!ready()) return;
         if (tier === bedTier) return;
         if (tier === 0) {
           clearInterval(bedTimer);
           bedTimer = null;
-          if (tapeStop && bedTier > 0) tone(hz(CHORDS[chordIndex][0] - 12), { type: "sawtooth", decay: 0.45, gain: 0.12, bend: 0.12 });
+          if (pad) stopPad(tapeStop);
+          bedBus.gain.cancelScheduledValues(ac.currentTime);
+          bedBus.gain.setValueAtTime(1, ac.currentTime);
           bedTier = 0;
           return;
         }
@@ -971,8 +1126,12 @@
         if (!bedTimer) {
           nextBeat = ac.currentTime + 0.05;
           sixteenth = 0;
+          barChord = chordIndex;
+          startPad();
           bedTimer = setInterval(scheduleBed, 25);
         }
+        // the pad's filter opens with the tier
+        pad.f.frequency.setTargetAtTime([0, 520, 1300, 3000, 4200][tier], ac.currentTime, 0.4);
       },
 
       // an impact: kick, cymbal and a power chord that opens up
@@ -1004,6 +1163,7 @@
       fever(onNow, quiet = false) {
         if (!ready()) return;
         feverOn = onNow;
+        if (pad) pad.f.frequency.setTargetAtTime(onNow ? 5200 : [0, 520, 1300, 3000, 4200][bedTier], ac.currentTime, 0.25);
         if (quiet) return;
         const t0 = ac.currentTime;
         const o = ac.createOscillator();
@@ -1055,6 +1215,18 @@
       }
     };
   })();
+
+  // the track's kick drives the picture: the combo nods on every beat, and in
+  // fever the edges flare, the keys' lines flash red and motes kick up
+  sound.onBeat = () => {
+    if (!sound.playing || body.dataset.screen !== "trial") return;
+    restartClass(comboEl, "on-beat");
+    if (!S.fever || reduced) return;
+    restartClass(stageEl, "on-beat");
+    keyboardEl.classList.add("beat-flash");
+    setTimeout(() => keyboardEl.classList.remove("beat-flash"), 110);
+    for (let i = 0; i < 5; i++) spawnMote(true);
+  };
 
   // ---------------------------------------------------------------- sound toggle
 
