@@ -13,6 +13,12 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const body = document.body;
+  // which independent collection this page feeds (the server's study_store.VARIANTS)
+  const VARIANT = body.dataset.variant || "study";
+  // Extensions (e.g. /study-funny) listen to "study:*" events on document and
+  // may add to the saved client summary and the result lines through these.
+  const hooks = () => window.STUDY_HOOKS || {};
+  const emit = (name, detail) => document.dispatchEvent(new CustomEvent(`study:${name}`, { detail }));
   const kickerEl = $("study-kicker");
   const titleEl = $("study-title");
   const subEl = $("study-sub");
@@ -22,7 +28,7 @@
   const beginBtn = $("study-begin");
   const resumeBtn = $("study-resume");
   // the participant this browser has not finished yet, offered on the start screen
-  const ACTIVE_KEY = "studyActivePid";
+  const ACTIVE_KEY = VARIANT === "study" ? "studyActivePid" : `studyActivePid:${VARIANT}`;
   const activePid = () => { try { return localStorage.getItem(ACTIVE_KEY); } catch (_) { return null; } };
   const setActivePid = (pid) => { try { pid ? localStorage.setItem(ACTIVE_KEY, pid) : localStorage.removeItem(ACTIVE_KEY); } catch (_) { /* storage off */ } };
   const sheet = $("study-sheet");
@@ -246,6 +252,7 @@
       S.timing = { shown: performance.now(), first: null, last: null, strokes: 0, text: "" };
       S.screen = "trial";
       render();
+      emit("trial-start", { target: target(), practice: cur().practice });
     } else if (S.pending && S.pending.startsWith("finish:") && m.saved) {
       const status = S.pending.slice(7);
       S.pending = null;
@@ -311,7 +318,7 @@
   // no pid: the server assigns the next participant ID
   function openSession(pid) {
     if (S.pending) return;
-    request({ type: "study-open", ...(pid ? { pid } : {}), frontendVersion: window.GESTURE_CONFIG.version, display: displayInfo() }, "open");
+    request({ type: "study-open", variant: VARIANT, ...(pid ? { pid } : {}), frontendVersion: window.GESTURE_CONFIG.version, display: displayInfo() }, "open");
     render();
   }
 
@@ -368,6 +375,7 @@
 
   // the text equals the phrase: green for a moment, then save as matched
   function onTextChange() {
+    emit("text", { text: plainText.trim(), target: target() });
     clearTimeout(S.matchTimer);
     body.classList.remove("is-matched");
     if (S.confirmNext) {
@@ -418,7 +426,8 @@
         strokes: t.strokes, words,
         perfect: S.lastResult.perfect,
         wpm: +S.lastResult.wpm.toFixed(3),
-        cer: +S.lastResult.cer.toFixed(4)
+        cer: +S.lastResult.cer.toFixed(4),
+        ...(hooks().clientExtra ? hooks().clientExtra() : {})
       }
     }, `finish:${status}`);
   }
@@ -432,6 +441,7 @@
     }
     S.done.add(key(saved.step, saved.trial));
     S.feedback = status === "forced" ? null : phraseSummary(S.lastResult);
+    emit("trial-end", { status, result: S.lastResult });
     S.results.push(S.lastResult);
     S.confirmNext = false;
     body.classList.remove("is-matched");
@@ -568,6 +578,7 @@
     if (screen !== "feedback") flash.innerHTML = "";
     body.classList.toggle("is-paused", S.paused);
     body.dataset.screen = screen;
+    emit("screen", { screen, step });
     setupForm.hidden = screen !== "setup";
     sheet.hidden = !["rating", "summary", "end"].includes(screen);
     sheet.className = `study-sheet is-${screen}`;
@@ -816,12 +827,14 @@
       const up = f.delta >= 0;
       parts.push(part(up ? "is-good" : "is-muted", `${up ? ICON.up : ICON.down}${Math.abs(f.delta).toFixed(1)}<small>vs avg</small>`));
     }
+    if (hooks().flashExtra) parts.push(...hooks().flashExtra(f).map((html) => part("", html)));
     return parts.join('<span class="study-flash-sep" aria-hidden="true"></span>');
   }
 
   function summaryHtml(b) {
     const change = b.change == null ? "" : `<em class="${b.change >= 0 ? "is-up" : "is-down"}">${b.change >= 0 ? ICON.up : ICON.down}${Math.abs(Math.round(b.change * 100))}% ${b.change >= 0 ? "faster" : "slower"} than ${b.prevLabel}</em>`;
-    return `<div class="study-stats-row">${stat(num(b.avg), "avg WPM", change)}${stat(pct(b.accuracy), "accuracy")}${stat(`${b.perfect}/${b.n}`, "perfect")}</div>
+    const extra = hooks().summaryExtra ? hooks().summaryExtra(b).map(([v, label]) => stat(v, label)).join("") : "";
+    return `<div class="study-stats-row">${stat(num(b.avg), "avg WPM", change)}${stat(pct(b.accuracy), "accuracy")}${stat(`${b.perfect}/${b.n}`, "perfect")}${extra}</div>
       ${b.series.length > 1 ? sparkline(b.series) : ""}
       ${b.best ? `<p class="study-best">${ICON.star}<span>Fastest · “${esc(b.best.target)}” · ${num(b.best.wpm)} WPM</span></p>` : ""}`;
   }

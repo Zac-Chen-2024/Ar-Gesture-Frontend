@@ -3,19 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ar-Gesture Study</title>
+    <title>Ar-Gesture Study · Funny</title>
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="../favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
     <link rel="stylesheet" href="../styles.css?v=20260929-1" />
-    <link rel="stylesheet" href="study.css?v=20260929-4" />
+    <link rel="stylesheet" href="../study/study.css?v=20260929-4" />
+    <link rel="stylesheet" href="funny.css?v=20260929-1" />
   </head>
-  <body class="display-body study-body">
+  <body class="display-body study-body funny-body" data-variant="funny">
     <main class="display-stage">
       <section class="display-frame" aria-label="Gesture display area">
         <header class="top-bar">
           <div id="study-info" class="study-info">
-            <span class="study-info-title">Study</span>
+            <span class="study-info-title">Study <em class="funny-mark">Funny</em></span>
             <span id="study-info-detail" class="study-info-detail"></span>
           </div>
           <div class="settings-row">
@@ -157,6 +158,10 @@
           </div>
         </div>
         <div id="cursor-marker" class="cursor-marker" aria-hidden="true"></div>
+        <canvas id="funny-ink" class="funny-ink" aria-hidden="true"></canvas>
+        <div id="funny-combo" class="funny-combo" aria-live="off" hidden><b></b><span>combo</span></div>
+        <div id="funny-shout" class="funny-shout" aria-hidden="true"></div>
+        <button id="funny-sound" class="funny-sound" type="button" aria-pressed="true" aria-label="Sound"></button>
         <canvas id="display-canvas"></canvas>
         <div id="build-badge" class="build-badge" aria-hidden="true"></div>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch display style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg></button>
@@ -168,6 +173,7 @@
     <script src="../config.js?v=20260929-1"></script>
     <script src="../vendor/adb.bundle.js?v=20260929-1"></script>
     <script src="../display.js?v=20260929-1"></script>
-    <script src="study.js?v=20260929-6"></script>
+    <script src="../study/study.js?v=20260929-6"></script>
+    <script src="funny.js?v=20260929-1"></script>
   </body>
   </html>
