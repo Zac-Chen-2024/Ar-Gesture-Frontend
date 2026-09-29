@@ -803,7 +803,7 @@
     return `<div class="study-stat"><b>${value}</b><span>${label}</span>${extra}</div>`;
   }
 
-  // one line in place of the typed text: verdict, speed, errors, trend, strokes, streak
+  // one line in place of the typed text: verdict, speed, errors, trend
   function feedbackHtml(f) {
     const part = (cls, html) => `<span class="study-flash-part ${cls}">${html}</span>`;
     const parts = [
@@ -816,8 +816,6 @@
       const up = f.delta >= 0;
       parts.push(part(up ? "is-good" : "is-muted", `${up ? ICON.up : ICON.down}${Math.abs(f.delta).toFixed(1)}<small>vs avg</small>`));
     }
-    parts.push(part("is-muted", `${f.words}<small>words</small> / ${f.strokes}<small>strokes</small>`));
-    if (f.streak >= 2) parts.push(part("is-streak", `${ICON.flame}${f.streak}<small>in a row</small>`));
     return parts.join('<span class="study-flash-sep" aria-hidden="true"></span>');
   }
 
