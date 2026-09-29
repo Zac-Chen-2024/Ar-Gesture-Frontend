@@ -55,7 +55,22 @@
 /* the prompt takes vertical room from the page, so the output line sits a
    little closer to the keyboard than on the main display */
 .study-body .text-row {
-  margin-bottom: 4vmin;
+  margin-bottom: 3vmin;
+}
+
+/* layout: less air above (a third of the free space instead of half), and
+   room below the keyboard for the Next bar, which display.js places under
+   the last row (to 2.25 key heights below G) outside the keyboard's box */
+.study-body .display-stage {
+  padding: 2.5vmin 4vmin;
+}
+
+.study-body .display-frame::before {
+  flex-grow: 0.5;
+}
+
+.study-body .keyboard-shell {
+  padding-bottom: calc(var(--key-height) * 0.85);
 }
 
 .study-kicker {
@@ -179,7 +194,20 @@
   transition: opacity 200ms ease;
 }
 
-/* Next: the whole bottom bar while typing and on single-choice screens */
+/* Next: the whole bottom bar while typing and on single-choice screens. No
+   frame, just the word: the whole band is Next. Hover shades the band. */
+.study-body .action-pill {
+  border: none;
+  background: transparent;
+  font-family: var(--font-serif);
+  font-size: clamp(1rem, 2.4vmin, 1.4rem);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
 .action-next {
   cursor: default;
 }
@@ -196,16 +224,10 @@
   opacity: 0.35;
 }
 
-.study-body.is-pointer .action-pill.is-hover {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: #ffffff;
-}
-
+.study-body.is-pointer .action-pill.is-hover,
 .study-body .action-next.is-hover {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: #ffffff;
+  background: rgba(17, 17, 17, 0.07);
+  color: var(--ink);
 }
 
 .action-pill.is-shake {
@@ -317,9 +339,11 @@
 
 /* a mismatching Next asks once more */
 .study-body .action-next.is-confirm {
-  border-color: var(--ed-red, #d6452b);
-  background: var(--ed-red, #d6452b);
-  color: #ffffff;
+  color: var(--ed-red, #d6452b);
+}
+
+.study-body .action-next.is-confirm.is-hover {
+  background: rgba(214, 69, 43, 0.08);
 }
 
 /* summaries on the sheet: numbers in the serif, labels in small caps */
@@ -464,4 +488,75 @@
 
 .study-table thead th {
   border-bottom-color: var(--ink);
+}
+
+/* per-phrase feedback: one line in place of the typed text */
+.study-body .text-row {
+  position: relative;
+}
+
+.study-flash[hidden] {
+  display: none;
+}
+
+.study-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 clamp(14px, 2.4vw, 34px);
+  background: var(--ed-paper, #faf8f3);
+  font-family: var(--font-serif);
+  font-size: clamp(1.2rem, 3.4vmin, 2.1rem);
+  color: var(--ink);
+  animation: study-flash-in 180ms ease;
+}
+
+@keyframes study-flash-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+.study-flash-part {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25em;
+  white-space: nowrap;
+}
+
+.study-flash-part b {
+  font-weight: 400;
+}
+
+.study-flash-part small {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.study-flash-part .study-icon {
+  align-self: center;
+}
+
+.study-flash-part.is-good {
+  color: var(--study-green);
+}
+
+.study-flash-part.is-muted {
+  color: var(--ink-soft);
+}
+
+.study-flash-part.is-streak {
+  color: var(--ed-red, #d6452b);
+}
+
+.study-flash-sep {
+  width: 1px;
+  height: 0.9em;
+  background: rgba(17, 17, 17, 0.18);
 }

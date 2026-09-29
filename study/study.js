@@ -26,6 +26,7 @@
   const activePid = () => { try { return localStorage.getItem(ACTIVE_KEY); } catch (_) { return null; } };
   const setActivePid = (pid) => { try { pid ? localStorage.setItem(ACTIVE_KEY, pid) : localStorage.removeItem(ACTIVE_KEY); } catch (_) { /* storage off */ } };
   const sheet = $("study-sheet");
+  const flash = $("study-flash");
   const clearPill = $("action-clear");
   const nextPill = $("action-next");
   const params = new URLSearchParams(location.search);
@@ -563,11 +564,12 @@
     const pointer = POINTER_SCREENS.includes(screen) && !S.paused;
     body.classList.toggle("is-trial", screen === "trial");
     body.classList.toggle("is-pointer", pointer);
-    body.classList.toggle("is-dim", screen !== "trial");
+    body.classList.toggle("is-dim", screen !== "trial" && screen !== "feedback");
+    if (screen !== "feedback") flash.innerHTML = "";
     body.classList.toggle("is-paused", S.paused);
     body.dataset.screen = screen;
     setupForm.hidden = screen !== "setup";
-    sheet.hidden = !["rating", "feedback", "summary", "end"].includes(screen);
+    sheet.hidden = !["rating", "summary", "end"].includes(screen);
     sheet.className = `study-sheet is-${screen}`;
     sheet.innerHTML = "";
     statusEl.textContent = S.error;
@@ -615,13 +617,14 @@
       pill(nextPill, S.confirmNext ? "Does not match yet · swipe down again to submit as it is" : "Next", { target: true });
       nextPill.classList.toggle("is-confirm", S.confirmNext);
     } else if (screen === "feedback") {
+      // the phrase stays; the output line shows how it went
       const f = S.cfg.show_trial_feedback ? S.feedback : null;
       show({
         kicker: `${blockLabel(step)} · Phrase ${S.trialIdx + 1} of ${step.phrases.length}`,
-        titleHtml: f ? `${f.perfect ? ICON.check : ""}${f.headline}` : "Saved"
+        title: step.phrases[S.trialIdx].text
       });
-      if (f) sheet.innerHTML = feedbackHtml(f);
-      else sheet.hidden = true;
+      sheet.hidden = true;
+      flash.innerHTML = f ? feedbackHtml(f) : "";
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
     } else if (screen === "summary") {
@@ -679,6 +682,7 @@
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
     }
+    flash.hidden = !flash.innerHTML;
     if (screen !== "trial") nextPill.classList.remove("is-confirm");
     layoutNextPill();
     setTargets(list);
@@ -713,7 +717,7 @@
   // ---------------------------------------------------------------- statistics
 
   // Phrases the experimenter forced through count as phrases but never in the
-  // speed or accuracy figures.
+  // speed or accuracy figures; submitted-with-errors phrases count for accuracy.
   // Participants only ever compare with themselves in the same condition, so
   // the feedback cannot tilt the ratings of another condition; the end screen
   // (after every rating) is the one place conditions sit side by side.
@@ -728,7 +732,9 @@
              perfect: c.perfect ?? (r.status === "matched" && c.strokes === words) };
   }
 
-  const scored = (r) => r.status !== "forced" && r.wpm > 0;
+  // speed (averages, trends, bests) counts only phrases typed to the end: a
+  // short, mismatching submission would otherwise read as a record
+  const scored = (r) => r.status === "matched" && r.wpm > 0;
   const mean = (xs) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : NaN);
 
   function phraseSummary(r) {
@@ -797,16 +803,22 @@
     return `<div class="study-stat"><b>${value}</b><span>${label}</span>${extra}</div>`;
   }
 
+  // one line in place of the typed text: verdict, speed, errors, trend, strokes, streak
   function feedbackHtml(f) {
-    let trend = "";
-    if (f.newBest) trend = `<em class="is-best">${ICON.star}New best</em>`;
+    const part = (cls, html) => `<span class="study-flash-part ${cls}">${html}</span>`;
+    const parts = [
+      part(f.status === "completed" ? "is-plain" : "is-good", `${f.status === "completed" ? "" : ICON.check}${f.headline}`),
+      part("", `<b>${num(f.wpm)}</b><small>WPM</small>`),
+      part("", `<b>${pct(f.cer)}</b><small>errors</small>`)
+    ];
+    if (f.newBest) parts.push(part("is-good", `${ICON.star}New best`));
     else if (f.delta != null) {
       const up = f.delta >= 0;
-      trend = `<em class="${up ? "is-up" : "is-down"}">${up ? ICON.up : ICON.down}${Math.abs(f.delta).toFixed(1)} vs your average</em>`;
+      parts.push(part(up ? "is-good" : "is-muted", `${up ? ICON.up : ICON.down}${Math.abs(f.delta).toFixed(1)}<small>vs avg</small>`));
     }
-    const streak = f.streak >= 2 ? `<span class="study-chip is-streak">${ICON.flame}${f.streak} perfect in a row</span>` : "";
-    return `<div class="study-stats-row">${stat(num(f.wpm), "WPM", trend)}${stat(pct(f.cer), "errors")}</div>
-      <div class="study-chips"><span class="study-chip">${f.words} word${f.words === 1 ? "" : "s"} · ${f.strokes} stroke${f.strokes === 1 ? "" : "s"}</span>${streak}</div>`;
+    parts.push(part("is-muted", `${f.words}<small>words</small> / ${f.strokes}<small>strokes</small>`));
+    if (f.streak >= 2) parts.push(part("is-streak", `${ICON.flame}${f.streak}<small>in a row</small>`));
+    return parts.join('<span class="study-flash-sep" aria-hidden="true"></span>');
   }
 
   function summaryHtml(b) {
