@@ -5,6 +5,6 @@
   window.STUDY_CONFIG_RUNTIME = {
     backendWsUrl: override || "wss://api.gesturetyping.com",
     // Study frontend build, stored with every trial. Bump on every change.
-    version: "study-v2026-09-28.1"
+    version: "study-v2026-09-29.1"
   };
 })();

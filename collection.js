@@ -33,7 +33,7 @@
     byId("save").title = currentSpelling.active ? "Commit or cancel the spelling draft first" : "";
     byId("skip").disabled = offline || !active || pending;
     byId("exit").disabled = active || pending;
-    toggle.disabled = pending || currentSpelling.active;
+    if (toggle) toggle.disabled = pending || currentSpelling.active;
     // Fix the device to Phone throughout collection and freeze input settings during a phrase.
     document.querySelectorAll("#device-mode button").forEach((el) => { el.disabled = state.enabled || currentSpelling.active; });
     document.querySelectorAll("#input-mode-switch button, #algo-version, #link-mode button, #lan-mode, #usb-connect").forEach((el) => {
@@ -71,7 +71,7 @@
 
   function open() {
     panel.hidden = false;
-    toggle.setAttribute("aria-expanded", "true");
+    toggle?.setAttribute("aria-expanded", "true");
     document.body.classList.add("is-collection");
     if (deviceMode === "touchpad") exitTouchpad();
     if (supported) request({ type: "collection-enter" });
@@ -79,7 +79,7 @@
     requestAnimationFrame(resizeCanvas);
   }
 
-  toggle.addEventListener("click", open);
+  toggle?.addEventListener("click", open);
   byId("start").addEventListener("click", () => request({
     type: "collection-start", participant, mode: mode.value,
     frontendVersion: window.GESTURE_CONFIG.version,
@@ -97,7 +97,7 @@
   });
   function closePanel() {
     panel.hidden = true;
-    toggle.setAttribute("aria-expanded", "false");
+    toggle?.setAttribute("aria-expanded", "false");
     document.body.classList.remove("is-collection");
     requestAnimationFrame(resizeCanvas);
   }
