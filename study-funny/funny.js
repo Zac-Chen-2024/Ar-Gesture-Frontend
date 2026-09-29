@@ -15,8 +15,18 @@
    for the leaderboard on the end screen. Each block ends on an S / A / B / C
    grade stamp.
 
-   Everything else reacts to the "study:*" events from study.js. Motion stays off the text itself (only the keyboard shakes),
-   and prefers-reduced-motion drops the shake and most of the ink. */
+   Sound is a small synth: each hit is a pluck on the current chord of an
+   Am-F-C-G loop (so a run plays a melody) over a sub kick, panned by where
+   the stroke ended, into a short reverb. A beat builds under the combo (kick
+   from 5, hats and bass from 10, claps from 20, an arpeggio from 40) and
+   tape-stops when it breaks. The picture adds a burst along the whole
+   stroke, a shockwave, a small punch of the frame, a red heat at the edges
+   that grows with the combo, and at milestones an ink flash with speed
+   lines. The phone vibrates with every hit (Android; iOS where allowed).
+
+   Everything else reacts to the "study:*" events from study.js. Motion stays
+   off the text itself, and prefers-reduced-motion drops the shake, the punch,
+   the flash and most of the ink. */
 (() => {
   const $ = (id) => document.getElementById(id);
   const body = document.body;
@@ -60,6 +70,17 @@
   };
   const newBlock = () => ({ n: 0, perfect: 0, cer: [], breaks: 0, points: 0 });
   S.block = newBlock();
+
+  // the stroke being drawn, in frame pixels (for the burst along it)
+  let path = [];
+  socket.addEventListener("message", (event) => {
+    let m;
+    try { m = JSON.parse(event.data); } catch (_) { return; }
+    if (m.type === "gesture-start" && m.point) path = [toDisplayPoint(m.point)];
+    else if (m.type === "gesture-move" && m.point && path.length < 400) path.push(toDisplayPoint(m.point));
+  });
+
+  const haptic = (pattern) => sendMessage({ type: "study-haptic", pattern });
 
   // ---------------------------------------------------------------- combo engine
 
@@ -120,17 +141,28 @@
     stampWord(word, tier);
     flashKeys(word);
     const p = cursorPoint();
+    burstAlong(path, tier);
     splash(p.x, p.y, tier, 1);
+    ring(p.x, p.y, 40 + tier * 22, tier >= 3 ? RED : INK);
     floatPoints(p.x, p.y, `+${points}`, tier);
     addScore(points);
     shake(tier);
+    punch(0.006 + tier * 0.003);
     paintTitle();
     paintCombo(true);
     setHotInk(tier);
-    sound.hit(S.combo, tier);
+    heat(tier);
+    const pan = Math.max(-1, Math.min(1, (p.x / frameEl.clientWidth) * 2 - 1));
+    sound.hit(S.combo, tier, pan);
+    sound.bed(tier);
+    haptic([14 + tier * 7]);
     if (SHOUTS[S.combo]) {
       shout(SHOUTS[S.combo], tier);
+      inkFlash(tier);
+      speedLines(tier);
+      ring(p.x, p.y, 220, RED);
       sound.milestone(S.combo);
+      haptic([35, 45, 35, 45, 90]);
     }
   }
 
@@ -160,7 +192,11 @@
     setHotInk(0);
     comboNum.textContent = `×${lost}`;
     restartClass(comboEl, "is-break");
+    heat(0);
     sound.crash();
+    sound.bed(0, true);
+    haptic([140]);
+    if (!reduced) restartClass(frameEl, "funny-drain");
   }
 
   document.addEventListener("study:trial-end", (e) => {
@@ -184,9 +220,14 @@
     titleEl.querySelectorAll(".funny-w").forEach((w) => restartClass(w, "is-wave"));
     const box = decodedEl.getBoundingClientRect();
     const f = frameEl.getBoundingClientRect();
-    splash(box.left - f.left + box.width / 2, box.top - f.top + box.height / 2, Math.max(2, tier), 2.2);
+    const cx = box.left - f.left + box.width / 2;
+    const cy = box.top - f.top + box.height / 2;
+    splash(cx, cy, Math.max(2, tier), 2.2);
+    ring(cx, cy, 320, RED);
     shake(Math.max(2, tier));
+    punch(0.02);
     sound.finish(tier);
+    haptic([20, 30, 20, 30, 70]);
   });
 
   document.addEventListener("study:screen", (e) => {
@@ -197,6 +238,11 @@
       S.frozen = false;
       S.block = newBlock();
       setHotInk(0);
+    }
+    // the beat and the heat belong to typing
+    if (!["trial", "feedback"].includes(screen)) {
+      sound.bed(0);
+      heat(0);
     }
     scoreEl.hidden = screen === "setup" || !screen;
     if (screen === "summary") stampGrade();
@@ -293,7 +339,10 @@
       const f = frameEl.getBoundingClientRect();
       splash(r.left - f.left + r.width / 2, r.top - f.top + r.height / 2, g === "S" ? 4 : g === "A" ? 3 : 1, 1.8);
       shake(g === "S" ? 4 : 2);
+      punch(g === "S" ? 0.03 : 0.015);
+      if (g === "S") { inkFlash(4); speedLines(4); }
       sound.grade(g);
+      haptic(g === "S" ? [40, 50, 40, 50, 160] : g === "A" ? [40, 60, 90] : [60]);
     }, 180);
   }
 
@@ -455,7 +504,9 @@
 
   // ---------------------------------------------------------------- ink
 
-  let drops = [];
+  let drops = []; // particles
+  let waves = []; // shockwave rings
+  let lines = []; // speed lines
   let running = false;
 
   function sizeInk() {
@@ -468,29 +519,99 @@
   addEventListener("resize", () => { sizeInk(); placeCombo(); });
   sizeInk();
 
-  // drops and short strokes of ink, black with more red as the combo climbs
-  function splash(x, y, tier, scale) {
-    const n = Math.round((reduced ? 4 : 10 + tier * 7) * scale);
-    const redShare = [0.05, 0.15, 0.35, 0.6, 0.85][tier];
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const v = (2 + Math.random() * (3 + tier * 1.4)) * Math.sqrt(scale);
-      drops.push({
-        x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2,
-        r: 1 + Math.random() * (2 + tier * 0.6),
-        life: 1, decay: 0.022 + Math.random() * 0.03,
-        streak: Math.random() < 0.35,
-        color: Math.random() < redShare ? RED : INK
-      });
-    }
+  function animate() {
     if (!running) {
       running = true;
       requestAnimationFrame(step);
     }
   }
 
+  function drop(x, y, vx, vy, tier, size = 1) {
+    const redShare = [0.05, 0.15, 0.35, 0.6, 0.85][tier];
+    drops.push({
+      x, y, vx, vy,
+      r: (1 + Math.random() * (2 + tier * 0.6)) * size,
+      life: 1, decay: 0.022 + Math.random() * 0.03,
+      streak: Math.random() < 0.35,
+      color: Math.random() < redShare ? RED : INK
+    });
+  }
+
+  // drops and short strokes of ink, black with more red as the combo climbs
+  function splash(x, y, tier, scale) {
+    const n = Math.round((reduced ? 4 : 10 + tier * 7) * scale);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = (2 + Math.random() * (3 + tier * 1.4)) * Math.sqrt(scale);
+      drop(x, y, Math.cos(a) * v, Math.sin(a) * v - 1.2, tier);
+    }
+    animate();
+  }
+
+  // the whole word bursts: ink flies off the stroke, sideways to its direction
+  function burstAlong(points, tier) {
+    if (reduced || points.length < 2) return;
+    const every = Math.max(1, Math.floor(points.length / (14 + tier * 6)));
+    for (let i = every; i < points.length; i += every) {
+      const a = points[i - every];
+      const b = points[i];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const side = Math.random() < 0.5 ? 1 : -1;
+      const v = 1.5 + Math.random() * (2 + tier);
+      drop(b.x, b.y, (-dy / len) * v * side + (dx / len) * 0.8, (dx / len) * v * side + (dy / len) * 0.8 - 0.6, tier, 0.8);
+    }
+    animate();
+  }
+
+  function ring(x, y, radius, color) {
+    if (reduced) return;
+    waves.push({ x, y, radius, color, t: 0 });
+    animate();
+  }
+
+  // manga speed lines, from the edges toward the middle, for a moment
+  function speedLines(tier) {
+    if (reduced) return;
+    const w = frameEl.clientWidth;
+    const h = frameEl.clientHeight;
+    const cx = w / 2;
+    const cy = h * 0.42;
+    const n = 36 + tier * 10;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.1;
+      const far = Math.hypot(w, h) * 0.6;
+      const near = far * (0.45 + Math.random() * 0.25);
+      lines.push({ x0: cx + Math.cos(a) * far, y0: cy + Math.sin(a) * far, x1: cx + Math.cos(a) * near, y1: cy + Math.sin(a) * near,
+                   width: 1 + Math.random() * (2 + tier), life: 1, color: Math.random() < 0.25 + tier * 0.12 ? RED : INK });
+    }
+    animate();
+  }
+
   function step() {
     ctx.clearRect(0, 0, ink.width, ink.height);
+    lines = lines.filter((l) => (l.life -= 0.06) > 0);
+    for (const l of lines) {
+      ctx.globalAlpha = l.life * 0.7;
+      ctx.strokeStyle = l.color;
+      ctx.lineWidth = l.width;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(l.x0, l.y0);
+      ctx.lineTo(l.x1 + (l.x0 - l.x1) * (1 - l.life) * 0.5, l.y1 + (l.y0 - l.y1) * (1 - l.life) * 0.5);
+      ctx.stroke();
+    }
+    waves = waves.filter((wv) => (wv.t += 0.055) < 1);
+    for (const wv of waves) {
+      const e = 1 - (1 - wv.t) ** 3;
+      ctx.globalAlpha = (1 - wv.t) * 0.8;
+      ctx.strokeStyle = wv.color;
+      ctx.lineWidth = 3.5 * (1 - wv.t) + 0.5;
+      ctx.beginPath();
+      ctx.arc(wv.x, wv.y, 6 + wv.radius * e, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     drops = drops.filter((d) => d.life > 0);
     for (const d of drops) {
       d.x += d.vx;
@@ -514,19 +635,55 @@
       }
     }
     ctx.globalAlpha = 1;
-    if (drops.length) requestAnimationFrame(step);
+    if (drops.length || waves.length || lines.length) requestAnimationFrame(step);
     else running = false;
+  }
+
+  // ---------------------------------------------------------------- frame effects
+
+  // the whole page leans in on a hit, a hair
+  function punch(amount) {
+    if (reduced) return;
+    frameEl.style.setProperty("--funny-punch", String(1 + amount));
+    restartClass(frameEl, "funny-punch");
+  }
+
+  // red heat at the edges, stronger with the combo; it pulses with the beat
+  const stageEl = document.querySelector(".display-stage");
+  function heat(tier) {
+    stageEl.dataset.heat = tier;
+  }
+
+  // a flash that inverts the page for an instant at a milestone (red above 20)
+  const flashEl = document.createElement("div");
+  flashEl.className = "funny-flash";
+  flashEl.setAttribute("aria-hidden", "true");
+  frameEl.appendChild(flashEl);
+  function inkFlash(tier) {
+    if (reduced) return;
+    flashEl.dataset.tone = tier >= 3 ? "red" : "ink";
+    restartClass(flashEl, "is-on");
   }
 
   // ---------------------------------------------------------------- sound
 
-  // Synthesized with Web Audio, no files: a woody key strike over a low thump,
-  // pitched up a pentatonic step per combo, so a run climbs like a scale.
+  // A small synth on Web Audio (no files). Hits are plucks on the chord of an
+  // Am-F-C-G loop, climbing through its tones as the combo grows, over a sub
+  // kick; everything goes through a compressor with a short reverb send. A
+  // beat builds under the combo and tape-stops when it breaks.
   const sound = (() => {
     let ac = null;
-    let master = null;
+    let out = null; // dry bus
+    let verb = null; // reverb send
     let noise = null;
     let on = (() => { try { return localStorage.getItem("funnySound") !== "off"; } catch (_) { return true; } })();
+
+    const BPM = 124;
+    const BEAT = 60 / BPM;
+    // Am, F, C, G as semitones from A3 (220 Hz)
+    const CHORDS = [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]];
+    const hz = (semi) => 220 * 2 ** (semi / 12);
+    let chordIndex = 0;
 
     function audio() {
       if (!ac) {
@@ -536,10 +693,26 @@
           return null;
         }
         const comp = ac.createDynamicsCompressor();
-        master = ac.createGain();
-        master.gain.value = 0.7;
+        comp.threshold.value = -14;
+        comp.ratio.value = 4;
+        const master = ac.createGain();
+        master.gain.value = 0.8;
         master.connect(comp).connect(ac.destination);
-        noise = ac.createBuffer(1, ac.sampleRate * 0.3, ac.sampleRate);
+        out = ac.createGain();
+        out.connect(master);
+        // reverb: a decaying noise impulse
+        const len = ac.sampleRate * 1.6;
+        const ir = ac.createBuffer(2, len, ac.sampleRate);
+        for (let c = 0; c < 2; c++) {
+          const d = ir.getChannelData(c);
+          for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3;
+        }
+        const conv = ac.createConvolver();
+        conv.buffer = ir;
+        verb = ac.createGain();
+        verb.gain.value = 0.35;
+        verb.connect(conv).connect(master);
+        noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
         const data = noise.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
       }
@@ -549,42 +722,111 @@
     // browsers start audio only after a user action: any click or key unlocks it
     ["pointerdown", "keydown"].forEach((t) => addEventListener(t, () => on && audio(), { passive: true }));
 
-    const PENTA = [0, 2, 4, 7, 9];
-    const noteHz = (step) => 196 * 2 ** ((12 * Math.floor(step / 5) + PENTA[step % 5]) / 12);
+    const ready = () => on && audio();
 
-    function tone(freq, { type = "triangle", t = 0, attack = 0.002, decay = 0.2, gain = 0.3, bend = 0 } = {}) {
-      const a = audio();
-      if (!a || !on) return;
-      const t0 = a.currentTime + t;
-      const o = a.createOscillator();
-      const g = a.createGain();
-      o.type = type;
-      o.frequency.setValueAtTime(freq, t0);
-      if (bend) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq * bend), t0 + decay);
+    function env(g, t0, gain, attack, decay) {
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(gain, t0 + attack);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
-      o.connect(g).connect(master);
-      o.start(t0);
-      o.stop(t0 + decay + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
     }
 
-    function click({ t = 0, freq = 3200, q = 1.2, decay = 0.03, gain = 0.25 } = {}) {
-      const a = audio();
-      if (!a || !on) return;
-      const t0 = a.currentTime + t;
-      const src = a.createBufferSource();
+    function route(node, pan = 0, send = 0) {
+      const p = ac.createStereoPanner ? ac.createStereoPanner() : null;
+      if (p) {
+        p.pan.value = pan;
+        node.connect(p).connect(out);
+      } else {
+        node.connect(out);
+      }
+      if (send) {
+        const s = ac.createGain();
+        s.gain.value = send;
+        node.connect(s).connect(verb);
+      }
+    }
+
+    function tone(freq, { type = "triangle", t = 0, attack = 0.002, decay = 0.2, gain = 0.3, bend = 0, pan = 0, send = 0 } = {}) {
+      if (!ready()) return;
+      const t0 = ac.currentTime + t;
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t0);
+      if (bend) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq * bend), t0 + attack + decay);
+      env(g, t0, gain, attack, decay);
+      o.connect(g);
+      route(g, pan, send);
+      o.start(t0);
+      o.stop(t0 + attack + decay + 0.05);
+    }
+
+    // a plucked synth: two detuned saws through a closing low-pass
+    function pluck(freq, { t = 0, gain = 0.16, decay = 0.35, pan = 0, send = 0.3, bright = 1 } = {}) {
+      if (!ready()) return;
+      const t0 = ac.currentTime + t;
+      const f = ac.createBiquadFilter();
+      f.type = "lowpass";
+      f.Q.value = 6;
+      f.frequency.setValueAtTime(900 + 4200 * bright, t0);
+      f.frequency.exponentialRampToValueAtTime(500, t0 + decay * 0.8);
+      const g = ac.createGain();
+      env(g, t0, gain, 0.003, decay);
+      [-8, 8].forEach((cents) => {
+        const o = ac.createOscillator();
+        o.type = "sawtooth";
+        o.frequency.value = freq;
+        o.detune.value = cents;
+        o.connect(f);
+        o.start(t0);
+        o.stop(t0 + decay + 0.05);
+      });
+      f.connect(g);
+      route(g, pan, send);
+    }
+
+    function noiseHit({ t = 0, type = "highpass", freq = 3000, q = 0.8, decay = 0.05, gain = 0.2, pan = 0, send = 0 } = {}) {
+      if (!ready()) return;
+      const t0 = ac.currentTime + t;
+      const src = ac.createBufferSource();
       src.buffer = noise;
-      const bp = a.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.value = freq;
-      bp.Q.value = q;
-      const g = a.createGain();
+      const f = ac.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const g = ac.createGain();
       g.gain.setValueAtTime(gain, t0);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
-      src.connect(bp).connect(g).connect(master);
+      src.connect(f).connect(g);
+      route(g, pan, send);
       src.start(t0);
       src.stop(t0 + decay + 0.02);
+    }
+
+    const kick = (t = 0, gain = 0.5) => tone(160, { type: "sine", t, decay: 0.16, gain, bend: 0.28 });
+    const crashCymbal = (t = 0, gain = 0.18) => noiseHit({ t, freq: 6500, decay: 1.4, gain, send: 0.5 });
+
+    // ---- the beat under the combo
+    let bedTier = 0;
+    let bedTimer = null;
+    let nextBeat = 0;
+    let sixteenth = 0;
+
+    function scheduleBed() {
+      while (nextBeat < ac.currentTime + 0.12) {
+        const t = nextBeat - ac.currentTime;
+        const pos = sixteenth % 16;
+        const chord = CHORDS[chordIndex];
+        if (pos % 4 === 0) kick(t, 0.28 + bedTier * 0.04);
+        if (bedTier >= 2 && pos % 2 === 0) noiseHit({ t, freq: 8000, decay: pos % 4 === 2 ? 0.09 : 0.03, gain: pos % 4 === 2 ? 0.07 : 0.04 });
+        if (bedTier >= 2 && pos % 4 === 0) tone(hz(chord[0] - 24), { type: "sawtooth", t, decay: BEAT * 0.8, gain: 0.07 });
+        if (bedTier >= 3 && (pos === 4 || pos === 12)) {
+          noiseHit({ t, type: "bandpass", freq: 1500, q: 0.7, decay: 0.14, gain: 0.22, send: 0.25 });
+          noiseHit({ t: t + 0.012, type: "bandpass", freq: 1800, q: 0.7, decay: 0.1, gain: 0.14 });
+        }
+        if (bedTier >= 4) pluck(hz(chord[pos % 3] + 12 * (1 + ((pos >> 2) % 2))), { t, gain: 0.05, decay: 0.12, send: 0.2, pan: pos % 2 ? 0.4 : -0.4, bright: 0.6 });
+        nextBeat += BEAT / 4;
+        sixteenth++;
+      }
     }
 
     return {
@@ -593,40 +835,81 @@
         on = v;
         try { localStorage.setItem("funnySound", v ? "on" : "off"); } catch (_) { /* storage off */ }
         if (v) audio();
+        else this.bed(0);
       },
-      hit(combo, tier) {
-        const f = noteHz(Math.min(combo - 1, 24));
-        click({ gain: 0.18 + tier * 0.04 });
-        tone(f, { decay: 0.16 + tier * 0.03, gain: 0.22 });
-        tone(f * 2, { type: "sine", decay: 0.08, gain: 0.06 });
-        tone(95, { type: "sine", decay: 0.12 + tier * 0.02, gain: 0.25 + tier * 0.05, bend: 0.55 }); // the weight
+
+      // the melody: chord tones climbing with the combo; the chord moves every 4 hits
+      hit(combo, tier, pan = 0) {
+        if (!ready()) return;
+        chordIndex = Math.floor((combo - 1) / 4) % CHORDS.length;
+        const chord = CHORDS[chordIndex];
+        const step = (combo - 1) % 8;
+        const note = chord[step % 3] + 12 * Math.floor(step / 3);
+        noiseHit({ freq: 3500, decay: 0.018, gain: 0.22 + tier * 0.03, pan }); // the snap
+        pluck(hz(note + 12), { pan, gain: 0.15 + tier * 0.015, decay: 0.3 + tier * 0.05, bright: 0.5 + tier * 0.12, send: 0.25 + tier * 0.05 });
+        if (tier >= 2) pluck(hz(note + 24), { pan: -pan, gain: 0.05, decay: 0.2, bright: 1 });
+        kick(0, 0.45 + tier * 0.08); // the weight
       },
+
+      // the beat: none below 5, then more layers per tier; a break tape-stops it
+      bed(tier, tapeStop = false) {
+        if (!ready()) return;
+        if (tier === bedTier) return;
+        if (tier === 0) {
+          clearInterval(bedTimer);
+          bedTimer = null;
+          if (tapeStop && bedTier > 0) tone(hz(CHORDS[chordIndex][0] - 12), { type: "sawtooth", decay: 0.45, gain: 0.12, bend: 0.12 });
+          bedTier = 0;
+          return;
+        }
+        bedTier = tier;
+        if (!bedTimer) {
+          nextBeat = ac.currentTime + 0.05;
+          sixteenth = 0;
+          bedTimer = setInterval(scheduleBed, 25);
+        }
+      },
+
+      // an impact: kick, cymbal and a power chord that opens up
       milestone(combo) {
-        const f = noteHz(Math.min(combo, 24));
-        [1, 1.26, 1.5, 2].forEach((m, i) => tone(f * m, { t: i * 0.05, decay: 0.5, gain: 0.12, type: "sine" }));
+        if (!ready()) return;
+        const chord = CHORDS[chordIndex];
+        kick(0, 0.8);
+        crashCymbal(0, 0.16 + Math.min(combo, 40) / 400);
+        [0, 7, 12].forEach((iv) => pluck(hz(chord[0] + iv), { gain: 0.12, decay: 1.1, bright: 1.2, send: 0.6 }));
+        [1, 1.5].forEach((m, i) => tone(hz(chord[0] + 24) * m, { type: "sine", t: 0.06 * (i + 1), decay: 0.8, gain: 0.06, send: 0.5 }));
       },
+
+      // a run up the chord and a cymbal
       finish(tier) {
-        // a bell: inharmonic partials, long decay
-        const base = 880 * (tier >= 3 ? 1.12 : 1);
-        [[1, 0.2], [2.76, 0.08], [5.4, 0.04]].forEach(([m, g]) => tone(base * m, { type: "sine", decay: 1.2, gain: g }));
-        click({ freq: 5000, decay: 0.02, gain: 0.12 });
+        if (!ready()) return;
+        const chord = CHORDS[chordIndex];
+        for (let i = 0; i < 7; i++) {
+          pluck(hz(chord[i % 3] + 12 * (1 + Math.floor(i / 3))), { t: i * 0.045, gain: 0.1, decay: 0.4, bright: 1, send: 0.5, pan: (i / 6) * 1.2 - 0.6 });
+        }
+        crashCymbal(0.3, 0.12 + tier * 0.03);
+        kick(0.3, 0.6);
       },
+
       save() {
-        tone(noteHz(4), { decay: 0.12, gain: 0.1, type: "sine" });
+        pluck(hz(CHORDS[chordIndex][2] + 12), { gain: 0.08, decay: 0.2, bright: 0.4 });
       },
       miss() {
-        tone(150, { type: "sine", decay: 0.09, gain: 0.12, bend: 0.8 });
+        tone(150, { type: "sine", decay: 0.09, gain: 0.14, bend: 0.8 });
       },
       crash() {
-        tone(110, { type: "sine", decay: 0.35, gain: 0.3, bend: 0.5 });
-        click({ freq: 400, q: 0.7, decay: 0.2, gain: 0.2 });
+        tone(110, { type: "sine", decay: 0.35, gain: 0.35, bend: 0.4 });
+        noiseHit({ type: "lowpass", freq: 600, decay: 0.25, gain: 0.25 });
       },
+
+      // a heavy stamp, then a fanfare that brightens with the grade
       grade(g) {
-        // a heavy stamp, then a chord that brightens with the grade
-        tone(70, { type: "sine", decay: 0.3, gain: 0.45, bend: 0.5 });
-        click({ freq: 900, q: 0.8, decay: 0.08, gain: 0.3 });
-        const chord = { S: [1, 1.26, 1.5, 2, 2.52], A: [1, 1.26, 1.5, 2], B: [1, 1.26, 1.5], C: [1, 1.19] }[g];
-        chord.forEach((m, i) => tone(262 * m, { t: 0.08 + i * 0.06, decay: 0.9, gain: 0.1, type: "sine" }));
+        if (!ready()) return;
+        kick(0, 0.9);
+        noiseHit({ type: "lowpass", freq: 900, decay: 0.12, gain: 0.3 });
+        const up = { S: [0, 4, 7, 12, 16, 19], A: [0, 4, 7, 12], B: [0, 4, 7], C: [0, 3] }[g];
+        up.forEach((iv, i) => pluck(hz(3 + iv + 12), { t: 0.1 + i * 0.07, gain: 0.11, decay: 0.7, bright: 1, send: 0.5 }));
+        if (g === "S") crashCymbal(0.1 + up.length * 0.07, 0.2);
       }
     };
   })();

@@ -490,6 +490,11 @@ document.addEventListener("visibilitychange", () => {
 function onSocketMessage(event) {
   const message = JSON.parse(event.data);
 
+  if (message.type === "study-haptic") {
+    haptic(message.pattern);
+    return;
+  }
+
   if (message.type === "spelling-state") {
     spellingState = message;
     renderInputHint();
@@ -572,3 +577,35 @@ canvas.addEventListener("pointercancel", endGesture);
 
 resizeCanvas();
 applyModeClasses();
+
+// Study (funny): the display's hits arrive as vibration patterns. Android uses
+// the Vibration API; iOS Safari has none, so an invisible switch is toggled,
+// which gives a single tap of the Taptic Engine where iOS still allows it.
+let hapticSwitch = null;
+function haptic(pattern) {
+  if (!Array.isArray(pattern) || !pattern.length) {
+    return;
+  }
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+    return;
+  }
+  if (!hapticSwitch) {
+    const label = document.createElement("label");
+    label.setAttribute("aria-hidden", "true");
+    label.style.cssText = "position:fixed;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.setAttribute("switch", "");
+    label.appendChild(input);
+    document.body.appendChild(label);
+    hapticSwitch = label;
+  }
+  // one tap per pulse (the odd entries are pauses)
+  pattern.forEach((ms, i) => {
+    if (i % 2 === 0) {
+      const at = pattern.slice(0, i).reduce((a, v) => a + v, 0);
+      setTimeout(() => hapticSwitch.click(), at);
+    }
+  });
+}

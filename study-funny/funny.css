@@ -399,6 +399,75 @@
   color: var(--ed-red, #d6452b);
 }
 
+/* ---------------------------------------------------------------- frame effects */
+
+/* a hit leans the page in, a hair (--funny-punch is set per hit) */
+.display-frame.funny-punch {
+  animation: funny-punch 150ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes funny-punch {
+  0% { transform: scale(var(--funny-punch, 1.01)); }
+  100% { transform: none; }
+}
+
+/* a broken combo drains the colour for a moment */
+.display-frame.funny-drain {
+  animation: funny-drain 420ms ease-out;
+}
+
+@keyframes funny-drain {
+  0% { filter: grayscale(1) contrast(0.8); }
+  100% { filter: none; }
+}
+
+/* heat: a red glow at the edges, stronger per combo tier, on the beat (124 BPM) */
+.funny-body .display-stage {
+  transition: box-shadow 400ms ease;
+}
+
+.funny-body .display-stage[data-heat="1"] { box-shadow: inset 0 0 9vmin rgba(214, 69, 43, 0.06); }
+.funny-body .display-stage[data-heat="2"] { box-shadow: inset 0 0 12vmin rgba(214, 69, 43, 0.12); }
+.funny-body .display-stage[data-heat="3"] { box-shadow: inset 0 0 15vmin rgba(214, 69, 43, 0.2); animation: funny-heat 484ms ease-out infinite; }
+.funny-body .display-stage[data-heat="4"] { box-shadow: inset 0 0 18vmin rgba(214, 69, 43, 0.3); animation: funny-heat 484ms ease-out infinite; }
+
+@keyframes funny-heat {
+  0% { box-shadow: inset 0 0 22vmin rgba(214, 69, 43, 0.38); }
+}
+
+/* the milestone flash: the page inverts for an instant, or flares red */
+.funny-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  background: #ffffff;
+  mix-blend-mode: difference;
+}
+
+.funny-flash[data-tone="red"] {
+  background: #d6452b;
+  mix-blend-mode: multiply;
+}
+
+.funny-flash.is-on {
+  animation: funny-flash 170ms cubic-bezier(0.7, 0, 1, 1);
+}
+
+/* crisp: fully inverted for an instant, then gone */
+@keyframes funny-flash {
+  0%, 40% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .display-frame.funny-punch,
+  .funny-body .display-stage[data-heat] {
+    animation: none;
+  }
+}
+
 /* ---------------------------------------------------------------- sound toggle */
 
 .funny-sound {
