@@ -209,6 +209,8 @@
           onTextChange();
         }
         if (body.classList.contains("is-pointer")) placePointer(); // display.js snapped it to G
+        // display.js relabels the left pill "Clear" with the candidates; endless keeps "Stop"
+        if (halves()) clearPill.textContent = S.confirmStop ? "Swipe to Stop again to end the run" : "Stop";
         if (S.screen === "setup" || S.screen === "ready") render();
         break;
       case "mobile-joined":

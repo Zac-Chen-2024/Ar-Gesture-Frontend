@@ -1,9 +1,15 @@
-/* Funny layer: letterpress impact in the study's Editorial look. Ink and one
-   red, serif numerals, motion on the keyboard and the stamps only. */
+/* Funny layer: letterpress impact in the study's Editorial look. Ink plus the
+   level's accent (--fx-accent) and light colour (--fx-light, an r,g,b
+   triplet), serif numerals, motion on the keyboard and the stamps only. */
+
+.funny-body {
+  --fx-accent: #d6452b;
+  --fx-light: 214, 69, 43;
+}
 
 .funny-mark {
   font-style: italic;
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
 }
 
 /* ink particles above the keyboard, below the prompt text */
@@ -23,7 +29,7 @@
   z-index: 7;
   display: block;
   white-space: nowrap;
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
   pointer-events: none;
   transform-origin: 50% 60%;
   animation: funny-stamp 360ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
@@ -72,7 +78,7 @@
 }
 
 .study-title.funny-sweep {
-  background-image: linear-gradient(var(--ed-red, #d6452b), var(--ed-red, #d6452b));
+  background-image: linear-gradient(var(--fx-accent), var(--fx-accent));
   background-repeat: no-repeat;
   background-position: 0 100%;
   animation: funny-sweep 520ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -147,12 +153,12 @@
 
 .funny-combo[data-tier="3"] b,
 .funny-combo[data-tier="4"] b {
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
   font-size: clamp(3rem, 8.5vmin, 5.6rem);
 }
 
 .funny-combo[data-tier="4"] span {
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
 }
 
 .funny-combo.is-frozen b {
@@ -201,7 +207,7 @@
 
 .funny-shout[data-tier="3"],
 .funny-shout[data-tier="4"] {
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
 }
 
 .funny-shout.is-on {
@@ -259,7 +265,7 @@
 }
 
 @keyframes funny-bump {
-  0% { transform: scale(1.18); color: var(--ed-red, #d6452b); }
+  0% { transform: scale(1.18); color: var(--fx-accent); }
   100% { transform: scale(1); }
 }
 
@@ -279,7 +285,7 @@
 .funny-points[data-tier="2"],
 .funny-points[data-tier="3"],
 .funny-points[data-tier="4"] {
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
 }
 
 .funny-points.is-big {
@@ -325,7 +331,7 @@
 
 .funny-grade[data-grade="S"],
 .funny-grade[data-grade="A"] {
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
 }
 
 .funny-grade.is-on {
@@ -363,7 +369,7 @@
   font-style: italic;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
 }
 
 .funny-board ol {
@@ -396,7 +402,7 @@
 }
 
 .funny-board li.is-me {
-  color: var(--ed-red, #d6452b);
+  color: var(--fx-accent);
 }
 
 /* ---------------------------------------------------------------- frame effects */
@@ -426,10 +432,10 @@
   transition: box-shadow 400ms ease;
 }
 
-.funny-body .display-stage[data-heat="1"] { box-shadow: inset 0 0 9vmin rgba(214, 69, 43, 0.06); }
-.funny-body .display-stage[data-heat="2"] { box-shadow: inset 0 0 12vmin rgba(214, 69, 43, 0.12); }
-.funny-body .display-stage[data-heat="3"] { box-shadow: inset 0 0 15vmin rgba(214, 69, 43, 0.2); }
-.funny-body .display-stage[data-heat="4"] { box-shadow: inset 0 0 18vmin rgba(214, 69, 43, 0.3); }
+.funny-body .display-stage[data-heat="1"] { box-shadow: inset 0 0 9vmin rgba(var(--fx-light), 0.06); }
+.funny-body .display-stage[data-heat="2"] { box-shadow: inset 0 0 12vmin rgba(var(--fx-light), 0.12); }
+.funny-body .display-stage[data-heat="3"] { box-shadow: inset 0 0 15vmin rgba(var(--fx-light), 0.2); }
+.funny-body .display-stage[data-heat="4"] { box-shadow: inset 0 0 18vmin rgba(var(--fx-light), 0.3); }
 
 /* on every kick of the track (fever): the edges flare */
 .funny-body .display-stage.on-beat {
@@ -437,7 +443,7 @@
 }
 
 @keyframes funny-heat {
-  0% { box-shadow: inset 0 0 26vmin rgba(214, 69, 43, 0.5); }
+  0% { box-shadow: inset 0 0 26vmin rgba(var(--fx-light), 0.5); }
 }
 
 /* the milestone flash: the page inverts for an instant, or flares red */
@@ -491,7 +497,7 @@
 }
 
 .funny-combo.is-hurry .funny-timer i {
-  background: var(--ed-red, #d6452b);
+  background: var(--fx-accent);
 }
 
 /* the last second: the number trembles */
@@ -546,25 +552,54 @@
 }
 
 .funny-body .keyboard-shell.beat-flash .key {
-  border-color: var(--ed-red, #d6452b);
+  border-color: var(--fx-accent);
   transition: none;
 }
 
-/* fever: slow diagonal stripes behind everything, text with a red glow */
-.funny-stripes {
+/* ---------------------------------------------------------------- background (by level) */
+
+.funny-bg,
+.funny-lights {
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 0;
   pointer-events: none;
-  background-image: repeating-linear-gradient(115deg, rgba(17, 17, 17, 0.06) 0 2px, transparent 2px 34px);
-  background-size: 200% 200%;
-  transition: opacity 400ms ease;
+  overflow: hidden;
 }
 
-.funny-body.is-fever .funny-stripes {
+.funny-bg {
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.funny-bg[data-bg]:not([data-bg=""]) {
   opacity: 1;
+}
+
+.funny-bg[data-bg="dots"] {
+  background-image: radial-gradient(rgba(17, 17, 17, 0.09) 1.2px, transparent 1.6px);
+  background-size: 22px 22px;
+}
+
+.funny-bg[data-bg="stripes"] {
+  background-image: repeating-linear-gradient(115deg, rgba(17, 17, 17, 0.06) 0 2px, transparent 2px 34px);
+  background-size: 200% 200%;
   animation: funny-stripes 1.94s linear infinite;
+}
+
+.funny-bg[data-bg="grid"] {
+  background-image: linear-gradient(rgba(17, 17, 17, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 17, 17, 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: funny-grid 0.968s linear infinite;
+}
+
+.funny-bg[data-bg="stars"] {
+  background-image: radial-gradient(rgba(17, 17, 17, 0.25) 1px, transparent 1.5px),
+    radial-gradient(rgba(17, 17, 17, 0.15) 1.5px, transparent 2px);
+  background-size: 90px 70px, 140px 110px;
+  background-position: 0 0, 40px 30px;
+  animation: funny-stars 6s linear infinite;
 }
 
 @keyframes funny-stripes {
@@ -572,18 +607,118 @@
   to { background-position: -145px 0; }
 }
 
+@keyframes funny-grid {
+  from { background-position: 0 0; }
+  to { background-position: 0 48px; }
+}
+
+@keyframes funny-stars {
+  from { background-position: 0 0, 40px 30px; }
+  to { background-position: 0 70px, 40px 140px; }
+}
+
+/* ---------------------------------------------------------------- lights (by level) */
+
+.funny-lights > i {
+  position: absolute;
+  display: block;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+/* glow: the light colour rising from the bottom corners */
+.funny-lights[data-lights~="glow"] {
+  background: radial-gradient(ellipse 45% 55% at 0% 100%, rgba(var(--fx-light), 0.14), transparent 70%),
+    radial-gradient(ellipse 45% 55% at 100% 100%, rgba(var(--fx-light), 0.14), transparent 70%);
+}
+
+/* pulse / strobe: the lights flare on the kick */
+.funny-lights.on-beat {
+  animation: funny-light-beat 300ms ease-out;
+}
+
+@keyframes funny-light-beat {
+  0% { background-color: rgba(var(--fx-light), 0.08); filter: brightness(1.6); }
+}
+
+/* beams: two stage lights swinging from the bottom corners */
+.funny-lights .beam {
+  bottom: -10%;
+  width: 70%;
+  height: 130%;
+  transform-origin: 50% 100%;
+  background: conic-gradient(from 180deg at 50% 100%, transparent 0deg 168deg, rgba(var(--fx-light), 0.22) 176deg,
+    rgba(var(--fx-light), 0.3) 180deg, rgba(var(--fx-light), 0.22) 184deg, transparent 192deg 360deg);
+  mix-blend-mode: multiply;
+}
+
+.funny-lights .beam.is-left {
+  left: -20%;
+  animation: funny-swing 3.9s ease-in-out infinite alternate;
+}
+
+.funny-lights .beam.is-right {
+  right: -20%;
+  animation: funny-swing 3.9s ease-in-out -1.95s infinite alternate-reverse;
+}
+
+.funny-lights[data-lights~="fast"] .beam {
+  animation-duration: 1.94s;
+}
+
+.funny-lights[data-lights~="beams"] .beam {
+  opacity: 1;
+}
+
+@keyframes funny-swing {
+  from { transform: rotate(-28deg); }
+  to { transform: rotate(28deg); }
+}
+
+/* spot: a soft circle of light under the cursor */
+.funny-lights .spot {
+  inset: 0;
+  background: radial-gradient(circle 16vmin at var(--spot-x, 50%) var(--spot-y, 70%), rgba(var(--fx-light), 0.2), transparent 70%);
+}
+
+.funny-lights[data-lights~="spot"] .spot {
+  opacity: 1;
+}
+
+/* strobe: the page's edges flash on the kick (soft, once a beat) */
+.funny-body .display-stage.on-beat {
+  animation: funny-heat 300ms ease-out;
+}
+
+/* ---------------------------------------------------------------- the page, by level */
+
+/* from 4: the letters lean */
+.funny-body.lv-4 .key {
+  font-style: italic;
+}
+
+/* from 8: the key lines take the accent */
+.funny-body.lv-8 .key {
+  border-color: rgba(var(--fx-light), 0.75);
+}
+
+/* from 12: the typed line glows in the accent */
+.funny-body.lv-12 .decoded-text {
+  text-shadow: 0 0 22px rgba(var(--fx-light), 0.6);
+}
+
+/* from 16 (never below 16 levels): kept for a longer table */
+.funny-body.lv-16 .candidate-strip {
+  border-color: var(--fx-accent);
+}
+
 .funny-body.is-fever .decoded-text,
 .funny-body.is-fever .study-title,
 .funny-body.is-fever .funny-score b,
 .funny-body.is-fever .funny-combo b {
-  text-shadow: 0 0 18px rgba(214, 69, 43, 0.55), 0 0 2px rgba(214, 69, 43, 0.4);
+  text-shadow: 0 0 18px rgba(var(--fx-light), 0.55), 0 0 2px rgba(var(--fx-light), 0.4);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .funny-body.is-fever .funny-stripes {
-    animation: none;
-  }
-}
 
 /* ---------------------------------------------------------------- sound toggle */
 
@@ -620,5 +755,13 @@
   .funny-w.is-wave,
   .keyboard-shell.funny-shake {
     animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .funny-bg,
+  .funny-lights .beam,
+  .funny-lights.on-beat {
+    animation: none !important;
   }
 }

@@ -456,15 +456,43 @@ if (pickerRefresh) {
   });
 }
 
+// the session this phone was paired with; a dropped connection rejoins it
+let rejoinCode = null;
+
 function onSocketOpen() {
   sendMessage({ type: "join", role: "mobile", inputDevice: "phone",
     deviceInfo: { width: innerWidth, height: innerHeight, pixelRatio: devicePixelRatio,
       userAgent: navigator.userAgent } });
+  if (rejoinCode) {
+    sendMessage({ type: "join-room", code: rejoinCode });
+  }
 }
 
+let reconnectTimer = null;
 function onSocketClose() {
-  showPicker("Connection lost — tap Refresh.");
+  // a phone that was paired tries again by itself (the session code is kept)
+  showPicker(rejoinCode ? "Reconnecting…" : "Connection lost — tap Refresh.");
+  if (rejoinCode && !reconnectTimer) {
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      if (!document.hidden) connectSocket();
+    }, 1500);
+  }
 }
+
+// keep the screen on while paired: a phone that dims and locks by itself
+// drops its connection even though nobody touched it
+let wakeLock = null;
+async function keepAwake() {
+  if (!paired || !navigator.wakeLock || (wakeLock && !wakeLock.released) || document.hidden) {
+    return;
+  }
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+  } catch (e) { /* refused (battery saver, no user gesture yet): try again on the next touch */ }
+}
+document.addEventListener("visibilitychange", keepAwake);
+document.addEventListener("pointerdown", keepAwake, { passive: true });
 
 function connectSocket() {
   if (socket) {
@@ -511,6 +539,8 @@ function onSocketMessage(event) {
   if (message.type === "room-joined") {
     paired = true;
     roomCode = message.code;
+    rejoinCode = message.code;
+    keepAwake();
     document.body.classList.add("is-paired");
     hidePicker();
     resizeCanvas();
@@ -518,6 +548,7 @@ function onSocketMessage(event) {
   }
 
   if (message.type === "room-closed" || message.type === "room-error") {
+    rejoinCode = null; // the display is gone: pick a session again
     stopP2P();
     showPicker(message.message || "Session ended.");
     return;

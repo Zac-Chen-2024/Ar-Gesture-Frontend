@@ -52,16 +52,43 @@
   const keyboardEl = document.querySelector(".keyboard-shell");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const TIERS = [5, 10, 20, 40];
-  const SHOUTS = { 5: "Sharp.", 10: "Fluent.", 40: "Inkstorm." }; // 20 is the fever
-  const FEVER_AT = 20;
-  const windowFor = (combo) => (S.fever ? 4000 : combo >= 10 ? 4500 : 5000); // ms before the combo halves
+  // Levels: one every 3 right words in a row. Each adds to the track, may
+  // change the chords, the key and the hit's instrument, and moves the look:
+  // accent colour, light colour, light styles, background and small touches
+  // on the page (lv-* classes). Fever is a level (21 in a row).
+  //   lights: glow (edges), pulse (on the beat), beams (swinging stage beams),
+  //           spot (follows the cursor), lasers (on the beat), strobe (on the
+  //           beat, soft), rainbow (the accent cycles)
+  //   bg:     dots, stripes, grid, stars (behind the keyboard)
+  const LEVELS = [
+    { name: "", accent: "#d6452b", light: "214,69,43", lights: [], bg: "", add: [], prog: "A", key: 0, voice: "pluck", padCut: 500 },
+    { name: "Warm up", accent: "#d6452b", light: "214,69,43", lights: ["glow"], bg: "", add: ["kick"], prog: "A", key: 0, voice: "pluck", padCut: 500 },
+    { name: "Groove", accent: "#d6452b", light: "214,69,43", lights: ["glow"], bg: "", add: ["hat", "pad"], prog: "A", key: 0, voice: "pluck", padCut: 600 },
+    { name: "Sharp", accent: "#e0582a", light: "224,88,42", lights: ["glow", "pulse"], bg: "", add: ["clap"], prog: "A", key: 0, voice: "square", padCut: 900 },
+    { name: "Fluent", accent: "#e8772e", light: "232,119,46", lights: ["glow", "pulse"], bg: "dots", add: ["bass"], prog: "A", key: 0, voice: "square", padCut: 1300 },
+    { name: "Heat", accent: "#e8772e", light: "232,119,46", lights: ["pulse", "beams"], bg: "dots", add: ["arp"], prog: "B", key: 0, voice: "square", padCut: 1800 },
+    { name: "Blaze", accent: "#d6337a", light: "214,51,122", lights: ["pulse", "beams"], bg: "dots", add: ["open", "hat16"], prog: "B", key: 0, voice: "bell", padCut: 2400 },
+    { name: "Fever", accent: "#d6337a", light: "214,51,122", lights: ["beams", "strobe"], bg: "stripes", add: ["roll", "sub", "crash"], prog: "C", key: 0, voice: "bell", padCut: 4200, fever: true },
+    { name: "Neon", accent: "#1fb5cc", light: "31,181,204", lights: ["beams", "spot"], bg: "stripes", add: ["hook"], prog: "C", key: 0, voice: "bell", padCut: 4600 },
+    { name: "Overdrive", accent: "#1fb5cc", light: "31,181,204", lights: ["spot", "lasers"], bg: "grid", add: ["stab"], prog: "C", key: 2, voice: "stab", padCut: 4800 },
+    { name: "Lightspeed", accent: "#8a5cf6", light: "138,92,246", lights: ["beams", "lasers"], bg: "grid", add: ["ride"], prog: "B", key: 2, voice: "stab", padCut: 5000 },
+    { name: "Unstoppable", accent: "#8a5cf6", light: "138,92,246", lights: ["beams", "lasers", "strobe"], bg: "grid", add: [], prog: "D", key: 2, voice: "stab", padCut: 5200 },
+    { name: "Supernova", accent: "#e9b21f", light: "233,178,31", lights: ["beams", "spot", "strobe"], bg: "stars", add: [], prog: "D", key: 4, voice: "glass", padCut: 5400 },
+    { name: "Stellar", accent: "#e9b21f", light: "233,178,31", lights: ["beams", "spot", "lasers", "strobe"], bg: "stars", add: ["perc"], prog: "A", key: 4, voice: "glass", padCut: 5600 },
+    { name: "Mythic", accent: "rainbow", light: "", lights: ["beams", "spot", "lasers", "strobe", "rainbow"], bg: "stars", add: [], prog: "B", key: 5, voice: "stab", padCut: 5800 },
+    { name: "Inkstorm", accent: "rainbow", light: "", lights: ["beams", "spot", "lasers", "strobe", "rainbow", "fast"], bg: "stars", add: [], prog: "C", key: 7, voice: "glass", padCut: 6000 }
+  ];
+  // the track's layers accumulate level by level
+  LEVELS.forEach((l, i) => { l.layers = new Set([...(i ? LEVELS[i - 1].layers : []), ...l.add]); });
+  const levelOf = (n) => Math.min(LEVELS.length - 1, Math.floor(n / 3));
+  const tierOf = (n) => Math.min(4, Math.floor(levelOf(n) / 3)); // intensity 0-4: ink, shake, heat
+  const FEVER_AT = 3 * LEVELS.findIndex((l) => l.fever);
+  const multOf = (n) => 1 + Math.floor(levelOf(n) / 2); // x1 ... x8
+  const windowFor = (combo) => [5000, 4500, 4000, 3600, 3300][tierOf(combo)]; // ms before the combo halves
   const timerBar = comboEl.querySelector(".funny-timer i");
-  const RED = "#d6452b";
   const INK = "#111111";
-  const tierOf = (n) => TIERS.filter((t) => n >= t).length; // 0..4
+  let RED = "#d6452b"; // the current accent (canvas colours follow the level)
 
-  const MULT = [1, 2, 3, 4, 5]; // by tier
   const PERFECT_BONUS = 500;
   const fmt = (n) => Math.round(n).toLocaleString("en-US");
 
@@ -71,6 +98,7 @@
     lastHitAt: 0,
     block: null, // { n, perfect, cer: [], breaks, points }
     combo: 0,
+    level: 0,
     fever: false,
     clock: 0, // ms left before the combo halves
     stroking: false,
@@ -157,7 +185,7 @@
     const perMinute = 60000 / Math.max(1, now - S.lastHitAt);
     S.lastHitAt = now;
     if (!S.fever && S.combo >= FEVER_AT) enterFever();
-    const points = (100 * MULT[tier] + Math.max(0, Math.min(100, Math.round((perMinute - 20) * 2)))) * (S.fever ? 2 : 1);
+    const points = (100 * multOf(S.combo) + Math.max(0, Math.min(100, Math.round((perMinute - 20) * 2)))) * (S.fever ? 2 : 1);
     S.clock = windowFor(S.combo);
     S.trial.points += points;
     stampWord(word, tier);
@@ -176,15 +204,10 @@
     heat(tier);
     const pan = Math.max(-1, Math.min(1, (p.x / frameEl.clientWidth) * 2 - 1));
     sound.hit(S.combo, tier, pan);
-    sound.bed(tier);
     haptic([14 + tier * 7]);
-    if (SHOUTS[S.combo]) {
-      shout(SHOUTS[S.combo], tier);
-      inkFlash(tier);
-      speedLines(tier);
+    if (levelOf(S.combo) !== S.level) {
+      setLevel(levelOf(S.combo), true);
       ring(p.x, p.y, 220, RED);
-      sound.milestone(S.combo);
-      haptic([35, 45, 35, 45, 90]);
     }
   }
 
@@ -218,7 +241,8 @@
     if (S.fever) exitFever();
     heat(0);
     sound.crash();
-    sound.bed(0, true);
+    sound.stop(true); // tape stop
+    setLevel(0, false);
     haptic([140]);
     if (!reduced) restartClass(frameEl, "funny-drain");
   }
@@ -265,9 +289,10 @@
     }
     // the beat and the heat belong to typing
     if (!["trial", "feedback"].includes(screen)) {
-      sound.bed(0);
       heat(0);
       if (S.fever) exitFever(true);
+      setLevel(0, false);
+      sound.stop();
     }
     scoreEl.hidden = screen === "setup" || !screen;
     if (screen === "summary" || screen === "gameover") stampGrade();
@@ -416,7 +441,7 @@
     S.fever = true;
     body.classList.add("is-fever");
     animate(); // the motes need the loop
-    shout("Fever ×2", 4);
+    shout("Fever ×2", 7);
     inkFlash(4);
     speedLines(4);
     sound.fever(true);
@@ -429,9 +454,50 @@
     if (!quiet) {
       sound.fever(false);
       haptic([90, 60, 90]);
-    } else {
-      sound.fever(false, true);
     }
+  }
+
+  // ---------------------------------------------------------------- levels
+
+  let rainbowHue = 0;
+
+  // a level's look and music; up = reached by a hit (announced)
+  function setLevel(lv, up) {
+    if (lv === S.level && !up) return;
+    const L = LEVELS[lv];
+    S.level = lv;
+    body.dataset.level = lv;
+    for (let k = 1; k <= 4; k++) body.classList.toggle(`lv-${k * 4}`, lv >= k * 4); // lv-4, lv-8, lv-12, lv-16
+    if (L.accent !== "rainbow") {
+      RED = L.accent;
+      body.style.setProperty("--fx-accent", L.accent);
+      body.style.setProperty("--fx-light", L.light);
+    }
+    lightsEl.dataset.lights = L.lights.join(" ");
+    bgEl.dataset.bg = L.bg;
+    setHotInk(tierOf(S.combo));
+    sound.level({ layers: L.layers, prog: L.prog, key: L.key, voice: L.voice, padCut: L.padCut, fever: !!L.fever });
+    if (up && lv > 0 && !L.fever) { // fever announces itself
+      shout(L.name, lv);
+      if (lv % 3 === 0) speedLines(tierOf(S.combo));
+      sound.levelUp(lv);
+      haptic([25, 30, 25, 30, 60]);
+    }
+    if (L.lights.includes("rainbow")) requestAnimationFrame(cycleRainbow);
+    paintCombo(); // the label shows the level
+  }
+
+  // the rainbow levels cycle the accent (and the canvas colours with it)
+  function cycleRainbow() {
+    if (!LEVELS[S.level].lights.includes("rainbow")) return;
+    rainbowHue = (rainbowHue + (LEVELS[S.level].lights.includes("fast") ? 2.4 : 1.2)) % 360;
+    RED = `hsl(${rainbowHue}, 78%, 56%)`;
+    body.style.setProperty("--fx-accent", RED);
+    const h = rainbowHue / 60;
+    const x = 1 - Math.abs((h % 2) - 1);
+    const [r, g, b] = [[1, x, 0], [x, 1, 0], [0, 1, x], [0, x, 1], [x, 0, 1], [1, 0, x]][Math.floor(h) % 6];
+    body.style.setProperty("--fx-light", `${Math.round(r * 230)},${Math.round(g * 230)},${Math.round(b * 230)}`);
+    requestAnimationFrame(cycleRainbow);
   }
 
   // ---------------------------------------------------------------- decay
@@ -472,7 +538,7 @@
     setHotInk(tier);
     heat(tier);
     sound.decay();
-    sound.bed(tier);
+    setLevel(levelOf(S.combo), false);
     haptic([50]);
     if (S.combo === 0) {
       comboNum.textContent = `×${was}`;
@@ -520,6 +586,7 @@
     comboEl.classList.remove("is-break");
     comboNum.textContent = `×${S.combo}`;
     comboEl.dataset.tier = tierOf(S.combo);
+    comboEl.querySelector("span").textContent = S.level ? `combo · lv ${S.level}` : "combo";
     comboEl.classList.toggle("is-frozen", S.frozen);
     placeCombo();
     if (pop) restartClass(comboEl, "is-pop");
@@ -583,11 +650,11 @@
     });
   }
 
-  function shout(text, tier) {
+  function shout(text, level) {
     placeCombo();
     shoutEl.style.top = comboEl.style.top;
     shoutEl.textContent = text;
-    shoutEl.dataset.tier = tier;
+    shoutEl.dataset.tier = Math.min(4, Math.floor(level / 3));
     restartClass(shoutEl, "is-on");
   }
 
@@ -600,9 +667,10 @@
   // from tier 3 the trace is drawn heavier and in red (Editorial already inks
   // it red; other looks get the colour change too)
   function setHotInk(tier) {
-    body.style.setProperty("--trace-color", tier >= 3 ? RED : "");
-    body.style.setProperty("--trace-width", tier >= 3 ? "5.5" : "");
-    if (tier < 3) {
+    if (S.level >= 3) {
+      body.style.setProperty("--trace-color", RED.startsWith("hsl") ? "#d6452b" : RED);
+      body.style.setProperty("--trace-width", String(4 + tier * 0.8));
+    } else {
       body.style.removeProperty("--trace-color");
       body.style.removeProperty("--trace-width");
     }
@@ -807,11 +875,36 @@
     stageEl.dataset.heat = tier;
   }
 
-  // fever: slow diagonal stripes scrolling behind everything
-  const stripesEl = document.createElement("div");
-  stripesEl.className = "funny-stripes";
-  stripesEl.setAttribute("aria-hidden", "true");
-  frameEl.prepend(stripesEl);
+  // behind everything: the level's background pattern, and its lights
+  const bgEl = document.createElement("div");
+  bgEl.className = "funny-bg";
+  bgEl.setAttribute("aria-hidden", "true");
+  const lightsEl = document.createElement("div");
+  lightsEl.className = "funny-lights";
+  lightsEl.setAttribute("aria-hidden", "true");
+  lightsEl.innerHTML = '<i class="beam is-left"></i><i class="beam is-right"></i><i class="spot"></i>';
+  frameEl.prepend(bgEl, lightsEl);
+
+  // the spot follows the cursor
+  setInterval(() => {
+    if (!lightsEl.dataset.lights || !lightsEl.dataset.lights.includes("spot")) return;
+    const p = cursorPoint();
+    lightsEl.style.setProperty("--spot-x", `${p.x}px`);
+    lightsEl.style.setProperty("--spot-y", `${p.y}px`);
+  }, 50);
+
+  // lasers: thin lines across the page from an edge, for a beat
+  function lasers() {
+    if (reduced) return;
+    const w = frameEl.clientWidth;
+    const h = frameEl.clientHeight;
+    for (let i = 0; i < 3; i++) {
+      const fromLeft = Math.random() < 0.5;
+      lines.push({ x0: fromLeft ? 0 : w, y0: h * (0.2 + Math.random() * 0.7), x1: fromLeft ? w : 0, y1: h * Math.random(),
+                   width: 1.2, life: 1, color: RED, laser: true });
+    }
+    animate();
+  }
 
   // a flash that inverts the page for an instant at a milestone (red above 20)
   const flashEl = document.createElement("div");
@@ -826,25 +919,43 @@
 
   // ---------------------------------------------------------------- sound
 
-  // A small synth on Web Audio (no files). Hits are plucks on the chord of an
-  // Am-F-C-G loop, climbing through its tones as the combo grows, over a sub
-  // kick; everything goes through a compressor with a short reverb send. A
-  // beat builds under the combo and tape-stops when it breaks.
+  // A small synth on Web Audio (no files). The level (see LEVELS) sets what
+  // the music does: which layers of the track play, the chord progression,
+  // the key and the instrument of the hits. Hits are notes of the current
+  // chord climbing with the combo, over a sub kick, panned by where the stroke
+  // ended; the track is four on the floor at 124 BPM with a pad side-chained
+  // to the kick, and the chord moves once a bar. A break tape-stops it.
   const sound = (() => {
     let ac = null;
     let out = null; // dry bus
     let verb = null; // reverb send
-    let bedBus = null; // the track's pads and bass, ducked by the kick (side-chain)
-    let echo = null; // a dotted-eighth echo for arps and leads
+    let bedBus = null; // pads and bass, ducked by the kick
+    let echo = null; // dotted-eighth echo
     let noise = null;
     let on = (() => { try { return localStorage.getItem("funnySound") !== "off"; } catch (_) { return true; } })();
 
     const BPM = 124;
     const BEAT = 60 / BPM;
-    // Am, F, C, G as semitones from A3 (220 Hz)
-    const CHORDS = [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]];
+    // chord progressions as semitones from A3 (220 Hz)
+    const PROGS = {
+      A: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]], // Am F C G
+      B: [[-4, 0, 3], [-2, 2, 5], [0, 3, 7], [3, 7, 10]], // F G Am C
+      C: [[5, 8, 12], [1, 5, 8], [-4, 0, 3], [3, 7, 10]], // Dm Bb F C
+      D: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-5, -1, 2]] // Am G F E
+    };
     const hz = (semi) => 220 * 2 ** (semi / 12);
-    let chordIndex = 0;
+    // the hook: chord-tone indices per sixteenth (null = rest), one bar
+    const HOOK = [4, null, 3, null, 2, null, 3, 4, null, 5, 4, null, 3, null, 2, null];
+
+    let cfg = { layers: new Set(), prog: "A", key: 0, voice: "pluck", padCut: 500, fever: false };
+    let bar = 0;
+    let timer = null;
+    let nextBeat = 0;
+    let sixteenth = 0;
+    let pad = null;
+    let onBeat = null;
+    const has = (layer) => cfg.layers.has(layer);
+    const chordNow = () => PROGS[cfg.prog][bar % 4].map((n) => n + cfg.key);
 
     function audio() {
       if (!ac) {
@@ -861,7 +972,6 @@
         master.connect(comp).connect(ac.destination);
         out = ac.createGain();
         out.connect(master);
-        // reverb: a decaying noise impulse
         const len = ac.sampleRate * 1.6;
         const ir = ac.createBuffer(2, len, ac.sampleRate);
         for (let c = 0; c < 2; c++) {
@@ -875,7 +985,6 @@
         verb.connect(conv).connect(master);
         bedBus = ac.createGain();
         bedBus.connect(out);
-        // echo: dotted eighth, filtered feedback
         const delay = ac.createDelay(1.5);
         delay.delayTime.value = BEAT * 0.75;
         const fb = ac.createGain();
@@ -896,9 +1005,7 @@
       if (ac.state === "suspended") ac.resume();
       return ac;
     }
-    // browsers start audio only after a user action: any click or key unlocks it
     ["pointerdown", "keydown"].forEach((t) => addEventListener(t, () => on && audio(), { passive: true }));
-
     const ready = () => on && audio();
 
     function env(g, t0, gain, attack, decay) {
@@ -943,7 +1050,7 @@
       o.stop(t0 + attack + decay + 0.05);
     }
 
-    // a plucked synth: two detuned saws through a closing low-pass
+    // two detuned oscillators through a closing low-pass
     function pluck(freq, { t = 0, gain = 0.16, decay = 0.35, pan = 0, send = 0.3, bright = 1, bus = null, delay = 0, type = "sawtooth" } = {}) {
       if (!ready()) return;
       const t0 = ac.currentTime + t;
@@ -967,6 +1074,25 @@
       route(g, pan, send, { bus, delay });
     }
 
+    // an FM bell: a sine whose pitch is wobbled by another at 3.5x, fading
+    function bell(freq, { t = 0, gain = 0.14, decay = 0.9, pan = 0, send = 0.45, delay = 0.2 } = {}) {
+      if (!ready()) return;
+      const t0 = ac.currentTime + t;
+      const car = ac.createOscillator();
+      const mod = ac.createOscillator();
+      const idx = ac.createGain();
+      const g = ac.createGain();
+      car.frequency.value = freq;
+      mod.frequency.value = freq * 3.5;
+      idx.gain.setValueAtTime(freq * 2.2, t0);
+      idx.gain.exponentialRampToValueAtTime(1, t0 + decay);
+      mod.connect(idx).connect(car.frequency);
+      env(g, t0, gain, 0.002, decay);
+      car.connect(g);
+      route(g, pan, send, { delay });
+      [car, mod].forEach((o) => { o.start(t0); o.stop(t0 + decay + 0.05); });
+    }
+
     function noiseHit({ t = 0, type = "highpass", freq = 3000, q = 0.8, decay = 0.05, gain = 0.2, pan = 0, send = 0 } = {}) {
       if (!ready()) return;
       const t0 = ac.currentTime + t;
@@ -988,30 +1114,38 @@
     const kick = (t = 0, gain = 0.5) => tone(160, { type: "sine", t, decay: 0.16, gain, bend: 0.28 });
     const crashCymbal = (t = 0, gain = 0.18) => noiseHit({ t, freq: 6500, decay: 1.4, gain, send: 0.5 });
 
-    // ---- the track under the combo: four on the floor that builds by tier
-    //   1 (5+):  kick, hats, a filtered supersaw pad breathing with the kick
-    //   2 (10+): offbeat bass, claps, the pad opens
-    //   3 (20+, fever): the drop - open hats, a rolling arp with echo, rolling
-    //            bass, deeper pumping, a crash every 4 bars
-    //   4 (40+): a lead hook on top
-    // The chord moves once a bar (Am F C G); hits play on the bar's chord.
-    let bedTier = 0;
-    let feverOn = false;
-    let bedTimer = null;
-    let nextBeat = 0;
-    let sixteenth = 0;
-    let pad = null;
-    let barChord = 0;
-    let onBeat = null; // visual callback, set from outside
-    // the hook: chord-tone indices per sixteenth (null = rest), one bar
-    const HOOK = [4, null, 3, null, 2, null, 3, 4, null, 5, 4, null, 3, null, 2, null];
+    // the hit's instrument, by level
+    function voice(freq, pan, lift) {
+      const c = chordNow();
+      switch (cfg.voice) {
+        case "square":
+          pluck(freq, { pan, type: "square", gain: 0.11 + lift, decay: 0.28, bright: 0.8, send: 0.3, delay: 0.1 });
+          break;
+        case "bell":
+          bell(freq, { pan, gain: 0.13 + lift });
+          pluck(freq / 2, { pan, gain: 0.06, decay: 0.2, bright: 0.4 });
+          break;
+        case "stab":
+          c.forEach((n, i) => pluck(hz(n + 12), { pan: pan + (i - 1) * 0.3, gain: 0.07 + lift / 2, decay: 0.22, bright: 1.3, send: 0.35 }));
+          pluck(freq, { pan, gain: 0.08, decay: 0.3, bright: 1 });
+          break;
+        case "glass":
+          bell(freq * 2, { pan, gain: 0.08, decay: 1.4, send: 0.6, delay: 0.35 });
+          tone(freq, { type: "sine", pan, decay: 0.9, gain: 0.12 + lift, send: 0.5 });
+          pluck(freq, { pan, gain: 0.06, decay: 0.2, bright: 1.2 });
+          break;
+        default:
+          pluck(freq, { pan, gain: 0.15 + lift, decay: 0.32, bright: 0.6, send: 0.3 });
+      }
+    }
 
+    // ---- the track
     function startPad() {
       const t0 = ac.currentTime;
       const f = ac.createBiquadFilter();
       f.type = "lowpass";
       f.Q.value = 3;
-      f.frequency.value = 500;
+      f.frequency.value = cfg.padCut;
       const g = ac.createGain();
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(0.085, t0 + 0.8);
@@ -1029,18 +1163,18 @@
         }
       }
       pad = { voices, f, g };
-      padChord(barChord, t0);
+      padChord(t0);
     }
 
-    function padChord(i, t) {
-      const c = CHORDS[i];
+    function padChord(t) {
+      const c = chordNow();
       pad.voices.forEach((o, k) => o.frequency.setValueAtTime(hz(c[Math.floor(k / 3)]), t));
     }
 
     function stopPad(tape) {
       const t0 = ac.currentTime;
       const end = tape ? 0.7 : 0.4;
-      if (tape) pad.voices.forEach((o) => o.frequency.exponentialRampToValueAtTime(18, t0 + end)); // tape stop
+      if (tape) pad.voices.forEach((o) => o.frequency.exponentialRampToValueAtTime(18, t0 + end));
       pad.g.gain.cancelScheduledValues(t0);
       pad.g.gain.setValueAtTime(Math.max(0.0001, pad.g.gain.value), t0);
       pad.g.gain.exponentialRampToValueAtTime(0.0001, t0 + end);
@@ -1048,9 +1182,8 @@
       pad = null;
     }
 
-    // side-chain: the bed ducks on every kick and swells back
     function pump(t) {
-      const depth = feverOn ? 0.12 : bedTier >= 2 ? 0.3 : 0.45;
+      const depth = cfg.fever ? 0.12 : has("bass") ? 0.3 : 0.45;
       const at = ac.currentTime + t;
       bedBus.gain.cancelScheduledValues(at);
       bedBus.gain.setValueAtTime(depth, at);
@@ -1062,44 +1195,58 @@
       tone(freq / 2, { type: "sine", t, attack: 0.004, decay: len, gain: 0.16, bus: "bed" });
     }
 
-    function scheduleBed() {
+    function schedule() {
       while (nextBeat < ac.currentTime + 0.12) {
         const t = nextBeat - ac.currentTime;
         const pos = sixteenth % 16;
-        const bar = Math.floor(sixteenth / 16);
         if (pos === 0) {
-          barChord = bar % CHORDS.length;
-          if (pad) padChord(barChord, ac.currentTime + t);
-          if (feverOn && bar % 4 === 0) crashCymbal(t, 0.1);
+          bar = Math.floor(sixteenth / 16);
+          if (pad) padChord(ac.currentTime + t);
+          if (has("crash") && bar % 4 === 0) crashCymbal(t, 0.1);
         }
-        const c = CHORDS[barChord];
+        const c = chordNow();
         const tones = [c[0], c[1], c[2], c[0] + 12, c[1] + 12, c[2] + 12];
         if (pos % 4 === 0) {
-          kick(t, 0.5 + bedTier * 0.05);
+          if (has("kick")) kick(t, 0.55);
           pump(t);
-          if (onBeat) setTimeout(() => onBeat(pos), Math.max(0, t * 1000));
+          if (onBeat) setTimeout(() => onBeat(pos, bar), Math.max(0, t * 1000));
         }
-        // hats: offbeat eighths, then sixteenths, then open hats in the drop
-        if (pos % 4 === 2) noiseHit({ t, freq: 8500, decay: feverOn ? 0.16 : 0.05, gain: feverOn ? 0.07 : 0.05, send: 0.1 });
-        else if (bedTier >= 2 && pos % 2 === 1) noiseHit({ t, freq: 9500, decay: 0.025, gain: 0.03, pan: pos % 4 === 1 ? -0.3 : 0.3 });
-        // bass: offbeat, rolling in the drop
-        if (bedTier >= 2 && (pos % 4 === 2 || (feverOn && pos % 4 === 3))) bass(hz(c[0] - 12), t, BEAT * 0.22);
-        // claps on 2 and 4
-        if (bedTier >= 2 && (pos === 4 || pos === 12)) {
+        if (pos % 4 === 2 && (has("hat") || has("open"))) noiseHit({ t, freq: 8500, decay: has("open") ? 0.16 : 0.05, gain: has("open") ? 0.07 : 0.05, send: 0.1 });
+        if (has("hat16") && pos % 2 === 1) noiseHit({ t, freq: 9500, decay: 0.025, gain: 0.03, pan: pos % 4 === 1 ? -0.3 : 0.3 });
+        if (has("ride") && pos % 2 === 0) noiseHit({ t, type: "bandpass", freq: 7000, q: 2, decay: 0.3, gain: 0.025, send: 0.3 });
+        if (has("bass") && (pos % 4 === 2 || (has("roll") && pos % 4 === 3))) bass(hz(c[0] - 12), t, BEAT * 0.22);
+        if (has("sub") && pos % 8 === 0) tone(hz(c[0] - 24), { type: "sine", t, decay: BEAT * 1.6, gain: 0.14, bus: "bed" });
+        if (has("clap") && (pos === 4 || pos === 12)) {
           noiseHit({ t, type: "bandpass", freq: 1400, q: 0.8, decay: 0.16, gain: 0.2, send: 0.35 });
           noiseHit({ t: t + 0.011, type: "bandpass", freq: 1700, q: 0.8, decay: 0.12, gain: 0.14 });
         }
-        // the drop's arp, up and down the chord, with echo
-        if (feverOn) {
+        if (has("stab") && (pos === 3 || pos === 6 || pos === 11)) c.forEach((n) => pluck(hz(n + 12), { t, gain: 0.035, decay: 0.12, bright: 1.1, send: 0.2 }));
+        if (has("perc") && pos >= 12 && bar % 2 === 1) tone(140 - (pos - 12) * 12, { type: "sine", t, decay: 0.12, gain: 0.18, bend: 0.6 });
+        if (has("arp")) {
           const up = [0, 1, 2, 3, 4, 5, 4, 3][pos % 8];
           pluck(hz(tones[up] + 12), { t, gain: 0.045, decay: 0.13, bright: 0.7, send: 0.15, delay: 0.35, pan: pos % 2 ? 0.35 : -0.35 });
         }
-        // the hook at 40+
-        if (bedTier >= 4 && HOOK[pos] !== null) {
-          pluck(hz(tones[HOOK[pos]] + 12), { t, gain: 0.07, decay: 0.28, bright: 1, send: 0.3, delay: 0.4, type: "square" });
-        }
+        if (has("hook") && HOOK[pos] !== null) pluck(hz(tones[HOOK[pos]] + 12), { t, gain: 0.07, decay: 0.28, bright: 1, send: 0.3, delay: 0.4, type: "square" });
         nextBeat += BEAT / 4;
         sixteenth++;
+      }
+    }
+
+    function startTrack() {
+      if (timer) return;
+      nextBeat = ac.currentTime + 0.05;
+      sixteenth = 0;
+      bar = 0;
+      timer = setInterval(schedule, 25);
+    }
+
+    function stopTrack(tape) {
+      clearInterval(timer);
+      timer = null;
+      if (pad) stopPad(tape);
+      if (bedBus) {
+        bedBus.gain.cancelScheduledValues(ac.currentTime);
+        bedBus.gain.setValueAtTime(1, ac.currentTime);
       }
     }
 
@@ -1109,81 +1256,90 @@
         on = v;
         try { localStorage.setItem("funnySound", v ? "on" : "off"); } catch (_) { /* storage off */ }
         if (v) audio();
-        else this.bed(0);
+        else stopTrack(false);
+      },
+      set onBeat(fn) { onBeat = fn; },
+      get playing() { return !!timer; },
+
+      // a level's music: layers, progression, key, voice; the track starts
+      // with the first layer and stops when there is none
+      level(c) {
+        cfg = c;
+        if (!ready()) return;
+        if (!c.layers.size) return stopTrack(false);
+        startTrack();
+        if (has("pad") && !pad) startPad();
+        if (!has("pad") && pad) stopPad(false);
+        if (pad) pad.f.frequency.setTargetAtTime(c.padCut, ac.currentTime, 0.3);
+      },
+      stop(tape = false) {
+        if (ac) stopTrack(tape);
       },
 
-      // the melody: chord tones climbing with the combo; the chord moves every 4 hits
       hit(combo, tier, pan = 0) {
         if (!ready()) return;
-        chordIndex = bedTier > 0 ? barChord : Math.floor((combo - 1) / 4) % CHORDS.length;
-        const chord = CHORDS[chordIndex];
+        const c = chordNow();
         const step = (combo - 1) % 8;
-        const note = chord[step % 3] + 12 * Math.floor(step / 3);
-        noiseHit({ freq: 3500, decay: 0.018, gain: 0.22 + tier * 0.03, pan }); // the snap
-        pluck(hz(note + 12), { pan, gain: 0.15 + tier * 0.015, decay: 0.3 + tier * 0.05, bright: 0.5 + tier * 0.12, send: 0.25 + tier * 0.05 });
-        if (tier >= 2) pluck(hz(note + 24), { pan: -pan, gain: 0.05, decay: 0.2, bright: 1 });
-        kick(0, 0.45 + tier * 0.08); // the weight
+        const note = c[step % 3] + 12 * Math.floor(step / 3);
+        noiseHit({ freq: 3500, decay: 0.018, gain: 0.22 + tier * 0.03, pan });
+        voice(hz(note + 12), pan, tier * 0.012);
+        kick(0, 0.45 + tier * 0.08);
       },
 
-      set onBeat(fn) { onBeat = fn; },
-      get playing() { return bedTier > 0; },
-
-      // the track: none below 5, more layers per tier; a break tape-stops it
-      bed(tier, tapeStop = false) {
+      // a level up: a quick sweep into a chord stab
+      levelUp(lv) {
         if (!ready()) return;
-        if (tier === bedTier) return;
-        if (tier === 0) {
-          clearInterval(bedTimer);
-          bedTimer = null;
-          if (pad) stopPad(tapeStop);
-          bedBus.gain.cancelScheduledValues(ac.currentTime);
-          bedBus.gain.setValueAtTime(1, ac.currentTime);
-          bedTier = 0;
-          return;
-        }
-        bedTier = tier;
-        if (!bedTimer) {
-          nextBeat = ac.currentTime + 0.05;
-          sixteenth = 0;
-          barChord = chordIndex;
-          startPad();
-          bedTimer = setInterval(scheduleBed, 25);
-        }
-        // the pad's filter opens with the tier
-        pad.f.frequency.setTargetAtTime([0, 520, 1300, 3000, 4200][tier], ac.currentTime, 0.4);
+        const t0 = ac.currentTime;
+        const src = ac.createBufferSource();
+        src.buffer = noise;
+        const f = ac.createBiquadFilter();
+        f.type = "bandpass";
+        f.Q.value = 3;
+        f.frequency.setValueAtTime(600, t0);
+        f.frequency.exponentialRampToValueAtTime(7000, t0 + 0.22);
+        const g = ac.createGain();
+        env(g, t0, 0.12, 0.15, 0.1);
+        src.connect(f).connect(g);
+        route(g, 0, 0.3);
+        src.start(t0);
+        src.stop(t0 + 0.3);
+        const c = chordNow();
+        c.forEach((n, i) => pluck(hz(n + 12 + (lv % 2 ? 0 : 12)), { t: 0.2, gain: 0.08, decay: 0.45, bright: 1.2, send: 0.45, pan: (i - 1) * 0.4 }));
+        kick(0.2, 0.6);
       },
 
-      // an impact: kick, cymbal and a power chord that opens up
-      milestone(combo) {
+      milestone() {
         if (!ready()) return;
-        const chord = CHORDS[chordIndex];
+        const c = chordNow();
         kick(0, 0.8);
-        crashCymbal(0, 0.16 + Math.min(combo, 40) / 400);
-        [0, 7, 12].forEach((iv) => pluck(hz(chord[0] + iv), { gain: 0.12, decay: 1.1, bright: 1.2, send: 0.6 }));
-        [1, 1.5].forEach((m, i) => tone(hz(chord[0] + 24) * m, { type: "sine", t: 0.06 * (i + 1), decay: 0.8, gain: 0.06, send: 0.5 }));
+        crashCymbal(0, 0.2);
+        [0, 7, 12].forEach((iv) => pluck(hz(c[0] + iv), { gain: 0.12, decay: 1.1, bright: 1.2, send: 0.6 }));
       },
 
-      // a run up the chord and a cymbal
       finish(tier) {
         if (!ready()) return;
-        const chord = CHORDS[chordIndex];
+        const c = chordNow();
         for (let i = 0; i < 7; i++) {
-          pluck(hz(chord[i % 3] + 12 * (1 + Math.floor(i / 3))), { t: i * 0.045, gain: 0.1, decay: 0.4, bright: 1, send: 0.5, pan: (i / 6) * 1.2 - 0.6 });
+          pluck(hz(c[i % 3] + 12 * (1 + Math.floor(i / 3))), { t: i * 0.045, gain: 0.1, decay: 0.4, bright: 1, send: 0.5, pan: (i / 6) * 1.2 - 0.6 });
         }
         crashCymbal(0.3, 0.12 + tier * 0.03);
         kick(0.3, 0.6);
       },
 
       save() {
-        pluck(hz(CHORDS[chordIndex][2] + 12), { gain: 0.08, decay: 0.2, bright: 0.4 });
+        pluck(hz(chordNow()[2] + 12), { gain: 0.08, decay: 0.2, bright: 0.4 });
+      },
+      miss() {
+        tone(150, { type: "sine", decay: 0.09, gain: 0.14, bend: 0.8 });
+      },
+      crash() {
+        tone(110, { type: "sine", decay: 0.35, gain: 0.35, bend: 0.4 });
+        noiseHit({ type: "lowpass", freq: 600, decay: 0.25, gain: 0.25 });
       },
 
       // fever: a power-up sweep into a hit / a power-down when it ends
-      fever(onNow, quiet = false) {
+      fever(onNow) {
         if (!ready()) return;
-        feverOn = onNow;
-        if (pad) pad.f.frequency.setTargetAtTime(onNow ? 5200 : [0, 520, 1300, 3000, 4200][bedTier], ac.currentTime, 0.25);
-        if (quiet) return;
         const t0 = ac.currentTime;
         const o = ac.createOscillator();
         const f = ac.createBiquadFilter();
@@ -1206,24 +1362,15 @@
         }
       },
 
-      // the combo halves: two notes falling
       decay() {
-        const root = CHORDS[chordIndex][0];
+        const root = chordNow()[0];
         pluck(hz(root + 12), { gain: 0.09, decay: 0.18, bright: 0.3 });
         pluck(hz(root + 5), { t: 0.09, gain: 0.09, decay: 0.3, bright: 0.2 });
       },
       tick() {
         noiseHit({ type: "bandpass", freq: 2400, q: 6, decay: 0.03, gain: 0.12 });
       },
-      miss() {
-        tone(150, { type: "sine", decay: 0.09, gain: 0.14, bend: 0.8 });
-      },
-      crash() {
-        tone(110, { type: "sine", decay: 0.35, gain: 0.35, bend: 0.4 });
-        noiseHit({ type: "lowpass", freq: 600, decay: 0.25, gain: 0.25 });
-      },
 
-      // a heavy stamp, then a fanfare that brightens with the grade
       grade(g) {
         if (!ready()) return;
         kick(0, 0.9);
@@ -1237,14 +1384,19 @@
 
   // the track's kick drives the picture: the combo nods on every beat, and in
   // fever the edges flare, the keys' lines flash red and motes kick up
-  sound.onBeat = () => {
-    if (!sound.playing || body.dataset.screen !== "trial") return;
+  sound.onBeat = (pos, bar) => {
+    if (!sound.playing || !["trial", "feedback"].includes(body.dataset.screen)) return;
     restartClass(comboEl, "on-beat");
-    if (!S.fever || reduced) return;
-    restartClass(stageEl, "on-beat");
-    keyboardEl.classList.add("beat-flash");
-    setTimeout(() => keyboardEl.classList.remove("beat-flash"), 110);
-    for (let i = 0; i < 5; i++) spawnMote(true);
+    if (reduced) return;
+    const L = LEVELS[S.level].lights;
+    if (L.includes("pulse") || L.includes("strobe")) restartClass(lightsEl, "on-beat");
+    if (L.includes("strobe")) restartClass(stageEl, "on-beat");
+    if (L.includes("lasers") && (bar + pos / 4) % 2 < 1) lasers();
+    if (S.fever) {
+      keyboardEl.classList.add("beat-flash");
+      setTimeout(() => keyboardEl.classList.remove("beat-flash"), 110);
+      for (let i = 0; i < 5; i++) spawnMote(true);
+    }
   };
 
   // ---------------------------------------------------------------- sound toggle
