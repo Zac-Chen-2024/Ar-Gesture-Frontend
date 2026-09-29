@@ -135,29 +135,11 @@
   border: 1px solid var(--ink);
 }
 
-.study-pid {
-  width: 8.5rem;
-  height: 48px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: var(--ink);
-  font-family: var(--font-serif);
-  font-size: 1.4rem;
-  letter-spacing: 0.08em;
-  text-align: center;
-  text-transform: uppercase;
-  outline: none;
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.study-begin {
+.study-begin,
+.study-resume {
   height: 48px;
   padding: 0 22px;
   border: none;
-  border-left: 1px solid var(--ink);
   border-radius: 0;
   background: var(--ink);
   color: #ffffff;
@@ -170,7 +152,22 @@
   background: #2b2b2b;
 }
 
-.study-begin:disabled {
+.study-resume {
+  border-left: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+
+.study-resume[hidden] {
+  display: none;
+}
+
+.study-resume:hover:not(:disabled) {
+  background: rgba(17, 17, 17, 0.06);
+}
+
+.study-begin:disabled,
+.study-resume:disabled {
   opacity: 0.4;
   cursor: default;
 }

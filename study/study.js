@@ -19,7 +19,12 @@
   const statusEl = $("study-status");
   const infoEl = $("study-info-detail");
   const setupForm = $("study-setup");
-  const pidInput = $("study-pid");
+  const beginBtn = $("study-begin");
+  const resumeBtn = $("study-resume");
+  // the participant this browser has not finished yet, offered on the start screen
+  const ACTIVE_KEY = "studyActivePid";
+  const activePid = () => { try { return localStorage.getItem(ACTIVE_KEY); } catch (_) { return null; } };
+  const setActivePid = (pid) => { try { pid ? localStorage.setItem(ACTIVE_KEY, pid) : localStorage.removeItem(ACTIVE_KEY); } catch (_) { /* storage off */ } };
   const sheet = $("study-sheet");
   const clearPill = $("action-clear");
   const nextPill = $("action-next");
@@ -254,6 +259,7 @@
     S.done = new Set(session.done.map((d) => key(d.step, d.trial)));
     S.rated = new Set(session.rated);
     S.results = (session.results || []).map(fromServer);
+    setActivePid(session.pid);
     if (S.pending === "open") S.pending = null;
     if (S.pending === "rating" && S.rated.has(cur().cond)) {
       S.pending = null;
@@ -301,9 +307,10 @@
              userAgent: navigator.userAgent.slice(0, 200) };
   }
 
+  // no pid: the server assigns the next participant ID
   function openSession(pid) {
     if (S.pending) return;
-    request({ type: "study-open", pid, frontendVersion: window.GESTURE_CONFIG.version, display: displayInfo() }, "open");
+    request({ type: "study-open", ...(pid ? { pid } : {}), frontendVersion: window.GESTURE_CONFIG.version, display: displayInfo() }, "open");
     render();
   }
 
@@ -334,6 +341,7 @@
     } else {
       S.screen = "end";
       setPhase("locked", "end");
+      setActivePid(null);
     }
     render();
   }
@@ -511,21 +519,19 @@
   }
 
   addEventListener("keydown", (event) => {
-    if (event.repeat || event.target === pidInput) return;
+    if (event.repeat) return;
     const cmd = { n: "next", r: "redo", p: "pause" }[event.key.toLowerCase()];
     if (cmd && S.session) command(cmd);
   });
 
   setupForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    const pid = pidInput.value.trim().toUpperCase();
-    if (!/^P\d{1,4}$/.test(pid)) {
-      S.error = "Participant IDs look like P01.";
-      render();
-      return;
-    }
     S.error = "";
-    openSession(pid);
+    openSession(null);
+  });
+  resumeBtn.addEventListener("click", () => {
+    S.error = "";
+    openSession(activePid());
   });
 
   addEventListener("beforeunload", (event) => {
@@ -573,16 +579,19 @@
     let list = [];
 
     if (screen === "setup") {
+      const resume = activePid();
       show({
         kicker: "User study",
         title: S.pending === "open" ? "Opening…" : "Participant",
-        sub: S.supported ? "Enter the participant ID to begin, or to resume an earlier session."
-          : "Connecting to the server…"
+        sub: !S.supported ? "Connecting to the server…"
+          : resume ? `<strong>${resume}</strong> has not finished on this computer. Continue, or start the next participant.`
+          : "The next participant number is assigned automatically."
       });
-      pidInput.disabled = setupForm.querySelector("button").disabled = !S.supported || !!S.pending;
+      beginBtn.disabled = resumeBtn.disabled = !S.supported || !!S.pending;
+      resumeBtn.hidden = !resume;
+      resumeBtn.textContent = resume ? `Continue ${resume}` : "";
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
-      if (!pidInput.value && !pidInput.disabled) pidInput.focus();
     } else if (screen === "ready") {
       const left = step.phrases.length - S.trialIdx;
       show({
