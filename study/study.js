@@ -2,9 +2,14 @@
    candidates and trace. The server owns the plan, the records and the phase;
    this page walks the plan and renders each screen.
 
-   Participant input works two ways everywhere: the phone (swipe down-right to
-   Next and lift while typing; a persistent pointer on the other screens) or
-   the mouse. Experimenter keys on this machine: N force-submit, R redo, P pause. */
+   A phrase ends by itself the moment the text equals it (it turns green, then
+   the next one comes). Next fills the bottom bar for when a phrase will not
+   come out: with a different text it asks once more before submitting. There
+   is no Clear. Each phrase, block and the whole study end on a short summary.
+
+   Participant input works two ways everywhere: the phone (swipe down to Next
+   and lift while typing; a persistent pointer on the other screens) or the
+   mouse. Experimenter keys on this machine: N force-submit, R redo, P pause. */
 (() => {
   const $ = (id) => document.getElementById(id);
   const body = document.body;
@@ -40,6 +45,9 @@
     trial: null,
     timing: null, // { shown, first, last, strokes }
     lastResult: null,
+    results: [], // finished trials: { step, cond, practice, block, status, target, text, wpm, cer, strokes, words, perfect }
+    confirmNext: false, // a mismatching Next was asked once
+    matchTimer: null,
     ratingIdx: 0,
     answers: {},
     ratingLog: [],
@@ -70,13 +78,17 @@
 
   // ---------------------------------------------------------------- layout
 
-  // Next pill: the mirror of Clear, from x = 4 key units to P's right edge.
+  // Next pill: the whole bottom bar (Q's left edge to P's right edge), or the
+  // mirror of Back on the rating screens.
+  const nextIsFull = () => S.screen !== "rating";
+
   function layoutNextPill() {
     if (!clearPill.style.left) return;
     const { keyWidth } = keyboardMetrics;
-    const left = parseFloat(clearPill.style.left) + (NEXT_ZONE_X_MIN - CLEAR_ZONE_X[0]) * keyWidth;
-    nextPill.style.left = `${left}px`;
-    nextPill.style.width = clearPill.style.width;
+    const clearLeft = parseFloat(clearPill.style.left);
+    const full = nextIsFull();
+    nextPill.style.left = `${full ? clearLeft : clearLeft + (NEXT_ZONE_X_MIN - CLEAR_ZONE_X[0]) * keyWidth}px`;
+    nextPill.style.width = full ? `${10 * keyWidth}px` : clearPill.style.width;
     nextPill.style.top = clearPill.style.top;
     nextPill.style.height = clearPill.style.height;
     sheet.style.bottom = `${sheet.parentElement.getBoundingClientRect().height - parseFloat(clearPill.style.top) + 8}px`;
@@ -111,7 +123,7 @@
 
   function hitTarget(p) {
     return targets.find((t) => {
-      if (t.el === nextPill) return p.x >= NEXT_ZONE_X_MIN && p.y >= ACTION_ZONE_Y;
+      if (t.el === nextPill) return p.y >= ACTION_ZONE_Y && (nextIsFull() || p.x >= NEXT_ZONE_X_MIN);
       if (t.el === clearPill) return p.x < CLEAR_ZONE_X[1] && p.y >= ACTION_ZONE_Y;
       const r = unitRect(t.el);
       return p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1;
@@ -168,6 +180,7 @@
         if (S.screen === "trial" && S.timing && (m.text || "") !== S.timing.text) {
           S.timing.text = m.text || "";
           S.timing.last = performance.now();
+          onTextChange();
         }
         if (body.classList.contains("is-pointer")) placePointer(); // display.js snapped it to G
         if (S.screen === "setup" || S.screen === "ready") render();
@@ -187,6 +200,8 @@
         nextPill.classList.toggle("is-hover", m.active !== true && m.slot === "next");
         break;
       case "study-next":
+        // a swipe down to Next is not a typing stroke
+        if (S.screen === "trial" && S.timing && S.timing.strokes > 0) S.timing.strokes--;
         nextFromParticipant();
         break;
       case "study-pointer":
@@ -209,8 +224,11 @@
   function onStudyUpdate(m) {
     clearTimeout(pendingTimer);
     if (m.error) {
-      S.error = m.error;
+      // the text moved on between the match and the save: keep typing
+      if (S.pending === "finish:matched") S.error = "";
+      else S.error = m.error;
       S.pending = null;
+      body.classList.remove("is-matched");
       render();
       return;
     }
@@ -235,6 +253,7 @@
     S.cfg = session.config;
     S.done = new Set(session.done.map((d) => key(d.step, d.trial)));
     S.rated = new Set(session.rated);
+    S.results = (session.results || []).map(fromServer);
     if (S.pending === "open") S.pending = null;
     if (S.pending === "rating" && S.rated.has(cur().cond)) {
       S.pending = null;
@@ -335,25 +354,60 @@
               frontendVersion: window.GESTURE_CONFIG.version, display: displayInfo() }, "start");
   }
 
+  const target = () => cur().phrases[S.trialIdx].text;
+  const matches = () => plainText.trim() === target();
+
+  // the text equals the phrase: green for a moment, then save as matched
+  function onTextChange() {
+    clearTimeout(S.matchTimer);
+    body.classList.remove("is-matched");
+    if (S.confirmNext) {
+      S.confirmNext = false;
+      render();
+    }
+    if (!S.cfg.auto_advance || S.pending || S.paused || !matches()) return;
+    body.classList.add("is-matched");
+    S.matchTimer = setTimeout(() => {
+      if (S.screen === "trial" && matches() && !S.pending) finishTrial("matched");
+      else body.classList.remove("is-matched");
+    }, 450);
+  }
+
   function nextFromParticipant() {
     if (S.screen !== "trial" || S.paused || S.pending || !S.trial) return;
+    if (matches()) return finishTrial("matched");
     if (!plainText.trim()) return shake(nextPill);
+    if (!S.confirmNext) {
+      S.confirmNext = true; // a different text: ask once more
+      render();
+      shake(nextPill);
+      return;
+    }
     finishTrial("completed");
   }
 
   function finishTrial(status) {
     if (S.pending || !S.trial) return;
-    const target = cur().phrases[S.trialIdx].text;
+    clearTimeout(S.matchTimer);
+    const step = cur();
+    const phrase = target();
     const typed = plainText.trim();
     const t = S.timing;
     const ms = t.first != null && t.last != null ? t.last - t.first : 0;
-    S.lastResult = { wpm: wpm(typed, ms), cer: cer(target, typed) };
+    const words = phrase.split(" ").length;
+    S.lastResult = {
+      step: S.step, trial: S.trialIdx, cond: step.cond, practice: step.practice, block: step.block,
+      status, target: phrase, text: typed, ms,
+      wpm: wpm(typed, ms), cer: cer(phrase, typed), strokes: t.strokes, words,
+      perfect: status === "matched" && t.strokes === words
+    };
     request({
       type: "study-trial-finish", trialId: S.trial.id, status,
       client: {
         typed, ms: Math.round(ms),
         msFromShown: t.first != null ? Math.round(t.first - t.shown) : null,
-        strokes: t.strokes,
+        strokes: t.strokes, words,
+        perfect: S.lastResult.perfect,
         wpm: +S.lastResult.wpm.toFixed(3),
         cer: +S.lastResult.cer.toFixed(4)
       }
@@ -368,9 +422,13 @@
       return;
     }
     S.done.add(key(saved.step, saved.trial));
+    S.feedback = status === "forced" ? null : phraseSummary(S.lastResult);
+    S.results.push(S.lastResult);
+    S.confirmNext = false;
+    body.classList.remove("is-matched");
     S.screen = "feedback";
     render();
-    const showStats = S.cfg.show_trial_feedback && status === "completed";
+    const showStats = S.cfg.show_trial_feedback && S.feedback;
     feedbackTimer = setTimeout(afterFeedback, showStats ? S.cfg.feedback_ms : 500);
   }
 
@@ -384,6 +442,11 @@
     if (next >= 0) {
       S.trialIdx = next;
       startTrial();
+    } else if (S.cfg.show_trial_feedback) {
+      S.screen = "summary"; // the block's summary; the participant moves on
+      setPhase("pointer", "summary", true);
+      S.pointer = { x: 0, y: 0 };
+      render();
     } else {
       advanceStep();
     }
@@ -391,8 +454,10 @@
 
   // ---------------------------------------------------------------- pointer screens
 
+  const POINTER_SCREENS = ["ready", "rating", "break", "summary"];
+
   function onPointer(m) {
-    if (!["ready", "rating", "break"].includes(S.screen) || S.paused) return;
+    if (!POINTER_SCREENS.includes(S.screen) || S.paused) return;
     S.pointer = { x: m.x, y: m.y };
     placePointer();
     paintHover();
@@ -402,7 +467,7 @@
   function activate(id) {
     if (S.pending || S.paused) return;
     if (id === "start") return startTrial();
-    if (id === "break-next") return advanceStep();
+    if (id === "break-next" || id === "summary-next") return advanceStep();
     if (S.screen !== "rating") return;
     const items = S.cfg.rating_items;
     const item = items[S.ratingIdx];
@@ -431,7 +496,7 @@
     switch (cmd) {
       case "pause":
         S.paused = !S.paused;
-        if (["ready", "rating", "break"].includes(S.screen)) {
+        if (POINTER_SCREENS.includes(S.screen)) {
           setPhase(S.paused ? "locked" : "pointer", S.paused ? "paused" : S.screen);
         }
         render();
@@ -489,13 +554,16 @@
   function render() {
     const screen = S.screen;
     const step = cur();
-    const pointer = ["ready", "rating", "break"].includes(screen) && !S.paused;
+    const pointer = POINTER_SCREENS.includes(screen) && !S.paused;
     body.classList.toggle("is-trial", screen === "trial");
     body.classList.toggle("is-pointer", pointer);
     body.classList.toggle("is-dim", screen !== "trial");
     body.classList.toggle("is-paused", S.paused);
+    body.dataset.screen = screen;
     setupForm.hidden = screen !== "setup";
-    sheet.hidden = screen !== "rating";
+    sheet.hidden = !["rating", "feedback", "summary", "end"].includes(screen);
+    sheet.className = `study-sheet is-${screen}`;
+    sheet.innerHTML = "";
     statusEl.textContent = S.error;
     infoEl.textContent = S.session
       ? [S.session.pid, step && step.cond ? `Condition ${step.cond} · ${condOf(step.cond).label}` : ""].filter(Boolean).join(" · ")
@@ -534,18 +602,26 @@
         kicker: `${blockLabel(step)} · Phrase ${S.trialIdx + 1} of ${n}`,
         title: step.phrases[S.trialIdx].text
       });
-      pill(nextPill, "Next", { target: true });
+      pill(clearPill, "", { hidden: true });
+      pill(nextPill, S.confirmNext ? "Does not match yet · swipe down again to submit as it is" : "Next", { target: true });
+      nextPill.classList.toggle("is-confirm", S.confirmNext);
     } else if (screen === "feedback") {
-      const r = S.lastResult;
+      const f = S.cfg.show_trial_feedback ? S.feedback : null;
       show({
-        kicker: `Phrase ${S.trialIdx + 1} saved`,
-        title: "Saved",
-        titleHtml: S.cfg.show_trial_feedback && r
-          ? `<span class="study-stats"><b>${r.wpm.toFixed(1)}<span>WPM</span></b><b>${Math.round(r.cer * 100)}%<span>errors</span></b></span>`
-          : ""
+        kicker: `${blockLabel(step)} · Phrase ${S.trialIdx + 1} of ${step.phrases.length}`,
+        titleHtml: f ? `${f.perfect ? ICON.check : ""}${f.headline}` : "Saved"
       });
+      if (f) sheet.innerHTML = feedbackHtml(f);
+      else sheet.hidden = true;
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
+    } else if (screen === "summary") {
+      const b = blockSummary(S.step);
+      show({ kicker: `Condition ${step.cond} · ${condOf(step.cond).label}`, title: `${step.practice ? "Practice" : `Block ${step.block}`} complete` });
+      sheet.innerHTML = summaryHtml(b);
+      pill(clearPill, "", { hidden: true });
+      pill(nextPill, "Continue", { target: true });
+      list = [{ id: "summary-next", el: nextPill }];
     } else if (screen === "rating") {
       const items = S.cfg.rating_items;
       const item = items[S.ratingIdx];
@@ -555,7 +631,6 @@
         kicker: `About condition ${step.cond} · ${condOf(step.cond).label} · ${S.ratingIdx + 1} of ${items.length}`,
         title: item.q
       });
-      sheet.innerHTML = "";
       const labels = document.createElement("div");
       labels.className = "study-scale-labels";
       labels.innerHTML = `<span></span><span></span>`;
@@ -591,9 +666,12 @@
       if (left > 0) breakTimer = setTimeout(() => S.screen === "break" && render(), Math.min(left, 1000));
     } else if (screen === "end") {
       show({ kicker: S.session.pid, title: "All done — thank you!", sub: "You can put the phone down." });
+      sheet.innerHTML = endHtml();
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
     }
+    if (screen !== "trial") nextPill.classList.remove("is-confirm");
+    layoutNextPill();
     setTargets(list);
     if (pointer) placePointer();
   }
@@ -606,7 +684,8 @@
     return ms > 0 && text.length > 1 ? ((text.length - 1) / (ms / 1000)) * 12 : 0;
   }
 
-  // character error rate: edit distance / target length
+  // character error rate: edit distance / max(|target|, |typed|), the same as
+  // the server's export_study.py
   function cer(target, typed) {
     const a = target;
     const b = typed;
@@ -618,7 +697,125 @@
       }
       prev = row;
     }
-    return a.length ? prev[b.length] / a.length : 0;
+    const len = Math.max(a.length, b.length);
+    return len ? prev[b.length] / len : 0;
+  }
+
+  // ---------------------------------------------------------------- statistics
+
+  // Phrases the experimenter forced through count as phrases but never in the
+  // speed or accuracy figures.
+  // Participants only ever compare with themselves in the same condition, so
+  // the feedback cannot tilt the ratings of another condition; the end screen
+  // (after every rating) is the one place conditions sit side by side.
+
+  function fromServer(r) {
+    const c = r.client || {};
+    const words = r.target.split(" ").length;
+    const text = c.typed ?? r.text ?? "";
+    return { step: r.step, trial: r.trial, cond: r.cond, practice: r.practice, block: r.block,
+             status: r.status, target: r.target, text, ms: c.ms || 0,
+             wpm: c.wpm || 0, cer: c.cer ?? cer(r.target, text), strokes: c.strokes ?? 0, words,
+             perfect: c.perfect ?? (r.status === "matched" && c.strokes === words) };
+  }
+
+  const scored = (r) => r.status !== "forced" && r.wpm > 0;
+  const mean = (xs) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : NaN);
+
+  function phraseSummary(r) {
+    const before = S.results.filter((x) => x.cond === r.cond && scored(x));
+    const avg = mean(before.map((x) => x.wpm));
+    const best = Math.max(0, ...before.map((x) => x.wpm));
+    let streak = r.perfect ? 1 : 0;
+    if (r.perfect) {
+      for (let i = S.results.length - 1; i >= 0 && S.results[i].cond === r.cond && S.results[i].perfect; i--) streak++;
+    }
+    return {
+      ...r,
+      headline: r.perfect ? "Perfect" : r.status === "matched" ? "Matched" : "Submitted",
+      delta: before.length && scored(r) ? r.wpm - avg : null,
+      newBest: before.length >= 2 && scored(r) && r.wpm > best,
+      streak
+    };
+  }
+
+  function blockSummary(step) {
+    const rows = S.results.filter((x) => x.step === step);
+    const ok = rows.filter(scored);
+    const bestRow = ok.reduce((a, x) => (!a || x.wpm > a.wpm ? x : a), null);
+    // the block before it in the same condition (practice counts)
+    const prevStep = S.session.steps.slice(0, step).map((s, i) => ({ s, i }))
+      .filter(({ s }) => s.kind === "block" && s.cond === S.session.steps[step].cond).pop();
+    const prev = prevStep ? S.results.filter((x) => x.step === prevStep.i && scored(x)) : [];
+    const avg = mean(ok.map((x) => x.wpm));
+    const prevAvg = mean(prev.map((x) => x.wpm));
+    return {
+      avg, accuracy: 1 - mean(rows.filter((x) => x.status !== "forced").map((x) => x.cer)),
+      perfect: rows.filter((x) => x.perfect).length, n: rows.length,
+      series: rows.map((x) => (scored(x) ? x.wpm : 0)),
+      best: bestRow,
+      change: prev.length && ok.length ? avg / prevAvg - 1 : null,
+      prevLabel: prevStep ? (prevStep.s.practice ? "practice" : `block ${prevStep.s.block}`) : ""
+    };
+  }
+
+  // ---- icons (inline SVG, stroke = currentColor)
+  const svg = (cls, body) => `<svg class="study-icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+  const ICON = {
+    check: svg("is-check", '<path d="M4.5 12.5l4.8 4.8L19.5 7"/>'),
+    up: svg("is-up", '<path d="M12 19V5M6 11l6-6 6 6"/>'),
+    down: svg("is-down", '<path d="M12 5v14M6 13l6 6 6-6"/>'),
+    star: svg("is-star", '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>'),
+    flame: svg("is-flame", '<path d="M12 21c-3.6 0-6-2.4-6-5.6 0-3.3 2.4-5 3.4-7.9.5 1.6 1.4 2.6 2.4 3 .1-3.2 1.7-5.8 4-7.5-.6 2.7.3 4.4 1.5 6.2 1 1.4 1.7 2.9 1.7 4.6C19 18.6 16 21 12 21z"/>')
+  };
+
+  function sparkline(values) {
+    const w = 240;
+    const h = 44;
+    const top = Math.max(...values, 1);
+    const step = values.length > 1 ? w / (values.length - 1) : 0;
+    const pts = values.map((v, i) => [values.length > 1 ? i * step : w / 2, h - 4 - (v / top) * (h - 10)]);
+    const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    const dots = pts.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"/>`).join("");
+    return `<svg class="study-spark" viewBox="-6 0 ${w + 12} ${h}" aria-hidden="true"><polyline points="${line}"/>${dots}</svg>`;
+  }
+
+  const num = (x, d = 1) => (Number.isFinite(x) ? x.toFixed(d) : "—");
+  const pct = (x) => (Number.isFinite(x) ? `${Math.round(x * 100)}%` : "—");
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  function stat(value, label, extra = "") {
+    return `<div class="study-stat"><b>${value}</b><span>${label}</span>${extra}</div>`;
+  }
+
+  function feedbackHtml(f) {
+    let trend = "";
+    if (f.newBest) trend = `<em class="is-best">${ICON.star}New best</em>`;
+    else if (f.delta != null) {
+      const up = f.delta >= 0;
+      trend = `<em class="${up ? "is-up" : "is-down"}">${up ? ICON.up : ICON.down}${Math.abs(f.delta).toFixed(1)} vs your average</em>`;
+    }
+    const streak = f.streak >= 2 ? `<span class="study-chip is-streak">${ICON.flame}${f.streak} perfect in a row</span>` : "";
+    return `<div class="study-stats-row">${stat(num(f.wpm), "WPM", trend)}${stat(pct(f.cer), "errors")}</div>
+      <div class="study-chips"><span class="study-chip">${f.words} word${f.words === 1 ? "" : "s"} · ${f.strokes} stroke${f.strokes === 1 ? "" : "s"}</span>${streak}</div>`;
+  }
+
+  function summaryHtml(b) {
+    const change = b.change == null ? "" : `<em class="${b.change >= 0 ? "is-up" : "is-down"}">${b.change >= 0 ? ICON.up : ICON.down}${Math.abs(Math.round(b.change * 100))}% ${b.change >= 0 ? "faster" : "slower"} than ${b.prevLabel}</em>`;
+    return `<div class="study-stats-row">${stat(num(b.avg), "avg WPM", change)}${stat(pct(b.accuracy), "accuracy")}${stat(`${b.perfect}/${b.n}`, "perfect")}</div>
+      ${b.series.length > 1 ? sparkline(b.series) : ""}
+      ${b.best ? `<p class="study-best">${ICON.star}<span>Fastest · “${esc(b.best.target)}” · ${num(b.best.wpm)} WPM</span></p>` : ""}`;
+  }
+
+  function endHtml() {
+    const real = S.results.filter((x) => !x.practice);
+    const rows = S.session.order.map((id) => {
+      const rs = real.filter((x) => x.cond === id);
+      return `<tr><td>${esc(`Condition ${id} · ${condOf(id).label}`)}</td><td>${num(mean(rs.filter(scored).map((x) => x.wpm)))}</td><td>${pct(1 - mean(rs.filter((x) => x.status !== "forced").map((x) => x.cer)))}</td><td>${rs.filter((x) => x.perfect).length}/${rs.length}</td></tr>`;
+    }).join("");
+    const best = real.filter(scored).reduce((a, x) => (!a || x.wpm > a.wpm ? x : a), null);
+    return `<table class="study-table"><thead><tr><th></th><th>WPM</th><th>accuracy</th><th>perfect</th></tr></thead><tbody>${rows}</tbody></table>
+      ${best ? `<p class="study-best">${ICON.star}<span>Fastest phrase · “${esc(best.target)}” · ${num(best.wpm)} WPM</span></p>` : ""}`;
   }
 
   layoutNextPill();

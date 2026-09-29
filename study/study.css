@@ -1,6 +1,7 @@
 /* Study display: the main display in its Editorial style, plus a prompt above
-   the output line, a Next pill mirroring Clear, and a sheet over the keyboard
-   for the rating scale. Layout boxes are fixed so G never moves between
+   the output line, a Next pill across the bottom bar (the mirror of Back on
+   rating screens), and a sheet over the keyboard for the rating scale and the
+   summaries. Layout boxes are fixed so G never moves between
    screens (display.js only re-measures it on resize). */
 
 /* the study fixes every setting: hide the settings row and style switch */
@@ -181,7 +182,7 @@
   transition: opacity 200ms ease;
 }
 
-/* Next: the mirror of Clear under the right edge (x from 4 key units) */
+/* Next: the whole bottom bar while typing and on single-choice screens */
 .action-next {
   cursor: default;
 }
@@ -295,4 +296,175 @@
 
 .study-body.is-paused .keyboard-shell {
   opacity: 0.22;
+}
+
+/* the text equals the phrase: a short green beat before the next one */
+.study-body {
+  --study-green: #2f7d4a;
+}
+
+.study-body .decoded-text {
+  transition: color 160ms ease;
+}
+
+.study-body.is-matched .decoded-text {
+  color: var(--study-green);
+}
+
+/* screens with nothing to point at hide the cursor */
+.study-body[data-screen="feedback"] .cursor-marker,
+.study-body[data-screen="end"] .cursor-marker,
+.study-body[data-screen="setup"] .cursor-marker {
+  visibility: hidden;
+}
+
+/* a mismatching Next asks once more */
+.study-body .action-next.is-confirm {
+  border-color: var(--ed-red, #d6452b);
+  background: var(--ed-red, #d6452b);
+  color: #ffffff;
+}
+
+/* summaries on the sheet: numbers in the serif, labels in small caps */
+.study-sheet.is-feedback,
+.study-sheet.is-summary,
+.study-sheet.is-end {
+  align-items: center;
+  gap: 18px;
+}
+
+.study-icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  vertical-align: -0.12em;
+}
+
+.study-title .study-icon.is-check {
+  margin-right: 0.3em;
+  color: var(--study-green);
+}
+
+.study-stats-row {
+  display: flex;
+  justify-content: center;
+  gap: clamp(28px, 7vw, 96px);
+}
+
+.study-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.study-stat b {
+  font-family: var(--font-serif);
+  font-size: clamp(2.2rem, 7vmin, 4.2rem);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.study-stat > span,
+.study-table th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.study-stat em {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  margin-top: 4px;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.study-stat em.is-up,
+.study-stat em.is-best {
+  color: var(--study-green);
+}
+
+.study-stat em.is-down {
+  color: var(--ink-faint);
+}
+
+.study-chips {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.study-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 5px 12px;
+  border: 1px solid rgba(17, 17, 17, 0.2);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
+.study-chip.is-streak {
+  border-color: var(--ed-red, #d6452b);
+  color: var(--ed-red, #d6452b);
+}
+
+.study-spark {
+  width: min(360px, 60%);
+  height: auto;
+  overflow: visible;
+}
+
+.study-spark polyline {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.study-spark circle {
+  fill: var(--ed-red, #d6452b);
+}
+
+.study-best {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+
+.study-best .study-icon {
+  color: var(--ed-red, #d6452b);
+}
+
+.study-table {
+  border-collapse: collapse;
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+}
+
+.study-table th,
+.study-table td {
+  padding: 8px 18px;
+  text-align: right;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.15);
+}
+
+.study-table th:first-child,
+.study-table td:first-child {
+  text-align: left;
+}
+
+.study-table thead th {
+  border-bottom-color: var(--ink);
 }
