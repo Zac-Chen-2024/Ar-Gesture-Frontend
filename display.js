@@ -33,6 +33,7 @@ let currentLetters = null;
 let isApplyingServerVersion = false;
 let versionsPopulated = false;
 let plainText = "";
+let currentSpelling = { active: false, text: "", preview: null, armed: false, actions: [] };
 
 function sendMessage(payload) {
   if (socket.readyState === WebSocket.OPEN) {
@@ -228,6 +229,10 @@ function candidateWeight(word) {
 // display-only; selection happens by the cursor (touchpad) sliding onto a
 // segment, decided on the server. Weights must match the server.
 function renderCandidates(candidates) {
+  if (currentSpelling.active) {
+    renderSpellingActions();
+    return;
+  }
   const list = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
   candidateStrip.innerHTML = "";
 
@@ -265,6 +270,61 @@ function highlightCandidate(index) {
 
 // ---- v3 letter input feedback ----
 const letterBadge = document.getElementById("letter-badge");
+
+function renderSpellingActions() {
+  candidateStrip.replaceChildren();
+  for (const action of currentSpelling.actions || []) {
+    const segment = document.createElement("div");
+    segment.className = "candidate-seg candidate-action spelling-action";
+    segment.dataset.action = action.id;
+    // Server-provided weights are the hit regions used by the phone cursor.
+    segment.style.flex = `${action.weight} 1 0`;
+    segment.textContent = action.label;
+    segment.classList.toggle("is-disabled", !action.enabled);
+    segment.setAttribute("aria-disabled", String(!action.enabled));
+    candidateStrip.appendChild(segment);
+  }
+}
+
+function renderSpellingState(state) {
+  const wasActive = currentSpelling.active;
+  const oldActions = JSON.stringify(currentSpelling.actions);
+  currentSpelling = state || { active: false, text: "", actions: [] };
+  document.body.classList.toggle("is-spelling", currentSpelling.active);
+  decodedText.textContent = plainText;
+  if (currentSpelling.active) {
+    const draft = document.createElement("span");
+    draft.className = "spelling-draft";
+    draft.id = "spelling-draft";
+    draft.textContent = currentSpelling.text || "…";
+    draft.setAttribute("aria-label", `Uncommitted spelling: ${currentSpelling.text || "empty"}`);
+    decodedText.appendChild(draft);
+  }
+  decodedText.scrollLeft = decodedText.scrollWidth;
+  if (letterBadge) {
+    const visible = currentSpelling.active || currentSpelling.armed || !!currentSpelling.holdSeconds;
+    letterBadge.classList.toggle("is-visible", visible);
+    letterBadge.classList.toggle("is-idle", !currentSpelling.active && !currentSpelling.armed);
+    letterBadge.setAttribute("aria-hidden", String(!visible));
+    const letter = (currentSpelling.preview || "").toUpperCase();
+    const hint = currentSpelling.active
+      ? (letter ? `Spelling · lift to add ${letter}` : "Spelling · slide up to commit or cancel")
+      : (currentSpelling.armed ? `Hold complete · lift to spell ${letter}` : "Hold a letter for 1 s to spell a word.");
+    if (letterBadge.textContent !== hint) letterBadge.textContent = hint;
+  }
+  document.querySelectorAll(".key[data-key]").forEach((key) => {
+    key.classList.toggle("is-spelling-target", (currentSpelling.active || currentSpelling.armed)
+      && key.dataset.key.toLowerCase() === currentSpelling.preview);
+  });
+  if (currentSpelling.active && (!wasActive || oldActions !== JSON.stringify(currentSpelling.actions))) {
+    renderSpellingActions();
+  }
+  if (wasActive !== currentSpelling.active) {
+    document.querySelectorAll(".settings-row select, .settings-row button").forEach((control) => {
+      control.disabled = currentSpelling.active;
+    });
+  }
+}
 
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -911,6 +971,20 @@ socket.addEventListener("message", (event) => {
     return;
   }
 
+  if (message.type === "spelling-state") {
+    renderSpellingState(message);
+    return;
+  }
+
+  if (message.type === "spelling-error") {
+    if (letterBadge) {
+      letterBadge.textContent = message.message;
+      letterBadge.classList.add("is-visible");
+      letterBadge.setAttribute("aria-hidden", "false");
+    }
+    return;
+  }
+
   if (message.type === "letter-state") {
     renderLetterState(message);
     return;
@@ -988,7 +1062,7 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "text-update" || message.type === "state-update") {
     plainText = message.text || "";
-    decodedText.textContent = plainText;
+    renderSpellingState(message.spelling || currentSpelling);
     decodedText.scrollLeft = decodedText.scrollWidth; // keep the newest words visible
 
     if ("letters" in message && message.letters !== currentLetters) {
@@ -1109,6 +1183,9 @@ socket.addEventListener("message", (event) => {
     }
 
     applyModeClasses();
+    if (currentSpelling.active) {
+      inputModeSwitch?.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    }
   }
 });
 

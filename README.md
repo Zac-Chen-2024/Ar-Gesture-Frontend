@@ -19,6 +19,20 @@ display shows the keyboard, the cursor, word candidates and the typed sentence.
 **Touchpad mode** (Device = Touchpad): the laptop touchpad replaces the phone.
 Moving starts a word, a click ends it, and **Esc** exits.
 
+**Spell an unknown word (OOV)**: on the phone, move the cursor onto its first
+letter, hold still for **1 second** until the display says “Hold complete”, then
+lift. The first letter enters a green, underlined draft. Each subsequent swipe
+and lift appends its endpoint letter immediately, without spaces or another hold.
+Slide up into the bar and lift on **⌫ Letter**, **✓ Commit word**, or **× Cancel**.
+Commit appends the entire word to the sentence and returns to word input; Cancel
+discards only the draft. To replace a wrongly decoded word, delete that word
+before spelling. Center starts every letter at G; Continuous starts at the last
+confirmed letter. The bottom Clear/Undo region is inactive during spelling.
+
+This also works in **Collection**. Commit or cancel the draft before saving a
+sentence; skipping preserves the draft in the collection event log. Both frontend
+and backend must be updated. A cancelled touch does not confirm a letter.
+
 **Display style**: the small half-filled circle in the bottom-left corner
 switches between two looks; the choice is saved per browser.
 

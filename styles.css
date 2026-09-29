@@ -1235,3 +1235,14 @@ body[data-theme="editorial"] {
   .collection-controls .mode-select { height: 32px; }
 }
 .mobile-collection-hint { position: fixed; z-index: 8; bottom: 65px; left: 5%; width: 90%; text-align: center; pointer-events: none; font-size: 14px; color: #333; background: #fffdf7e8; padding: 10px; border-radius: 8px; }
+
+/* Buffered OOV spelling: draft and feedback do not move the keyboard. */
+.spelling-draft { display: inline-block; flex-shrink: 0; margin-left: .35em; padding: 0 .15em; border-bottom: 2px solid #247153; color: #247153; }
+.letter-badge { max-width: 95%; font-size: 12px; line-height: 1.3; }
+.letter-badge.is-idle { background: transparent; box-shadow: none; color: var(--ink-faint); }
+.is-spelling .letter-badge { background: #245b46; box-shadow: none; }
+.is-spelling #action-clear { visibility: hidden; }
+.key.is-spelling-target, [data-theme="editorial"] .key.is-spelling-target { background: #d7eadf; outline: 2px solid #247153; outline-offset: -3px; }
+.spelling-action.is-disabled { opacity: .4; }
+.candidate-seg.spelling-action { padding: 0; border: 0; box-shadow: inset -1px 0 rgba(17,17,17,.15); }
+.spelling-action[data-action="commit"] { color: #245b46; font-weight: 700; }

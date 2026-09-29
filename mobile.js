@@ -12,10 +12,21 @@ let startPoint = null;
 let lastPoint = null;
 let gestureStartTime = 0;
 let collectionState = null;
+let spellingState = null;
 const collectionHint = document.createElement("div");
 collectionHint.className = "mobile-collection-hint";
 collectionHint.hidden = true;
 document.body.appendChild(collectionHint);
+
+function renderInputHint() {
+  collectionHint.hidden = !collectionState?.enabled && !spellingState?.active && !spellingState?.armed;
+  if (collectionState?.error) collectionHint.textContent = collectionState.error;
+  else if (spellingState?.active) collectionHint.textContent = `Spelling: ${spellingState.text || "…"} · use the display bar to delete, commit or cancel.`;
+  else if (spellingState?.armed) collectionHint.textContent = `Lift to start spelling with ${(spellingState.preview || "").toUpperCase()}.`;
+  else collectionHint.textContent = collectionState?.attempt
+    ? "Collection · hold a letter for 1 s to spell a word. Save the sentence on the computer."
+    : "Collection · choose a mode and start a sentence on the computer.";
+}
 
 // Long-press / dwell detection for v3 letter input lives entirely on the
 // SERVER (keyboard units + its own clock); the phone stays a dumb touchpad.
@@ -382,7 +393,8 @@ function endGesture(event) {
 
   drawIdleState();
   applyModeClasses();
-  sendMessage({ type: "gesture-end", t: Math.round(performance.now() - gestureStartTime) });
+  sendMessage({ type: event.type === "pointercancel" ? "gesture-cancel" : "gesture-end",
+    t: Math.round(performance.now() - gestureStartTime) });
   p2pSend("end", {});
 }
 
@@ -393,6 +405,9 @@ const pickerStatus = document.getElementById("picker-status");
 
 function showPicker(statusMessage) {
   paired = false;
+  spellingState = null;
+  collectionState = null;
+  renderInputHint();
   roomCode = null;
   document.body.classList.remove("is-paired");
   if (pickerStatus) {
@@ -475,6 +490,12 @@ document.addEventListener("visibilitychange", () => {
 function onSocketMessage(event) {
   const message = JSON.parse(event.data);
 
+  if (message.type === "spelling-state") {
+    spellingState = message;
+    renderInputHint();
+    return;
+  }
+
   if (message.type === "room-list") {
     if (!paired) {
       renderRooms(message.rooms);
@@ -513,10 +534,8 @@ function onSocketMessage(event) {
 
   if (message.type === "state-update") {
     collectionState = message.collection || null;
-    collectionHint.hidden = !collectionState?.enabled;
-    collectionHint.textContent = collectionState?.error || (collectionState?.attempt
-      ? "Collection · swipe here, then save the sentence on the computer."
-      : "Collection · choose a mode and start a sentence on the computer.");
+    spellingState = message.spelling || null;
+    renderInputHint();
     currentStartKey = String(message.cursorKey || "g").toUpperCase();
     currentMappingMode = message.mappingMode || "relative";
     currentInputMode = message.mode || "continuous";

@@ -11,6 +11,7 @@
   let pending = false;
   let timer;
   let savedCount = 0;
+  let spellingNotice = false;
   const savedIds = new Set();
   let participant;
   try {
@@ -28,18 +29,26 @@
     const offline = socket.readyState !== WebSocket.OPEN;
     mode.disabled = active || pending;
     byId("start").disabled = offline || !supported || !state.enabled || !state.phonePaired || active || pending;
-    byId("save").disabled = offline || !active || pending || !!state.error || !plainText.trim();
+    byId("save").disabled = offline || !active || pending || !!state.error || !plainText.trim() || currentSpelling.active;
+    byId("save").title = currentSpelling.active ? "Commit or cancel the spelling draft first" : "";
     byId("skip").disabled = offline || !active || pending;
     byId("exit").disabled = active || pending;
-    toggle.disabled = pending;
+    toggle.disabled = pending || currentSpelling.active;
     // Fix the device to Phone throughout collection and freeze input settings during a phrase.
-    document.querySelectorAll("#device-mode button").forEach((el) => { el.disabled = state.enabled; });
+    document.querySelectorAll("#device-mode button").forEach((el) => { el.disabled = state.enabled || currentSpelling.active; });
     document.querySelectorAll("#input-mode-switch button, #algo-version, #link-mode button, #lan-mode, #usb-connect").forEach((el) => {
-      el.disabled = active;
+      el.disabled = active || currentSpelling.active;
     });
     if (active) {
       mode.value = state.attempt.mode;
       byId("target").textContent = state.attempt.target;
+    }
+    if (active && currentSpelling.active) {
+      status.textContent = "Finish spelling with ✓ Commit word, or × Cancel, before saving this sentence.";
+      spellingNotice = true;
+    } else if (spellingNotice) {
+      status.textContent = "Continue typing, or save the sentence when ready.";
+      spellingNotice = false;
     }
     if (!panel.hidden && offline) status.textContent = "Connection lost. Saved sentences remain on the server. Reload and reconnect your phone to continue.";
     else if (state.error) status.textContent = state.error;
@@ -95,6 +104,7 @@
 
   socket.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
+    if (message.type === "spelling-state") render();
     if (message.type === "state-update") {
       const first = !ready;
       ready = true;
