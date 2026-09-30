@@ -1246,3 +1246,9 @@ body[data-theme="editorial"] {
 .spelling-action.is-disabled { opacity: .4; }
 .candidate-seg.spelling-action { padding: 0; border: 0; box-shadow: inset -1px 0 rgba(17,17,17,.15); }
 .spelling-action[data-action="commit"] { color: #245b46; font-weight: 700; }
+
+/* Main display only: the lower OOV key shares the Commit word action. */
+#spelling-space[hidden] { display: none; }
+#spelling-space { border-radius: 10px; color: #245b46; }
+#spelling-space.is-hover { background: #245b46; border-color: #245b46; color: white; }
+#spelling-space.is-disabled { opacity: .4; }

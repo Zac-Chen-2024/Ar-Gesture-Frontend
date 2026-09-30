@@ -116,6 +116,13 @@ function layoutActionPill(anchorRect) {
   pill.style.width = `${(CLEAR_ZONE_X[1] - CLEAR_ZONE_X[0]) * keyWidth}px`;
   pill.style.top = `${centerY + ACTION_ZONE_Y[mode] * keyHeight}px`;
   pill.style.height = `${BAR_BAND_H * keyHeight}px`;
+  const space = document.getElementById("spelling-space");
+  if (space) {
+    space.style.left = `${centerX - 5 * keyWidth}px`;
+    space.style.width = `${10 * keyWidth}px`;
+    space.style.top = pill.style.top;
+    space.style.height = pill.style.height;
+  }
 }
 
 function clearCanvas() {
@@ -291,6 +298,13 @@ function renderSpellingState(state) {
   const oldActions = JSON.stringify(currentSpelling.actions);
   currentSpelling = state || { active: false, text: "", actions: [] };
   document.body.classList.toggle("is-spelling", currentSpelling.active);
+  const space = document.getElementById("spelling-space");
+  if (space) {
+    space.hidden = !currentSpelling.active;
+    space.classList.toggle("is-disabled", !currentSpelling.text);
+    space.setAttribute("aria-disabled", String(!currentSpelling.text));
+    if (!currentSpelling.active) space.classList.remove("is-hover");
+  }
   decodedText.textContent = plainText;
   if (currentSpelling.active) {
     const draft = document.createElement("span");
@@ -308,7 +322,7 @@ function renderSpellingState(state) {
     letterBadge.setAttribute("aria-hidden", String(!visible));
     const letter = (currentSpelling.preview || "").toUpperCase();
     const hint = currentSpelling.active
-      ? (letter ? `Spelling · lift to add ${letter}` : "Spelling · slide up to commit or cancel")
+      ? (letter ? `Spelling · lift to add ${letter}` : (space ? "Spelling · slide down to Space to commit" : "Spelling · slide up to commit or cancel"))
       : (currentSpelling.armed ? `Hold complete · lift to spell ${letter}` : "Hold a letter for 1 s to spell a word.");
     if (letterBadge.textContent !== hint) letterBadge.textContent = hint;
   }
@@ -1011,6 +1025,9 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "action-hover") {
+    const space = document.getElementById("spelling-space");
+    if (space) space.classList.toggle("is-hover", currentSpelling.active && !!currentSpelling.text
+      && message.slot === "spelling-space");
     const pill = document.getElementById("action-clear");
     if (pill) {
       pill.classList.toggle("is-hover", message.active === true);
