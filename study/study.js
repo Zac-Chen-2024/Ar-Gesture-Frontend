@@ -656,7 +656,9 @@
   setupForm.addEventListener("submit", (event) => {
     event.preventDefault();
     S.error = "";
-    openSession(null);
+    const firstMode = $("study-first-mode")?.value;
+    if (VARIANT === "study" && !firstMode) return;
+    openSession(null, VARIANT === "study" ? { firstMode } : {});
   });
   resumeBtn.addEventListener("click", () => {
     S.error = "";
@@ -729,6 +731,7 @@
           : "The next participant number is assigned automatically."
       });
       beginBtn.disabled = resumeBtn.disabled = !S.supported || !!S.pending;
+      if ($("study-first-mode")) $("study-first-mode").disabled = !S.supported || !!S.pending;
       resumeBtn.hidden = !resume;
       resumeBtn.textContent = resume ? `Continue ${resume}` : "";
       pill(clearPill, "", { hidden: true });

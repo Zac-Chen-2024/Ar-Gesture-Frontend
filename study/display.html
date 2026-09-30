@@ -8,7 +8,7 @@
     <link rel="icon" href="../favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
     <link rel="stylesheet" href="../styles.css?v=20260929-1" />
-    <link rel="stylesheet" href="study.css?v=20260930-1" />
+    <link rel="stylesheet" href="study.css?v=20260930-3" />
   </head>
   <body class="display-body study-body">
     <main class="display-stage">
@@ -106,6 +106,13 @@
           <p id="study-title" class="study-title"></p>
           <p id="study-sub" class="study-sub"></p>
           <form id="study-setup" class="study-setup" hidden>
+            <label for="study-first-mode">First input mode</label>
+            <select id="study-first-mode" required>
+              <option value="" disabled selected>Choose a mode to start</option>
+              <option value="center">G-center → Continuous</option>
+              <option value="continuous">Continuous → G-center</option>
+            </select>
+            <span class="study-order-hint">Both modes will be completed. Continue keeps your saved order.</span>
             <button id="study-begin" class="study-begin" type="submit">New participant</button>
             <button id="study-resume" class="study-resume" type="button" hidden></button>
           </form>
@@ -168,6 +175,6 @@
     <script src="../config.js?v=20260929-1"></script>
     <script src="../vendor/adb.bundle.js?v=20260929-1"></script>
     <script src="../display.js?v=20260929-1"></script>
-    <script src="study.js?v=20260930-1"></script>
+    <script src="study.js?v=20260930-3"></script>
   </body>
   </html>

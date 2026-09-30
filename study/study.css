@@ -630,3 +630,15 @@
   width: 14px;
   height: 14px;
 }
+
+/* Only the ordinary study offers an explicit starting order. */
+#study-first-mode {
+  padding: 10px 12px;
+  border: 1px solid currentColor;
+  background: var(--paper, #faf8f3);
+  color: inherit;
+  font: inherit;
+  max-width: 100%;
+}
+.study-order-hint { flex-basis: 100%; font-size: 12px; opacity: .7; }
+.study-setup:has(#study-first-mode) { flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; }
