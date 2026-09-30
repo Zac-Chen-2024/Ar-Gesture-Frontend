@@ -720,6 +720,137 @@
 }
 
 
+/* ---------------------------------------------------------------- login */
+
+.funny-login[hidden] {
+  display: none;
+}
+
+.funny-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.funny-login-fields,
+.funny-login-buttons {
+  display: flex;
+  border: 1px solid var(--ink);
+}
+
+.funny-login input {
+  width: 11rem;
+  height: 46px;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  text-align: center;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.funny-login input[name="pin"] {
+  width: 6rem;
+  border-left: 1px solid var(--ink);
+  letter-spacing: 0.3em;
+}
+
+.funny-login-buttons {
+  border: none;
+  gap: 10px;
+}
+
+.funny-login button {
+  height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.funny-login button[type="submit"],
+.funny-login-again button {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.funny-login button:disabled,
+.funny-login input:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.funny-login-again[hidden] {
+  display: none;
+}
+
+.funny-login-again {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.funny-login-again a {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+/* ---------------------------------------------------------------- the right candidate */
+
+/* a wrong word: the right one glows in the candidate bar */
+.funny-body .candidate-seg.funny-hint {
+  color: var(--fx-accent);
+  background: rgba(var(--fx-light), 0.12);
+  box-shadow: inset 0 -3px 0 var(--fx-accent);
+  animation: funny-hint 700ms ease-in-out infinite alternate;
+}
+
+@keyframes funny-hint {
+  to { background: rgba(var(--fx-light), 0.26); }
+}
+
+/* ---------------------------------------------------------------- records and boards */
+
+.funny-record {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-style: italic;
+  color: var(--fx-accent);
+}
+
+.funny-boards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  width: min(900px, 96%);
+}
+
+.funny-boards .funny-board {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------- fever breakdown */
+
+/* the drums drop out: the lights slow down and dim, the motes drift */
+.funny-body.is-breakdown .funny-lights .beam {
+  animation-duration: 8s;
+  opacity: 0.5;
+}
+
+.funny-body.is-breakdown .display-stage {
+  box-shadow: none;
+}
+
 /* ---------------------------------------------------------------- sound toggle */
 
 .funny-sound {
@@ -764,4 +895,10 @@
   .funny-lights.on-beat {
     animation: none !important;
   }
+}
+
+/* the login screen: no keyboard behind the form */
+.funny-body[data-screen="setup"] .keyboard-shell,
+.funny-body[data-screen="setup"] .cursor-marker {
+  visibility: hidden;
 }

@@ -265,6 +265,7 @@
       return;
     }
     S.error = "";
+    if (m.account) emit("account", m.account);
     if (m.session) applySession(m.session);
     if (S.pending === "start" && m.trial) {
       S.pending = null;
@@ -276,7 +277,7 @@
       S.timing = { shown: performance.now(), first: null, last: null, strokes: 0, text: "" };
       S.screen = "trial";
       render();
-      emit("trial-start", { target: target(), practice: cur().practice, mode: S.mode });
+      emit("trial-start", { target: target(), practice: cur().practice, mode: S.mode, index: S.trialIdx });
     } else if (S.pending && S.pending.startsWith("finish:") && m.saved) {
       const status = S.pending.slice(7);
       S.pending = null;
@@ -380,12 +381,20 @@
              userAgent: navigator.userAgent.slice(0, 200) };
   }
 
-  // no pid: the server assigns the next participant ID
-  function openSession(pid) {
+  // no pid: the server assigns the next participant ID; `extra` carries what
+  // a collection needs to open (funny: the player's account)
+  function openSession(pid, extra = {}) {
     if (S.pending) return;
-    request({ type: "study-open", variant: VARIANT, ...(pid ? { pid } : {}), frontendVersion: window.GESTURE_CONFIG.version, display: displayInfo() }, "open");
+    request({ type: "study-open", variant: VARIANT, ...(pid ? { pid } : {}), ...extra, frontendVersion: window.GESTURE_CONFIG.version, display: displayInfo() }, "open");
     render();
   }
+
+  // for extensions that bring their own start screen (funny's login)
+  window.STUDY_API = {
+    open: (extra) => openSession(null, extra),
+    get ready() { return S.supported && !S.pending; },
+    refresh: () => render()
+  };
 
   function setPhase(phase, screen, reset = false) {
     sendMessage({ type: "study-phase", phase, screen, reset });
@@ -553,6 +562,12 @@
     if (endless()) {
       if (S.lives <= 0) return runOver("lives");
       if (S.trialIdx + 1 >= runLength()) return runOver("complete");
+      // every 50 phrases: a milestone and a life back (up to 2 over the start)
+      if ((S.trialIdx + 1) % 50 === 0) {
+        const max = (S.cfg.endless.lives || 3) + 2;
+        S.lives = Math.min(max, S.lives + 1);
+        emit("milestone", { phrases: S.trialIdx + 1, lives: S.lives });
+      }
       S.trialIdx++;
       return startTrial();
     }
@@ -633,7 +648,7 @@
   }
 
   addEventListener("keydown", (event) => {
-    if (event.repeat) return;
+    if (event.repeat || event.target.tagName === "INPUT") return;
     const cmd = { n: "next", r: "redo", p: "pause" }[event.key.toLowerCase()];
     if (cmd && S.session) command(cmd);
   });
@@ -653,6 +668,9 @@
   });
 
   // ---------------------------------------------------------------- render
+
+  // who is playing: the player's name where there are accounts (funny), else the ID
+  const who = () => (S.session ? S.session.username || S.session.pid : "");
 
   const blockLabel = (s) => (s.practice ? "Practice" : `Block ${s.block} of ${S.cfg.blocks_per_condition}`);
 
@@ -689,13 +707,19 @@
     sheet.innerHTML = "";
     statusEl.textContent = S.error;
     infoEl.textContent = S.session
-      ? [S.session.pid, screen === "mode" ? "" : endless() ? "Endless" : step && step.cond ? `Condition ${step.cond} · ${condOf(step.cond).label}` : ""].filter(Boolean).join(" · ")
+      ? [who(), screen === "mode" ? "" : endless() ? "Endless" : step && step.cond ? `Condition ${step.cond} · ${condOf(step.cond).label}` : ""].filter(Boolean).join(" · ")
       : "";
     pill(clearPill, "Clear");
     pill(nextPill, "Next");
     let list = [];
 
-    if (screen === "setup") {
+    if (screen === "setup" && hooks().setup) {
+      // the extension draws its own start screen (funny: log in)
+      setupForm.hidden = true;
+      pill(clearPill, "", { hidden: true });
+      pill(nextPill, "", { hidden: true });
+      hooks().setup({ supported: S.supported, pending: S.pending, error: S.error, kicker: kickerEl, title: titleEl, sub: subEl });
+    } else if (screen === "setup") {
       const resume = activePid();
       show({
         kicker: "User study",
@@ -710,7 +734,7 @@
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
     } else if (screen === "mode") {
-      show({ kicker: S.session.pid, title: "Choose a mode" });
+      show({ kicker: who(), title: "Choose a mode" });
       sheet.innerHTML = modesHtml();
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
@@ -808,7 +832,7 @@
       clearTimeout(breakTimer);
       if (left > 0) breakTimer = setTimeout(() => S.screen === "break" && render(), Math.min(left, 1000));
     } else if (screen === "end") {
-      show({ kicker: S.session.pid, title: "All done — thank you!", sub: hasModes() ? "" : "You can put the phone down." });
+      show({ kicker: who(), title: "All done — thank you!", sub: hasModes() ? "" : "You can put the phone down." });
       sheet.innerHTML = endHtml();
       pill(clearPill, "", { hidden: true });
       if (hasModes()) {
@@ -988,7 +1012,7 @@
   // the kicker while typing: where we are, and in endless the lives left
   function progressHtml(step) {
     if (!endless()) return esc(`${blockLabel(step)} · Phrase ${S.trialIdx + 1} of ${step.phrases.length}`);
-    const total = S.cfg.endless.lives || 3;
+    const total = Math.max(S.cfg.endless.lives || 3, S.lives);
     const hearts = Array.from({ length: total }, (_, i) => (i < S.lives ? ICON.heartFull : ICON.heart)).join("");
     return `Endless · Phrase ${S.trialIdx + 1} of ${runLength()} <span class="study-lives" aria-label="${S.lives} lives">${hearts}</span>`;
   }
