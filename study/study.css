@@ -641,4 +641,33 @@
   max-width: 100%;
 }
 .study-order-hint { flex-basis: 100%; font-size: 12px; opacity: .7; }
-.study-setup:has(#study-first-mode) { flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; }
+.study-main .study-setup {
+  width: 100%;
+  flex-direction: column;
+  gap: 14px;
+  border: 0;
+  padding: 16px 0 0;
+}
+.study-main .study-setup label { text-align: left; font-size: 13px; }
+.study-main #study-first-mode { width: 100%; min-height: 48px; }
+.study-main .study-order-hint { flex-basis: auto; line-height: 1.5; }
+.study-main .study-resume { border: 1px solid var(--ink); }
+
+/* Keep keyboard geometry measurable for the phone mapping, but show none of
+   the input surface until the participant has opened a study session. */
+.study-main[data-screen="setup"] .keyboard-shell,
+.study-main[data-screen="setup"] .text-row,
+.study-main[data-screen="setup"] #display-canvas,
+.study-main[data-screen="setup"] #cursor-marker {
+  visibility: hidden;
+  pointer-events: none;
+}
+.study-main[data-screen="setup"] .study-prompt {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(90%, 520px);
+  height: auto;
+  max-height: calc(100% - 150px);
+  overflow-y: auto;
+}
