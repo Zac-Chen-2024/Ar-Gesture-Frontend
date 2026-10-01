@@ -733,10 +733,14 @@
   gap: 10px;
 }
 
-.funny-login-fields,
-.funny-login-buttons {
+.funny-login-fields {
   display: flex;
   border: 1px solid var(--ink);
+}
+
+.funny-login-fields button {
+  border: none;
+  border-left: 1px solid var(--ink);
 }
 
 .funny-login input {
@@ -754,16 +758,6 @@
   user-select: text;
 }
 
-.funny-login input[name="pin"] {
-  width: 6rem;
-  border-left: 1px solid var(--ink);
-  letter-spacing: 0.3em;
-}
-
-.funny-login-buttons {
-  border: none;
-  gap: 10px;
-}
 
 .funny-login button {
   height: 44px;

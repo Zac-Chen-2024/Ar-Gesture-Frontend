@@ -1,0 +1,84 @@
+/* The funny game's additions to the study page styles (study/study.css stays
+   as the study's own): the Stop pill in endless, the game-over sheet, the
+   mode cards and the lives. */
+
+.study-body #action-clear.is-hover {
+  background: rgba(17, 17, 17, 0.07);
+  color: var(--ink);
+}
+
+.study-body #action-clear.is-confirm {
+  color: var(--ed-red, #d6452b);
+}
+
+.study-sheet.is-gameover {
+  align-items: center;
+  gap: 18px;
+}
+
+/* modes: two cards over the keyboard */
+.study-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  width: 100%;
+}
+
+.study-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: calc(var(--key-height, 10vmin) * 2.4);
+  padding: 18px;
+  border: 1px solid var(--ink);
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.study-mode b {
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 5vmin, 3rem);
+  font-weight: 400;
+}
+
+.study-mode span {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+
+.study-mode em {
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.study-mode.is-hover {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.study-mode.is-hover span,
+.study-mode.is-hover em {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* endless: lives in the kicker */
+.study-lives {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 8px;
+  vertical-align: -3px;
+  color: var(--ed-red, #d6452b);
+}
+
+.study-lives .study-icon {
+  width: 14px;
+  height: 14px;
+}

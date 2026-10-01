@@ -31,8 +31,9 @@
    combo halves. The clock stops while a stroke is in the air, while paused
    and off the typing screen.
 
-   Players log in by name and PIN (the server keeps their runs, records and
-   leaderboard places); the page remembers who played last. A wrong word
+   Players come in by name, no password (the server keeps their runs, records
+   and leaderboard places; a new name makes a new player); the page remembers
+   who played last. A wrong word
    lights up the right one in the candidate bar when it is there. Long words
    hit harder and score more (x1.5 from 7 letters, x2 from 9). Endless runs
    tighten the decay clock as they go, and every 50 phrases is a milestone
@@ -379,11 +380,11 @@
       info.kicker.textContent = "Study · Funny";
       info.title.textContent = "Who's playing?";
       info.sub.innerHTML = info.supported
-        ? "Log in with your name and PIN, or make a new player. Your runs and records stay with your name."
+        ? "Type your name to play. A new name makes a new player; your runs and records stay with it."
         : "Connecting to the server…";
       loginEl.hidden = false;
       paintLogin(info);
-      if (info.supported && !remember.get("funnyToken") && !field("name").value && document.activeElement !== field("pin")) field("name").focus();
+      if (info.supported && !remember.get("funnyToken") && !field("name").value) field("name").focus();
     },
     summaryExtra: () => [[fmt(S.block.points), "points"], [`×${S.blockBest}`, "best combo"]]
   };
@@ -439,8 +440,8 @@
 
   // ---------------------------------------------------------------- login
 
-  // players keep their progress by name and PIN; the last one on this
-  // computer can continue with one click (a token the server gave)
+  // players keep their progress by name; the last one on this computer can
+  // continue with one click (a token the server gave)
   const remember = {
     get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } },
     set: (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (_) { /* storage off */ } }
@@ -451,12 +452,8 @@
   loginEl.innerHTML = `
     <div class="funny-login-again" hidden><button type="button" data-action="token"></button><a href="#" data-action="logout">Not you?</a></div>
     <div class="funny-login-fields">
-      <input name="name" maxlength="16" placeholder="Name" autocomplete="username" spellcheck="false">
-      <input name="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN" autocomplete="current-password">
-    </div>
-    <div class="funny-login-buttons">
-      <button type="submit" data-action="login">Log in</button>
-      <button type="button" data-action="register">New player</button>
+      <input name="name" maxlength="16" placeholder="Your name" autocomplete="username" spellcheck="false">
+      <button type="submit" data-action="name">Play</button>
     </div>`;
   $("study-prompt").appendChild(loginEl);
   const field = (n) => loginEl.querySelector(`[name="${n}"]`);
@@ -465,16 +462,16 @@
     if (!window.STUDY_API.ready) return;
     const account = action === "token"
       ? { action, token: remember.get("funnyToken") }
-      : { action, username: field("name").value.trim(), pin: field("pin").value.trim() };
+      : { action: "name", username: field("name").value.trim() };
     window.STUDY_API.open({ account });
   }
   loginEl.addEventListener("submit", (e) => {
     e.preventDefault();
-    login("login");
+    login("name");
   });
   loginEl.addEventListener("click", (e) => {
     const action = e.target.dataset && e.target.dataset.action;
-    if (action === "register" || action === "token") login(action);
+    if (action === "token") login(action);
     if (action === "logout") {
       e.preventDefault();
       remember.set("funnyToken", null);
@@ -485,7 +482,6 @@
   document.addEventListener("study:account", (e) => {
     remember.set("funnyToken", e.detail.token);
     remember.set("funnyName", e.detail.username);
-    field("pin").value = "";
   });
 
   function paintLogin(info) {
