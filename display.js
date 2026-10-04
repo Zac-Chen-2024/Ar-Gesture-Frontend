@@ -70,7 +70,9 @@ function resizeCanvas() {
 
   updateKeyboardReference();
   clearCanvas();
-  if (touchpadActive) {
+  if (currentInputMode === "unify") {
+    moveCursor(toDisplayPoint(unifyCursor));
+  } else if (touchpadActive) {
     moveCursor(touchpadCursorPoint());
   } else {
     updateCursorByKey(currentCursorKey);
@@ -123,6 +125,13 @@ function layoutActionPill(anchorRect) {
     space.style.top = pill.style.top;
     space.style.height = pill.style.height;
   }
+  const unifySpace = document.getElementById("unify-space");
+  if (unifySpace) {
+    unifySpace.style.left = `${centerX + UNIFY_SPACE_X[0] * keyWidth}px`;
+    unifySpace.style.width = `${(UNIFY_SPACE_X[1] - UNIFY_SPACE_X[0]) * keyWidth}px`;
+    unifySpace.style.top = pill.style.top;
+    unifySpace.style.height = pill.style.height;
+  }
 }
 
 function clearCanvas() {
@@ -138,6 +147,7 @@ const CANDIDATE_ZONE_Y = { relative: -1.8, absolute: -1.35 };
 const ACTION_ZONE_Y = { relative: 1.8, absolute: 1.35 }; // mirrors the server
 const BAR_BAND_H = 0.45; // visual height of the bar band above the zone line
 const CLEAR_ZONE_X = [-5, -4]; // Q's left edge to Z's left edge; mirrors the server
+const UNIFY_SPACE_X = [-2, 3]; // Unify's space key: C's left edge to M's right edge; mirrors unify.py
 
 function clampTracePoint(point) {
   const mode = currentMappingMode === "absolute" ? "absolute" : "relative";
@@ -184,6 +194,18 @@ function applyModeClasses() {
   document.body.classList.toggle("is-absolute-mode", isAbsoluteMode);
   document.body.classList.toggle("is-continuous-mode", !isAbsoluteMode && currentInputMode === "continuous");
   document.body.classList.toggle("is-cursor-visual-mode", currentVisualMode === "cursor");
+  document.body.classList.toggle("is-unify-mode", !isAbsoluteMode && currentInputMode === "unify");
+  const unifySpace = document.getElementById("unify-space");
+  if (unifySpace) {
+    unifySpace.hidden = currentInputMode !== "unify";
+  }
+  if (currentInputMode !== "unify") {
+    unifySpace?.classList.remove("is-hover");
+    document.querySelectorAll(".key.is-unify-hover").forEach((key) => key.classList.remove("is-unify-hover"));
+  }
+  if (touchpadActive) {
+    setTouchpadHint(currentInputMode === "unify" ? TOUCHPAD_UNIFY_HINT : TOUCHPAD_IDLE_HINT);
+  }
   inputModeSelect.disabled = isAbsoluteMode;
   syncSegmented(inputModeSwitch, inputModeSelect.value);
   inputModeSwitch?.querySelectorAll("button").forEach((button) => {
@@ -474,6 +496,58 @@ deviceSwitch?.addEventListener("click", (event) => {
   }
 });
 
+// ---- Unify: the cursor persists and clicks alone act (unify.py on the server) ----
+let unifyCursor = { x: 0, y: 0 }; // keyboard units, as the server last placed it
+let unifyTouchpad = null; // the touchpad's movement since its last click, keyboard units
+const UNIFY_HINTS = {
+  W0: "Unify · trace a word, click Space · click letters to spell",
+  W1: "Unify · click a candidate to switch · or go on to the next word",
+  S: "Unify · spelling · click Space to finish"
+};
+
+function renderUnify(state) {
+  if (!state || currentInputMode !== "unify") {
+    return;
+  }
+  unifyCursor = state.cursor || unifyCursor;
+  moveCursor(toDisplayPoint(unifyCursor));
+  // the provisional word (W1) or the letters being spelled (S) are marked
+  const tail = state.state === "S" ? state.letters : (state.provisional ? plainText.split(" ").pop() : "");
+  if (tail && plainText.endsWith(tail)) {
+    const head = plainText.slice(0, plainText.length - tail.length);
+    decodedText.textContent = head.trimEnd(); // the text row is a flex box: the gap is the mark's margin
+    const mark = document.createElement("span");
+    mark.className = state.state === "S" ? "unify-letters" : "unify-provisional";
+    mark.classList.toggle("is-spaced", head.endsWith(" "));
+    mark.textContent = tail;
+    decodedText.appendChild(mark);
+    decodedText.scrollLeft = decodedText.scrollWidth;
+  }
+  if (letterBadge) {
+    letterBadge.textContent = UNIFY_HINTS[state.state] || "";
+    letterBadge.classList.add("is-visible");
+    letterBadge.classList.toggle("is-idle", state.state === "W0");
+    letterBadge.setAttribute("aria-hidden", "false");
+  }
+}
+
+function moveUnifyTouchpad(dx, dy) {
+  const { keyWidth, keyHeight } = keyboardMetrics;
+  if (!keyWidth || !keyHeight) {
+    return;
+  }
+  if (!unifyTouchpad) {
+    unifyTouchpad = { x: 0, y: 0, t0: performance.now() };
+    touchpadSend({ type: "gesture-start", point: { x: 0, y: 0, t: 0 } });
+  }
+  unifyTouchpad.x += (dx * TOUCHPAD_GAIN) / keyWidth;
+  unifyTouchpad.y += (dy * TOUCHPAD_GAIN) / keyHeight;
+  touchpadSend({
+    type: "gesture-move",
+    point: { x: unifyTouchpad.x, y: unifyTouchpad.y, t: Math.round(performance.now() - unifyTouchpad.t0) }
+  });
+}
+
 // ---- Touchpad mode: the laptop touchpad stands in for the phone ----
 // A second socket joins this display's own room as the "mobile", so the server
 // path (decode, candidates, state) is exactly the phone's. The pointer is
@@ -484,6 +558,7 @@ deviceSwitch?.addEventListener("click", (event) => {
 const TOUCHPAD_GAIN = 1.0; // cursor px per px of pointer travel
 const touchpadHint = document.getElementById("touchpad-hint");
 const TOUCHPAD_IDLE_HINT = "Touchpad · move to start a word · click to finish · Esc to exit";
+const TOUCHPAD_UNIFY_HINT = "Touchpad · Unify · move the cursor · click to act · Esc to exit";
 let currentRoomCode = null;
 let touchpadSocket = null;
 let touchpadActive = false; // joined the room: strokes are ours to render
@@ -583,8 +658,8 @@ function enterTouchpad() {
     if (message.type === "room-joined") {
       touchpadActive = true;
       touchpadPos = keyboardUnitsOfKey(currentCursorKey); // pick up where the cursor is
-      moveCursor(touchpadCursorPoint());
-      setTouchpadHint(TOUCHPAD_IDLE_HINT);
+      moveCursor(currentInputMode === "unify" ? toDisplayPoint(unifyCursor) : touchpadCursorPoint());
+      setTouchpadHint(currentInputMode === "unify" ? TOUCHPAD_UNIFY_HINT : TOUCHPAD_IDLE_HINT);
     } else if (message.type === "room-error" || message.type === "room-closed") {
       exitTouchpad(`Touchpad: ${message.message || "could not join the session"}`);
     }
@@ -614,7 +689,12 @@ function exitTouchpad(reason) {
   }
   setTouchpadHint("");
   clearCanvas();
-  updateCursorByKey(currentCursorKey);
+  unifyTouchpad = null;
+  if (currentInputMode === "unify") {
+    moveCursor(toDisplayPoint(unifyCursor));
+  } else {
+    updateCursorByKey(currentCursorKey);
+  }
   if (reason) {
     setUsbStatus(reason);
     setTimeout(() => setUsbStatus(""), 4000);
@@ -708,6 +788,11 @@ document.addEventListener("mousedown", (event) => {
     return;
   }
   event.preventDefault();
+  if (currentInputMode === "unify") {
+    unifyTouchpad = null; // the server keeps the movement so far
+    touchpadSend({ type: "unify-click" });
+    return;
+  }
   if (touchpadStroke) {
     endTouchpadStroke();
   }
@@ -715,6 +800,10 @@ document.addEventListener("mousedown", (event) => {
 
 document.addEventListener("mousemove", (event) => {
   if (!touchpadActive || document.pointerLockElement !== frame) {
+    return;
+  }
+  if (currentInputMode === "unify") {
+    moveUnifyTouchpad(event.movementX, event.movementY);
     return;
   }
   // idle: any movement starts a stroke
@@ -890,6 +979,9 @@ function p2pGlobalPoint(msg) {
 }
 
 function handleP2pTrace(msg) {
+  if (currentInputMode === "unify") {
+    return;
+  }
   if (msg.kind === "start") {
     updateKeyboardReference();
     clearCanvas();
@@ -1024,7 +1116,32 @@ socket.addEventListener("message", (event) => {
     return;
   }
 
+  if (message.type === "unify-move") {
+    const p = toDisplayPoint(message.point);
+    unifyCursor = message.point;
+    moveCursor(p);
+    if (message.ink && !message.jump && lastPoint && currentVisualMode === "gesture") {
+      drawSegment(lastPoint, p);
+    }
+    lastPoint = p;
+    return;
+  }
+
+  if (message.type === "unify-ink") {
+    clearCanvas();
+    lastPoint = toDisplayPoint(unifyCursor);
+    return;
+  }
+
+  if (message.type === "unify-hover") {
+    document.querySelectorAll(".key[data-key]").forEach((key) => {
+      key.classList.toggle("is-unify-hover", key.dataset.key.toLowerCase() === message.key);
+    });
+    return;
+  }
+
   if (message.type === "action-hover") {
+    document.getElementById("unify-space")?.classList.toggle("is-hover", message.slot === "unify-space");
     const space = document.getElementById("spelling-space");
     if (space) space.classList.toggle("is-hover", currentSpelling.active && !!currentSpelling.text
       && message.slot === "spelling-space");
@@ -1160,7 +1277,7 @@ socket.addEventListener("message", (event) => {
 
     if (message.cursorKey) {
       currentCursorKey = String(message.cursorKey).toUpperCase();
-      if (!touchpadActive) {
+      if (!touchpadActive && currentInputMode !== "unify") {
         updateCursorByKey(currentCursorKey); // touchpad keeps its own unsnapped pointer
       }
     }
@@ -1203,6 +1320,7 @@ socket.addEventListener("message", (event) => {
     if (currentSpelling.active) {
       inputModeSwitch?.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     }
+    renderUnify(message.unify);
   }
 });
 

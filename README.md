@@ -33,6 +33,14 @@ This also works in **Collection**. Commit or cancel the draft before saving a
 sentence; skipping preserves the draft in the collection event log. Both frontend
 and backend must be updated. A cancelled touch does not confirm a letter.
 
+**Unify** (Word start → Unify): the cursor stays where you leave it and only a
+click acts — a tap on the phone, a click on the touchpad. Trace over a word's
+letters and click **Space** (under C–M) to decode it; the word stays dashed
+while the bar's candidates can still replace it. Click letters one by one to
+spell a word, then Space to finish; the bar offers completions. ⌫ in the bar
+deletes a letter while spelling, otherwise the last word. The keyboard state
+machine is in the “Unify input mode · state machine” doc.
+
 **Display style**: the small half-filled circle in the bottom-left corner
 switches between two looks; the choice is saved per browser.
 

@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20260930-2" />
+    <link rel="stylesheet" href="styles.css?v=20261004-1" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -33,10 +33,12 @@
               <select id="input-mode" class="mode-select" aria-label="Input mode" hidden>
                 <option value="center">Center</option>
                 <option value="continuous" selected>Continuous</option>
+                <option value="unify">Unify</option>
               </select>
               <div class="segmented" id="input-mode-switch" role="radiogroup" aria-label="Input mode">
                 <button type="button" role="radio" data-value="center">Center</button>
                 <button type="button" role="radio" data-value="continuous">Continuous</button>
+                <button type="button" role="radio" data-value="unify">Unify</button>
               </div>
             </div>
             <!-- Trace is hidden for now: always Gesture (cursor + drawn trail;
@@ -151,6 +153,7 @@
           </div>
           <div class="action-strip" aria-hidden="true">
             <span id="spelling-space" class="action-pill" hidden>Space</span>
+            <span id="unify-space" class="action-pill" hidden>Space</span>
             <span id="action-clear" class="action-pill">Clear</span>
           </div>
         </div>
@@ -165,7 +168,7 @@
     </main>
     <script src="config.js?v=20260929-1"></script>
     <script src="vendor/adb.bundle.js?v=20260929-1"></script>
-    <script src="display.js?v=20260930-2"></script>
+    <script src="display.js?v=20261004-1"></script>
     <script src="collection.js?v=20260929-1"></script>
   </body>
   </html>
