@@ -1255,9 +1255,9 @@ body[data-theme="editorial"] {
 
 /* Unify: the space key under C–M, the key a click would hit, and the word still open to change */
 #unify-space[hidden] { display: none; }
-#unify-space { border-radius: 10px; }
-#unify-space.is-hover { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+#unify-space { position: absolute; box-sizing: border-box; margin: 0; max-height: none; font-size: clamp(.8rem, 1.7vmin, 1.15rem); letter-spacing: .04em; }
 .key.is-unify-hover { outline: 2px solid currentColor; outline-offset: -3px; }
+.is-unify-mode .key-anchor, [data-theme="editorial"].is-unify-mode .key-anchor { background: transparent; } /* no home key: the cursor stays put */
 .unify-provisional, .unify-letters { display: inline-block; flex-shrink: 0; }
 .unify-provisional.is-spaced, .unify-letters.is-spaced { margin-left: .35em; }
 .unify-provisional { border-bottom: 2px dashed currentColor; }

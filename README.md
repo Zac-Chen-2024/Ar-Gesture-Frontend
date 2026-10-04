@@ -35,7 +35,7 @@ and backend must be updated. A cancelled touch does not confirm a letter.
 
 **Unify** (Word start → Unify): the cursor stays where you leave it and only a
 click acts — a tap on the phone, a click on the touchpad. Trace over a word's
-letters and click **Space** (under C–M) to decode it; the word stays dashed
+letters and click **Space** (the key under V) to decode it; the word stays dashed
 while the bar's candidates can still replace it. Click letters one by one to
 spell a word, then Space to finish; the bar offers completions. ⌫ in the bar
 deletes a letter while spelling, otherwise the last word. The keyboard state

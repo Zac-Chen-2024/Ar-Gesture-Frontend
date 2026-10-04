@@ -125,12 +125,16 @@ function layoutActionPill(anchorRect) {
     space.style.top = pill.style.top;
     space.style.height = pill.style.height;
   }
+  // Unify's space key: a key of its own, right under V (a fourth row on the grid)
   const unifySpace = document.getElementById("unify-space");
-  if (unifySpace) {
-    unifySpace.style.left = `${centerX + UNIFY_SPACE_X[0] * keyWidth}px`;
-    unifySpace.style.width = `${(UNIFY_SPACE_X[1] - UNIFY_SPACE_X[0]) * keyWidth}px`;
-    unifySpace.style.top = pill.style.top;
-    unifySpace.style.height = pill.style.height;
+  const v = document.querySelector('[data-key="V"]');
+  if (unifySpace && v) {
+    const r = v.getBoundingClientRect();
+    const border = parseFloat(getComputedStyle(v).borderTopWidth) || 0;
+    unifySpace.style.left = `${r.left - shellRect.left}px`;
+    unifySpace.style.top = `${r.bottom - shellRect.top - border}px`; // keys share their borders
+    unifySpace.style.width = `${r.width}px`;
+    unifySpace.style.height = `${r.height}px`;
   }
 }
 
@@ -147,7 +151,6 @@ const CANDIDATE_ZONE_Y = { relative: -1.8, absolute: -1.35 };
 const ACTION_ZONE_Y = { relative: 1.8, absolute: 1.35 }; // mirrors the server
 const BAR_BAND_H = 0.45; // visual height of the bar band above the zone line
 const CLEAR_ZONE_X = [-5, -4]; // Q's left edge to Z's left edge; mirrors the server
-const UNIFY_SPACE_X = [-2, 3]; // Unify's space key: C's left edge to M's right edge; mirrors unify.py
 
 function clampTracePoint(point) {
   const mode = currentMappingMode === "absolute" ? "absolute" : "relative";
@@ -200,7 +203,7 @@ function applyModeClasses() {
     unifySpace.hidden = currentInputMode !== "unify";
   }
   if (currentInputMode !== "unify") {
-    unifySpace?.classList.remove("is-hover");
+    unifySpace?.classList.remove("is-unify-hover");
     document.querySelectorAll(".key.is-unify-hover").forEach((key) => key.classList.remove("is-unify-hover"));
   }
   if (touchpadActive) {
@@ -1141,7 +1144,7 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "action-hover") {
-    document.getElementById("unify-space")?.classList.toggle("is-hover", message.slot === "unify-space");
+    document.getElementById("unify-space")?.classList.toggle("is-unify-hover", message.slot === "unify-space");
     const space = document.getElementById("spelling-space");
     if (space) space.classList.toggle("is-hover", currentSpelling.active && !!currentSpelling.text
       && message.slot === "spelling-space");
