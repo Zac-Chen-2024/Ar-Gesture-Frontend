@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20261004-3" />
+    <link rel="stylesheet" href="styles.css?v=20261005-1" />
   </head>
   <body class="display-body">
     <main class="display-stage">
@@ -34,11 +34,21 @@
                 <option value="center">Center</option>
                 <option value="continuous" selected>Continuous</option>
                 <option value="unify">Unify</option>
+                <option value="unify-double">Unify · Double</option>
+                <option value="unify-lp">Unify · Long press</option>
               </select>
               <div class="segmented" id="input-mode-switch" role="radiogroup" aria-label="Input mode">
                 <button type="button" role="radio" data-value="center">Center</button>
                 <button type="button" role="radio" data-value="continuous">Continuous</button>
                 <button type="button" role="radio" data-value="unify">Unify</button>
+              </div>
+            </div>
+            <div class="setting" id="unify-variant-setting" hidden>
+              <span class="setting-label">Unify</span>
+              <div class="segmented" id="unify-variant" role="radiogroup" aria-label="Unify variant">
+                <button type="button" role="radio" data-value="unify">Space</button>
+                <button type="button" role="radio" data-value="unify-double">Double</button>
+                <button type="button" role="radio" data-value="unify-lp">Long press</button>
               </div>
             </div>
             <!-- Trace is hidden for now: always Gesture (cursor + drawn trail;
@@ -169,7 +179,7 @@
     </main>
     <script src="config.js?v=20260929-1"></script>
     <script src="vendor/adb.bundle.js?v=20260929-1"></script>
-    <script src="display.js?v=20261004-4"></script>
+    <script src="display.js?v=20261005-1"></script>
     <script src="collection.js?v=20260929-1"></script>
   </body>
   </html>
