@@ -125,19 +125,26 @@ function layoutActionPill(anchorRect) {
     space.style.top = pill.style.top;
     space.style.height = pill.style.height;
   }
-  // Unify's space key: a fourth row on the key grid, one key high, X to M
-  const unifySpace = document.getElementById("unify-space");
-  const x = document.querySelector('[data-key="X"]');
-  const m = document.querySelector('[data-key="M"]');
-  if (unifySpace && x && m) {
-    const left = x.getBoundingClientRect();
-    const right = m.getBoundingClientRect();
-    const border = parseFloat(getComputedStyle(m).borderTopWidth) || 0;
-    unifySpace.style.left = `${left.left - shellRect.left}px`;
-    unifySpace.style.top = `${right.bottom - shellRect.top - border}px`; // keys share their borders
-    unifySpace.style.width = `${right.right - left.left}px`;
-    unifySpace.style.height = `${right.height}px`;
-  }
+  // Unify: a fourth row on the key grid, one key high (mirrors unify.py) —
+  // Clear in Q's column, the space key from X's left edge to K's right edge
+  const placeKey = (element, fromKey, toKey) => {
+    const from = document.querySelector(`[data-key="${fromKey}"]`);
+    const to = document.querySelector(`[data-key="${toKey}"]`);
+    const below = document.querySelector('[data-key="M"]');
+    if (!element || !from || !to || !below) {
+      return;
+    }
+    const left = from.getBoundingClientRect();
+    const right = to.getBoundingClientRect();
+    const row = below.getBoundingClientRect();
+    const border = parseFloat(getComputedStyle(below).borderTopWidth) || 0;
+    element.style.left = `${left.left - shellRect.left}px`;
+    element.style.top = `${row.bottom - shellRect.top - border}px`; // keys share their borders
+    element.style.width = `${right.right - left.left}px`;
+    element.style.height = `${row.height}px`;
+  };
+  placeKey(document.getElementById("unify-space"), "X", "K");
+  placeKey(document.getElementById("unify-clear"), "Q", "Q");
 }
 
 function clearCanvas() {
@@ -200,12 +207,14 @@ function applyModeClasses() {
   document.body.classList.toggle("is-continuous-mode", !isAbsoluteMode && currentInputMode === "continuous");
   document.body.classList.toggle("is-cursor-visual-mode", currentVisualMode === "cursor");
   document.body.classList.toggle("is-unify-mode", !isAbsoluteMode && currentInputMode === "unify");
-  const unifySpace = document.getElementById("unify-space");
-  if (unifySpace) {
-    unifySpace.hidden = currentInputMode !== "unify";
-  }
+  const unifyKeys = [document.getElementById("unify-space"), document.getElementById("unify-clear")];
+  unifyKeys.forEach((key) => {
+    if (key) {
+      key.hidden = currentInputMode !== "unify";
+    }
+  });
   if (currentInputMode !== "unify") {
-    unifySpace?.classList.remove("is-unify-hover");
+    unifyKeys.forEach((key) => key?.classList.remove("is-unify-hover"));
     document.querySelectorAll(".key.is-unify-hover").forEach((key) => key.classList.remove("is-unify-hover"));
   }
   if (touchpadActive) {
@@ -1147,6 +1156,8 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "action-hover") {
     document.getElementById("unify-space")?.classList.toggle("is-unify-hover", message.slot === "unify-space");
+    document.getElementById("unify-clear")?.classList.toggle("is-unify-hover",
+      currentInputMode === "unify" && message.active === true);
     const space = document.getElementById("spelling-space");
     if (space) space.classList.toggle("is-hover", currentSpelling.active && !!currentSpelling.text
       && message.slot === "spelling-space");

@@ -1254,8 +1254,8 @@ body[data-theme="editorial"] {
 #spelling-space.is-disabled { opacity: .4; }
 
 /* Unify: the space key under C–M, the key a click would hit, and the word still open to change */
-#unify-space[hidden] { display: none; }
-#unify-space { position: absolute; box-sizing: border-box; margin: 0; max-height: none; font-size: clamp(.8rem, 1.7vmin, 1.15rem); letter-spacing: .04em; }
+#unify-space[hidden], #unify-clear[hidden], .is-unify-mode #action-clear { display: none; }
+#unify-space, #unify-clear { position: absolute; box-sizing: border-box; margin: 0; max-height: none; font-size: clamp(.8rem, 1.7vmin, 1.15rem); letter-spacing: .04em; }
 .key.is-unify-hover { outline: 2px solid currentColor; outline-offset: -3px; }
 .is-unify-mode .key-anchor, [data-theme="editorial"].is-unify-mode .key-anchor { background: transparent; } /* no home key: the cursor stays put */
 .unify-provisional, .unify-letters { display: inline-block; flex-shrink: 0; }
