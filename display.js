@@ -125,16 +125,18 @@ function layoutActionPill(anchorRect) {
     space.style.top = pill.style.top;
     space.style.height = pill.style.height;
   }
-  // Unify's space key: a key of its own, right under V (a fourth row on the grid)
+  // Unify's space key: a fourth row on the key grid, one key high, X to M
   const unifySpace = document.getElementById("unify-space");
-  const v = document.querySelector('[data-key="V"]');
-  if (unifySpace && v) {
-    const r = v.getBoundingClientRect();
-    const border = parseFloat(getComputedStyle(v).borderTopWidth) || 0;
-    unifySpace.style.left = `${r.left - shellRect.left}px`;
-    unifySpace.style.top = `${r.bottom - shellRect.top - border}px`; // keys share their borders
-    unifySpace.style.width = `${r.width}px`;
-    unifySpace.style.height = `${r.height}px`;
+  const x = document.querySelector('[data-key="X"]');
+  const m = document.querySelector('[data-key="M"]');
+  if (unifySpace && x && m) {
+    const left = x.getBoundingClientRect();
+    const right = m.getBoundingClientRect();
+    const border = parseFloat(getComputedStyle(m).borderTopWidth) || 0;
+    unifySpace.style.left = `${left.left - shellRect.left}px`;
+    unifySpace.style.top = `${right.bottom - shellRect.top - border}px`; // keys share their borders
+    unifySpace.style.width = `${right.right - left.left}px`;
+    unifySpace.style.height = `${right.height}px`;
   }
 }
 
