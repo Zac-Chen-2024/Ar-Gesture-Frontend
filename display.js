@@ -216,7 +216,8 @@ function applyModeClasses() {
   const unifyKeys = [document.getElementById("unify-space"), document.getElementById("unify-clear")];
   unifyKeys.forEach((key) => {
     if (key) {
-      key.hidden = !isUnifyMode() || (key.id === "unify-space" && currentInputMode !== "unify");
+      // the space key: Unify, and Double (it finishes a spelled word there)
+      key.hidden = !isUnifyMode() || (key.id === "unify-space" && currentInputMode === "unify-lp");
     }
   });
   if (!isUnifyMode()) {
@@ -536,7 +537,7 @@ const VARIANT_HINTS = {
   "unify-double": {
     W0: "Unify · Double · trace a word, double-click its last letter · click a letter to spell",
     W1: "Unify · Double · click a candidate to switch · or trace the next word",
-    S: "Unify · Double · spelling · finish the word in the bar"
+    S: "Unify · Double · spelling · click Space for the word as typed, or pick in the bar"
   },
   "unify-lp": {
     W0: "Unify · Long press · trace a word, click its last letter · hold a letter to spell",

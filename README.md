@@ -41,11 +41,13 @@ spell a word, then Space to finish; the bar offers completions. ⌫ in the bar
 deletes a letter while spelling, otherwise the last word. The keyboard state
 machine is in the “Unify input mode · state machine” doc.
 
-Unify's two variants have no space key: a word ends with a click on its last
-letter. **Double**: double-click the last letter; a single click on a letter
+In Unify's two variants a word ends with a click on its last letter, so Space
+never decodes. **Double**: double-click the last letter; a single click on a letter
 starts spelling. **Long press**: click the last letter; hold a letter to start
 spelling (the key fills while held). Either way, finish a spelled word in the
-bar: the letters as typed (in quotes) or a completion.
+bar: the letters as typed (in quotes) or a completion. Double also keeps the
+space key: while spelling it enters the letters as typed (the completions stay
+in the bar); otherwise it does nothing. Long press has no space key.
 
 **Display style**: the small half-filled circle in the bottom-left corner
 switches between two looks; the choice is saved per browser.
