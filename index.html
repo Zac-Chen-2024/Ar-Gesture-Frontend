@@ -123,6 +123,15 @@
       a.btn .btn-title {
         transition: color 140ms ease;
       }
+      /* each mode has its own colour: Demo green, Game red */
+      a.btn.demo {
+        --btn-accent: #25915f;
+        --btn-tint: rgba(37, 145, 95, 0.07);
+      }
+      a.btn.game {
+        --btn-accent: #d6452b;
+        --btn-tint: rgba(214, 69, 43, 0.07);
+      }
 
       .btn-title {
         font-family: var(--font-serif);
@@ -139,15 +148,15 @@
       }
 
       a.btn:hover {
-        background: rgba(17, 17, 17, 0.06);
+        background: var(--btn-tint, rgba(17, 17, 17, 0.06));
       }
 
       a.btn:hover .btn-title {
-        color: var(--red);
+        color: var(--btn-accent);
       }
 
       a.btn:focus-visible {
-        outline: 2px solid var(--red);
+        outline: 2px solid var(--btn-accent);
         outline-offset: -4px;
       }
 
@@ -176,14 +185,14 @@
       }
       .art-demo .swipe {
         fill: none;
-        stroke: var(--red);
+        stroke: var(--btn-accent);
         stroke-width: 2.2;
         stroke-linecap: round;
         stroke-dasharray: 1;
         stroke-dashoffset: 0;
       }
       .art-demo .tip {
-        fill: var(--red);
+        fill: var(--btn-accent);
       }
       a.btn:hover .art-demo .swipe {
         animation: art-draw 900ms ease-out;
@@ -208,10 +217,10 @@
       .art-game .mid {
         fill: var(--ink);
       }
-      .art-game .btn-a, .art-game .btn-b { fill: var(--red); }
+      .art-game .btn-a, .art-game .btn-b { fill: var(--btn-accent); }
       .art-game .btn-c, .art-game .btn-d { fill: var(--ink); }
       .art-game .sparks {
-        stroke: var(--red);
+        stroke: var(--btn-accent);
         stroke-width: 1.6;
         stroke-linecap: round;
         opacity: 0;
