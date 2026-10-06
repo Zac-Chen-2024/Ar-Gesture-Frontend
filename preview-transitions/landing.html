@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ar-Gesture · transition preview</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <script>
+      // arriving mid-transition: paint the covered colour before anything else
+      try {
+        const t = JSON.parse(sessionStorage.getItem("ar-tx"));
+        if (t) document.documentElement.dataset.tx = t.fx;
+      } catch {}
+    </script>
+    <style>
+      html[data-tx="vine"] { background: #17573a; }
+      html[data-tx="fire"] { background: #1e120c; }
+      :root {
+        --paper: #faf8f3;
+        --ink: #111111;
+        --ink-faint: rgba(17, 17, 17, 0.45);
+        --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-ui);
+        -webkit-font-smoothing: antialiased;
+      }
+      .top {
+        position: fixed; top: 0; left: 0; right: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 18px 24px;
+      }
+      .top a { color: var(--ink); text-decoration: none; font-size: 14px; }
+      .session { display: flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+      .session b { font-family: var(--font-serif); font-size: 1.6rem; letter-spacing: 0; color: var(--ink); font-weight: 400; }
+      .qr { width: 44px; height: 44px; border: 1px solid var(--ink);
+        background: repeating-conic-gradient(var(--ink) 0 25%, transparent 0 50%) 0 0 / 11px 11px; opacity: .8; }
+      main { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 90px 20px 40px; }
+      .kicker { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); }
+      h1 { margin: 0; font-family: var(--font-serif); font-weight: 400; font-size: clamp(2.6rem, 8vw, 4.6rem); line-height: 1; }
+      .accent { color: var(--accent); }
+      .bar { display: flex; border: 1px solid var(--ink); width: min(640px, 92vw); }
+      .bar span { flex: 1; padding: 10px; text-align: center; font-family: var(--font-serif); font-size: 1.15rem; }
+      .bar span + span { border-left: 1px solid var(--ink); }
+      .kb { display: grid; gap: 6px; width: min(640px, 92vw); }
+      .row { display: grid; gap: 6px; grid-template-columns: repeat(10, 1fr); }
+      .row:nth-child(2) { padding: 0 5%; grid-template-columns: repeat(9, 1fr); }
+      .row:nth-child(3) { padding: 0 15%; grid-template-columns: repeat(7, 1fr); }
+      .kb i { font-style: normal; border: 1px solid rgba(17, 17, 17, .35); aspect-ratio: 1 / 1; display: grid; place-items: center; font-size: 15px; text-transform: uppercase; color: rgba(17,17,17,.7); }
+      .tools { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+      .tools button, .tools a { font: inherit; font-size: 13px; padding: 7px 14px; border: 1px solid var(--ink); background: none; color: var(--ink); cursor: pointer; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <script src="transitions.js"></script>
+    <header class="top">
+      <a href="./">← Home</a>
+      <div class="session">Session <b>4821</b><span class="qr" aria-hidden="true"></span></div>
+    </header>
+    <main>
+      <p class="kicker" id="kicker"></p>
+      <h1 id="title"></h1>
+      <div class="bar" id="bar"><span>hello</span><span>help</span><span>held</span></div>
+      <div class="kb" aria-hidden="true">
+        <div class="row"><i>q</i><i>w</i><i>e</i><i>r</i><i>t</i><i>y</i><i>u</i><i>i</i><i>o</i><i>p</i></div>
+        <div class="row"><i>a</i><i>s</i><i>d</i><i>f</i><i>g</i><i>h</i><i>j</i><i>k</i><i>l</i></div>
+        <div class="row"><i>z</i><i>x</i><i>c</i><i>v</i><i>b</i><i>n</i><i>m</i></div>
+      </div>
+      <div class="tools">
+        <button type="button" id="replay">Replay transition</button>
+        <a id="real" href="../">Open the real page</a>
+      </div>
+    </main>
+    <script>
+      // a stand-in for the Demo / Game page, so the transition lands somewhere
+      const game = new URLSearchParams(location.search).get("page") === "game";
+      document.documentElement.style.setProperty("--accent", game ? "#d6452b" : "#25915f");
+      document.getElementById("kicker").textContent = game ? "Endless" : "Ar-Gesture";
+      document.getElementById("title").innerHTML = game
+        ? 'Swipe <span class="accent">Start</span>'
+        : 'Gesture <span class="accent">Demo</span>';
+      if (game) document.getElementById("bar").style.visibility = "hidden";
+      document.getElementById("real").href = game ? "../study-funny/display.html" : "../display.html";
+      document.getElementById("replay").addEventListener("click", () => ArTransition.replay());
+    </script>
+  </body>
+</html>
