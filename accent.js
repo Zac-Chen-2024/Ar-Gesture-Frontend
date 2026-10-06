@@ -6,7 +6,7 @@
 (() => {
   const PALETTE = {
     vermilion: { name: "Vermilion", hex: "#d6452b", rgb: "214, 69, 43" },
-    green: { name: "Green", hex: "#1f7a55", rgb: "31, 122, 85" },
+    green: { name: "Green", hex: "#25915f", rgb: "37, 145, 95" },
     indigo: { name: "Indigo", hex: "#3049b8", rgb: "48, 73, 184" }
   };
   const KEY = "accentColour";
