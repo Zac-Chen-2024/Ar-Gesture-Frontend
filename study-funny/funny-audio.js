@@ -488,6 +488,13 @@
         kick(0, 0.45 + tier * 0.08);
       },
 
+      // Start: a small rising arpeggio (C E G C) and a soft kick
+      start() {
+        if (!ready()) return;
+        [15, 19, 22, 27].forEach((semi, i) => pluck(hz(semi), { t: i * 0.06, gain: 0.08, decay: 0.32, bright: 1.15, send: 0.35, pan: (i - 1.5) * 0.25 }));
+        kick(0, 0.35);
+      },
+
       // a level up: a quick sweep into a chord stab
       levelUp(lv) {
         if (!ready()) return;

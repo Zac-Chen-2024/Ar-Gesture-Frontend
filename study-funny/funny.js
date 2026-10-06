@@ -132,10 +132,12 @@
     if (m.type === "gesture-start" && m.point) {
       path = [toDisplayPoint(m.point)];
       S.stroking = true; // the decay clock waits while a stroke is in the air
+      ghost.pause();
     } else if (m.type === "gesture-move" && m.point && path.length < 400) {
       path.push(toDisplayPoint(m.point));
     } else if (m.type === "gesture-end" || m.type === "gesture-cancel") {
       S.stroking = false;
+      ghost.resume();
     }
     // after display.js has drawn the candidates
     if (m.type === "state-update" || m.type === "gesture-end") setTimeout(hintCandidate, 0);
@@ -163,6 +165,12 @@
     S.frozen = false;
     S.trial = { hits: 0, saves: 0, breaks: 0, decays: 0, max: S.combo, points: 0, bonus: 0 };
     S.endlessAt = e.detail.mode === "endless" ? e.detail.index : null;
+    if (S.endlessAt === 0) {
+      sound.start();
+      ghost.begin(S.target);
+    } else {
+      ghost.stop();
+    }
     S.lastHitAt = performance.now();
     S.clock = windowFor(S.combo); // reading a new phrase costs nothing
     titleEl.classList.remove("funny-sweep");
@@ -198,6 +206,7 @@
   });
 
   function onHit(i, word) {
+    ghost.hit(i);
     S.combo++;
     S.trial.hits++;
     S.trial.max = Math.max(S.trial.max, S.combo);
@@ -933,6 +942,108 @@
     sound.on = !sound.on;
     paintSound();
   });
+
+  // ---------------------------------------------------------------- the guide
+
+  // The run's first phrase ("come on") is walked through: a ghost swipe from
+  // the cursor over the next word's keys, drawn again and again until the
+  // player traces it. It fades while a stroke is in the air and moves on to
+  // the next word after a hit.
+  const ghost = (() => {
+    const SVGNS = "http://www.w3.org/2000/svg";
+    const layer = document.createElementNS(SVGNS, "svg");
+    layer.setAttribute("class", "funny-ghost");
+    layer.setAttribute("aria-hidden", "true");
+    frameEl.appendChild(layer);
+    let words = [];
+    let at = -1;      // the word being shown
+    let loop = null;
+    let showTimer = null;
+
+    const local = (r) => {
+      const f = frameEl.getBoundingClientRect();
+      return { x: r.left - f.left + r.width / 2, y: r.top - f.top + r.height / 2 };
+    };
+    const keyAt = (c) => document.querySelector(`.key[data-key="${c.toUpperCase()}"]`);
+
+    // a smooth line through the points (Catmull-Rom as cubic Bezier)
+    function smooth(pts) {
+      let d = `M${pts[0].x} ${pts[0].y}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+        d += ` C${p1.x + (p2.x - p0.x) / 9} ${p1.y + (p2.y - p0.y) / 9} ${p2.x - (p3.x - p1.x) / 9} ${p2.y - (p3.y - p1.y) / 9} ${p2.x} ${p2.y}`;
+      }
+      return d;
+    }
+
+    function clear() {
+      clearInterval(loop);
+      clearTimeout(showTimer);
+      loop = null;
+      layer.replaceChildren();
+    }
+
+    function draw() {
+      clear();
+      layer.classList.remove("is-paused");
+      const word = words[at];
+      if (!word || body.dataset.screen !== "trial") return;
+      const keys = [...word].map(keyAt);
+      if (keys.some((k) => !k)) return;
+      const pts = [local($("cursor-marker").getBoundingClientRect()), ...keys.map((k) => local(k.getBoundingClientRect()))];
+      const line = document.createElementNS(SVGNS, "path");
+      line.setAttribute("d", smooth(pts));
+      line.setAttribute("pathLength", "1");
+      line.setAttribute("class", "funny-ghost-line");
+      const dot = document.createElementNS(SVGNS, "circle");
+      dot.setAttribute("r", "9");
+      dot.setAttribute("class", "funny-ghost-dot");
+      layer.append(line, dot);
+      const len = line.getTotalLength();
+      const CYCLE = 2200, DRAW = 1400;
+      const t0 = performance.now();
+      const frame = (now) => {
+        if (!line.isConnected) return;
+        if (body.dataset.screen !== "trial") return clear();
+        const k = ((now - t0) % CYCLE) / DRAW;
+        const shown = Math.min(1, k);
+        line.style.strokeDashoffset = String(1 - shown);
+        const p = line.getPointAtLength(len * shown);
+        dot.setAttribute("cx", p.x);
+        dot.setAttribute("cy", p.y);
+        layer.style.opacity = k > 1.2 ? String(Math.max(0, 1 - (k - 1.2) / 0.3)) : "1";
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    }
+
+    return {
+      begin(target) {
+        words = target;
+        at = 0;
+        clearTimeout(showTimer);
+        showTimer = setTimeout(draw, 400);
+      },
+      hit(i) {
+        if (at < 0 || i !== at) return;
+        at = i + 1 < words.length ? i + 1 : -1;
+        clear();
+        if (at >= 0) showTimer = setTimeout(draw, 450); // the cursor has moved to the word's end
+      },
+      pause() {
+        if (at >= 0) layer.classList.add("is-paused");
+      },
+      resume() {
+        if (at < 0) return;
+        clearTimeout(showTimer);
+        showTimer = setTimeout(draw, 600);
+      },
+      stop() {
+        at = -1;
+        clear();
+      }
+    };
+  })();
   paintSound();
   // study.js drew its own start screen before this file loaded
   window.STUDY_API.refresh();

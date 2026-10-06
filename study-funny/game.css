@@ -202,3 +202,42 @@
 .funny-body .study-flash {
   background: transparent;
 }
+
+/* the game's lights, backgrounds and ink fill the whole screen: no margin
+   around the frame (the effects live inside it) */
+.funny-body .display-stage {
+  padding: 0;
+}
+.funny-body .display-frame {
+  border: none;
+  border-radius: 0;
+  padding: 4vmin;
+}
+
+/* the guide on a run's first phrase: a ghost swipe over the keys */
+.funny-ghost {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transition: opacity 250ms ease;
+}
+.funny-ghost.is-paused {
+  opacity: 0 !important;
+}
+.funny-ghost-line {
+  fill: none;
+  stroke: var(--fx-accent, #d6452b);
+  stroke-opacity: 0.32;
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+}
+.funny-ghost-dot {
+  fill: var(--fx-accent, #d6452b);
+  fill-opacity: 0.5;
+}
