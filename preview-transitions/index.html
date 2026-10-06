@@ -318,6 +318,14 @@
       .tx-speed button { font: inherit; margin-left: 6px; padding: 3px 10px; background: none;
         border: 1px solid rgba(17,17,17,.25); color: var(--ink-soft); cursor: pointer; }
       .tx-speed button.is-on { border-color: var(--ink); color: var(--ink); }
+      .tx-schemes { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 14px; border: 1px solid rgba(17,17,17,.25); }
+      .tx-schemes button { font: inherit; background: none; border: 0; padding: 10px 6px; cursor: pointer; color: var(--ink-soft);
+        display: flex; flex-direction: column; gap: 3px; text-align: center; }
+      .tx-schemes button + button { border-left: 1px solid rgba(17,17,17,.25); }
+      .tx-schemes b { font-family: var(--font-serif); font-weight: 400; font-size: 1.05rem; color: var(--ink); }
+      .tx-schemes span { font-size: 11px; line-height: 1.3; }
+      .tx-schemes button.is-on { background: rgba(17,17,17,.06); box-shadow: inset 0 -2px 0 var(--ink); }
+      @media (max-width: 640px) { .tx-schemes { grid-template-columns: 1fr; } .tx-schemes button + button { border-left: 0; border-top: 1px solid rgba(17,17,17,.25); } }
     </style>
   </head>
   <body>
@@ -359,7 +367,14 @@
           <span class="btn-sub">combos, music, scores</span>
         </a>
       </nav>
-      <p class="phone-link">Transition preview · Demo grows vines, Game burns through.</p>
+      <p class="phone-link">Transition preview — pick a scheme, then click Demo or Game.</p>
+      <div class="tx-schemes">
+        <button type="button" data-scheme="A"><b>A · Wipe</b><span>one thin line crosses the screen</span></button>
+        <button type="button" data-scheme="B"><b>B · Sprigs / Embers</b><span>a few vines, or a thin burning edge</span></button>
+        <button type="button" data-scheme="C"><b>C · Trace</b><span>one big swipe across the screen</span></button>
+        <button type="button" data-scheme="D"><b>D · Iris</b><span>a circle of paper with a thin rim</span></button>
+        <button type="button" data-scheme="E"><b>E · Fade</b><span>a fade, a sprig or a puff of sparks</span></button>
+      </div>
       <p class="tx-speed">Speed:
         <button type="button" data-speed="1">Normal</button>
         <button type="button" data-speed="2">Slow ×2</button>
@@ -515,6 +530,10 @@
       const mark = () => speeds.forEach((b) => b.classList.toggle("is-on", Number(b.dataset.speed) === ArTransition.speed()));
       speeds.forEach((b) => b.addEventListener("click", () => { ArTransition.setSpeed(b.dataset.speed); mark(); }));
       mark();
+      const schemes = document.querySelectorAll("[data-scheme]");
+      const markScheme = () => schemes.forEach((b) => b.classList.toggle("is-on", b.dataset.scheme === ArTransition.scheme()));
+      schemes.forEach((b) => b.addEventListener("click", () => { ArTransition.setScheme(b.dataset.scheme); markScheme(); }));
+      markScheme();
     </script>
   </body>
 </html>

@@ -13,8 +13,7 @@
       } catch {}
     </script>
     <style>
-      html[data-tx="vine"] { background: #17573a; }
-      html[data-tx="fire"] { background: #1e120c; }
+      html[data-tx] { background: #faf8f3; }
       :root {
         --paper: #faf8f3;
         --ink: #111111;
@@ -73,6 +72,7 @@
         <div class="row"><i>z</i><i>x</i><i>c</i><i>v</i><i>b</i><i>n</i><i>m</i></div>
       </div>
       <div class="tools">
+        <span id="scheme-label" style="align-self:center;font-size:13px;color:var(--ink-faint)"></span>
         <button type="button" id="replay">Replay transition</button>
         <a id="real" href="../">Open the real page</a>
       </div>
@@ -87,6 +87,8 @@
         : 'Gesture <span class="accent">Demo</span>';
       if (game) document.getElementById("bar").style.visibility = "hidden";
       document.getElementById("real").href = game ? "../study-funny/display.html" : "../display.html";
+      const last = ArTransition.last();
+      if (last) document.getElementById("scheme-label").textContent = "Scheme " + last.scheme;
       document.getElementById("replay").addEventListener("click", () => ArTransition.replay());
     </script>
   </body>
