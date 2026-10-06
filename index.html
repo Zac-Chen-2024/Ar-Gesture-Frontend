@@ -72,15 +72,49 @@
         overflow: visible;
       }
 
+      /* the title's swipe: ink at rest; over a button it takes that mode's
+         colour and is drawn again */
+      .trace {
+        --trace-ink: var(--ink);
+      }
       .trace path {
         fill: none;
-        stroke: var(--red);
+        stroke: var(--trace-ink);
         stroke-width: 2.5;
         stroke-linecap: round;
+        stroke-dasharray: 1;
+        stroke-dashoffset: 0;
+        transition: stroke 220ms ease;
       }
-
       .trace circle {
-        fill: var(--red);
+        fill: var(--trace-ink);
+        transition: fill 220ms ease;
+      }
+      body:has(a.btn.demo:hover) .trace {
+        --trace-ink: #25915f;
+      }
+      body:has(a.btn.game:hover) .trace {
+        --trace-ink: #d6452b;
+      }
+      .trace.is-drawing path {
+        animation: trace-draw 700ms ease-out;
+      }
+      .trace.is-drawing circle {
+        animation: trace-dot 700ms ease-out;
+      }
+      @keyframes trace-draw {
+        from { stroke-dashoffset: 1; }
+      }
+      @keyframes trace-dot {
+        0%, 70% { opacity: 0; transform: scale(0.4); }
+        100% { opacity: 1; transform: none; }
+      }
+      .trace circle {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .trace.is-drawing path, .trace.is-drawing circle { animation: none; }
       }
 
       .lede {
@@ -260,7 +294,7 @@
       <p class="kicker">AR text entry</p>
       <h1>Ar-Gesture</h1>
       <svg class="trace" viewBox="0 0 240 26" aria-hidden="true">
-        <path d="M6 18 C 40 2, 62 24, 96 12 S 150 2, 176 16 S 214 20, 232 8" />
+        <path pathLength="1" d="M6 18 C 40 2, 62 24, 96 12 S 150 2, 176 16 S 214 20, 232 8" />
         <circle cx="232" cy="8" r="4" />
       </svg>
       <nav class="links">
@@ -297,5 +331,14 @@
       <p class="phone-link">No camera on the phone? Open <a href="mobile.html">Mobile</a> and tap the session number.</p>
     </main>
     <script src="accent.js?v=20261006-2"></script>
+    <script>
+      // moving onto a mode button draws the title's swipe again, in its colour
+      const trace = document.querySelector(".trace");
+      document.querySelectorAll("a.btn").forEach((btn) => btn.addEventListener("mouseenter", () => {
+        trace.classList.remove("is-drawing");
+        void trace.getBoundingClientRect();
+        trace.classList.add("is-drawing");
+      }));
+    </script>
   </body>
 </html>
