@@ -1016,10 +1016,10 @@ select.mode-select {
    untouched), and display.js re-measures G whenever the style changes.
    ====================================================================== */
 body[data-theme="editorial"] {
-  --trace-color: #d6452b;
+  --trace-color: var(--accent-main, #d6452b);
   --trace-width: 4;
   --ed-paper: #faf8f3;
-  --ed-red: #d6452b;
+  --ed-red: var(--accent-main, #d6452b);
   background: var(--ed-paper);
 }
 
@@ -1200,7 +1200,7 @@ body[data-theme="editorial"] {
   height: 16px;
   border: none;
   background: var(--ed-red);
-  box-shadow: 0 0 0 5px rgba(214, 69, 43, 0.16);
+  box-shadow: 0 0 0 5px rgba(var(--accent-main-rgb, 214, 69, 43), 0.16);
 }
 
 [data-theme="editorial"] .touchpad-hint {

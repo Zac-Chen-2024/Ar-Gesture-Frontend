@@ -250,6 +250,9 @@ function readTraceStyle() {
   traceWidth = parseFloat(styles.getPropertyValue("--trace-width")) || 6;
 }
 
+// the site's accent (accent.js, Demo only) colours the Editorial trace
+document.addEventListener("accent-change", () => readTraceStyle());
+
 function drawSegment(from, to) {
   context.strokeStyle = traceColor;
   context.lineWidth = traceWidth;
