@@ -1005,12 +1005,14 @@
     return parts.join('<span class="study-flash-sep" aria-hidden="true"></span>');
   }
 
+  // a block's or a run's result: one headline number (the game's points), one
+  // quiet line of the rest; the game adds its board below
   function summaryHtml(b) {
-    const change = b.change == null ? "" : `<em class="${b.change >= 0 ? "is-up" : "is-down"}">${b.change >= 0 ? ICON.up : ICON.down}${Math.abs(Math.round(b.change * 100))}% ${b.change >= 0 ? "faster" : "slower"} than ${b.prevLabel}</em>`;
-    const extra = hooks().summaryExtra ? hooks().summaryExtra(b).map(([v, label]) => stat(v, label)).join("") : "";
-    return `<div class="study-stats-row">${stat(num(b.avg), "avg WPM", change)}${stat(pct(b.accuracy), "accuracy")}${stat(`${b.perfect}/${b.n}`, "perfect")}${extra}</div>
-      ${b.series.length > 1 ? sparkline(b.series) : ""}
-      ${b.best ? `<p class="study-best">${ICON.star}<span>Fastest · “${esc(b.best.target)}” · ${num(b.best.wpm)} WPM</span></p>` : ""}`;
+    const [headline, ...extra] = hooks().summaryExtra ? hooks().summaryExtra(b) : [[num(b.avg), "avg WPM"]];
+    const line = [`${num(b.avg)} WPM`, `${pct(b.accuracy)} accuracy`, `${b.perfect}/${b.n} perfect`,
+      ...extra.map(([v, label]) => `${v} ${label}`)];
+    return `<div class="result-hero"><b>${headline[0]}</b><span>${esc(headline[1])}</span></div>
+      <p class="result-line">${line.map(esc).join(' <i aria-hidden="true">·</i> ')}</p>`;
   }
 
   // the kicker while typing: where we are, and in endless the lives left

@@ -395,11 +395,11 @@
     const record = S.block.points > S.bestBefore && S.block.points > 0;
     if (record) {
       setTimeout(() => {
-        const sheet = $("study-sheet");
-        const note = document.createElement("p");
+        const hero = $("study-sheet").querySelector(".result-hero");
+        const note = document.createElement("em");
         note.className = "funny-record";
-        note.textContent = S.bestBefore ? `New personal best · ${fmt(S.block.points)} (was ${fmt(S.bestBefore)})` : `First run on the board · ${fmt(S.block.points)}`;
-        sheet.prepend(note);
+        note.textContent = S.bestBefore ? `New best · was ${fmt(S.bestBefore)}` : "First run";
+        if (hero) hero.append(note);
       }, 0);
       shout("New best!", 12);
     }
@@ -572,20 +572,26 @@
       return;
     }
     if (!["end", "gameover"].includes(body.dataset.screen)) return;
-    const rows = b.top.slice(0, 8);
-    if (b.me && !rows.some((r) => r.me)) rows.push(b.me); // outside the top: show own row last
+    // one board, today's top five (own row last when outside it); all time is one line
     const sheet = $("study-sheet");
     let boards = sheet.querySelector(".funny-boards");
     if (!boards) {
       boards = document.createElement("div");
       boards.className = "funny-boards";
-      boards.innerHTML = '<div data-period="day"></div><div data-period="all"></div>';
+      boards.innerHTML = '<div data-period="day"></div><p class="funny-alltime" data-period="all"></p>';
       sheet.appendChild(boards);
     }
-    const title = `${b.mode === "endless" ? "Best runs" : "Blocks"} · ${b.period === "day" ? "last 24 h" : "all time"}`;
-    boards.querySelector(`[data-period="${b.period}"]`).innerHTML = `<div class="funny-board">
-      <h3>${esc(title)}${b.me ? ` <em>#${b.me.rank} of ${b.total}</em>` : ""}</h3>
-      <ol>${rows.map((r) => `<li class="${r.me ? "is-me" : ""}"><span class="rank">${r.rank}</span><span class="pid">${esc(r.pid)}</span><span class="combo">×${r.best_combo}</span><b>${fmt(r.score)}</b></li>`).join("")}</ol></div>`;
+    if (b.period === "all") {
+      boards.querySelector('[data-period="all"]').textContent = b.me
+        ? `All time · #${b.me.rank} of ${b.total} · your best ${fmt(b.me.score)}`
+        : `All time · ${b.total} player${b.total === 1 ? "" : "s"} · not on the board yet`;
+    } else {
+      const rows = b.top.slice(0, 5);
+      if (b.me && !rows.some((r) => r.me)) rows.push(b.me);
+      boards.querySelector('[data-period="day"]').innerHTML = `<div class="funny-board">
+        <h3>${b.mode === "endless" ? "Today's best runs" : "Today"}${b.me ? ` <em>#${b.me.rank} of ${b.total}</em>` : ""}</h3>
+        <ol>${rows.map((r) => `<li class="${r.me ? "is-me" : ""}"><span class="rank">${r.rank}</span><span class="pid">${esc(r.pid)}</span><b>${fmt(r.score)}</b></li>`).join("")}</ol></div>`;
+    }
     if (b.period === "day" && b.me && b.me.rank <= 3) sound.grade("S");
   });
 
@@ -854,6 +860,31 @@
       onResize: () => placeCombo()
     });
   const sound = window.FunnyAudio;
+
+  // Start / Next / Stop have no bar behind them: while the cursor is on one,
+  // the word throws sparks (game.css makes it grow)
+  const sparkTargets = ["action-next", "action-clear"].map((id) => $(id)).filter(Boolean);
+  let sparkOn = null;
+  let sparkTimer = null;
+  function sparkFrom(el, burst) {
+    const r = el.getBoundingClientRect();
+    const f = frameEl.getBoundingClientRect();
+    const spread = Math.min(r.width, 160);
+    splash(r.left - f.left + r.width / 2 + (Math.random() - 0.5) * spread,
+      r.top - f.top + r.height / 2, burst ? 3 : 2, burst ? 1.1 : 0.35);
+  }
+  function watchSparks() {
+    const on = sparkTargets.find((el) => el.classList.contains("is-hover") && el.offsetParent) || null;
+    if (on === sparkOn) return;
+    sparkOn = on;
+    clearInterval(sparkTimer);
+    sparkTimer = null;
+    if (!on) return;
+    sparkFrom(on, true);
+    sparkTimer = setInterval(() => sparkFrom(on, false), 90);
+  }
+  const sparkWatch = new MutationObserver(watchSparks);
+  sparkTargets.forEach((el) => sparkWatch.observe(el, { attributes: true, attributeFilter: ["class", "hidden"] }));
 
   // fever breakdowns: the lights calm down; the drop hits
   sound.onSection = ({ breakdown, drop }) => {

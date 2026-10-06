@@ -82,3 +82,63 @@
   width: 14px;
   height: 14px;
 }
+
+/* a result: one headline number, one quiet line of the rest */
+.result-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+}
+
+.result-hero b {
+  font-family: var(--font-serif);
+  font-size: clamp(3.4rem, 8vw, 5rem);
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-hero > span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.result-line {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+}
+
+.result-line i {
+  margin: 0 0.35em;
+  font-style: normal;
+  color: var(--ink-faint);
+}
+
+/* Start / Next / Stop: no bar behind the word; the word grows and throws
+   sparks while the cursor is on it (funny.js) */
+.study-body .action-next,
+.study-body #action-clear {
+  transition: transform 160ms ease, color 160ms ease, letter-spacing 160ms ease;
+}
+
+.study-body .action-next.is-hover,
+.study-body #action-clear.is-hover,
+.study-body.is-pointer .action-pill.is-hover,
+.study-body .action-next.is-confirm.is-hover {
+  background: transparent;
+  color: var(--fx-accent, var(--ink));
+  transform: scale(1.18);
+  letter-spacing: 0.04em;
+}
+
+/* on a result the headline number is the score: the running one steps aside */
+.funny-body[data-screen="gameover"] #funny-score,
+.funny-body[data-screen="summary"] #funny-score {
+  visibility: hidden;
+}

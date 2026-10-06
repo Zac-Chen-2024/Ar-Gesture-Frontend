@@ -1087,10 +1087,11 @@ async function handleRtcOffer(message) {
 
 const roomCodeBadge = document.getElementById("room-code");
 
-// Pairing code beside the session number (preview: pages opened with ?qr):
-// small, always there, larger while the mouse is over it. The phone camera
-// opens mobile.html?room=<code>, which joins this session directly.
-const PAIR_QR = new URLSearchParams(location.search).has("qr");
+// Pairing code beside the session number (pages with data-pair-qr: Demo and
+// Game; ?qr turns it on anywhere): small, always there, larger while the mouse
+// is over it. The phone camera opens mobile.html?room=<code>, which joins this
+// session directly.
+const PAIR_QR = document.body.hasAttribute("data-pair-qr") || new URLSearchParams(location.search).has("qr");
 
 function renderPairQr(code) {
   if (!PAIR_QR || !roomCodeBadge || typeof qrcode !== "function") {
