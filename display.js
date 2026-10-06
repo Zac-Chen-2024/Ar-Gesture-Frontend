@@ -1113,6 +1113,11 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "room-created") {
     updateRoomBadge(message.code, false);
+    // the main display opens in Unify · Double (the study pages share this
+    // script but have no Unify switch, and keep the server's default)
+    if (unifyVariantSwitch) {
+      sendMessage({ type: "mode-set", mode: "unify-double" });
+    }
     return;
   }
 
