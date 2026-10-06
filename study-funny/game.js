@@ -315,13 +315,11 @@
 
   // ---------------------------------------------------------------- modes
 
+  // the game is the endless run: no mode screen, every start and every
+  // "Continue" goes straight to the next run's Ready
   function chooseMode() {
     clearTimeout(feedbackTimer);
-    S.mode = null;
-    S.screen = "mode";
-    S.pointer = { x: 0, y: 0 };
-    setPhase("pointer", "mode", true);
-    render();
+    startMode("endless");
   }
 
   function startMode(mode) {
@@ -747,10 +745,10 @@
       list = [...sheet.querySelectorAll("[data-mode]")].map((el) => ({ id: `mode:${el.dataset.mode}`, el }));
     } else if (screen === "ready" && endless()) {
       show({
-        kicker: `Endless · ${S.cfg.endless.input_mode === "center" ? "Center" : "Continuous"} word start`,
+        kicker: "Endless",
         title: "Ready?",
         sub: !S.phone
-          ? `Open <strong>Mobile</strong> on the phone and choose session <strong>${currentRoomCode || "····"}</strong>.`
+          ? `Scan the code beside session <strong>${currentRoomCode || "····"}</strong> with your phone.`
           : `Up to ${runLength()} phrases. Swipe down-right for <strong>Next</strong>, down-left to <strong>Stop</strong> the run. `
             + `A phrase you submit with errors costs a life; lose ${S.lives} and the run is over.`
       });

@@ -438,7 +438,7 @@
 
   // No login step. The last player on this computer comes back by the token
   // the server gave; a first visit plays under a made-up name (swift-fox-42).
-  // The mode screen offers "change name": a free name renames the player (the
+  // The Ready screen offers "change name": a free name renames the player (the
   // runs follow), a taken one is that player.
   const remember = {
     get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } },
@@ -468,7 +468,7 @@
     setTimeout(() => window.STUDY_API.refresh(), 0); // the header shows the new name
   });
 
-  // the name, top left on the mode screen, with a way to change it
+  // the name, top left on the Ready screen, with a way to change it
   const nameEl = document.createElement("div");
   nameEl.className = "funny-name";
   nameEl.hidden = true;
@@ -488,7 +488,7 @@
     window.STUDY_API.open({ account: { action: "rename", token: remember.get("funnyToken"), username } });
   });
   new MutationObserver(() => {
-    nameEl.hidden = body.dataset.screen !== "mode";
+    nameEl.hidden = body.dataset.screen !== "ready";
     if (nameEl.hidden) nameForm.hidden = true;
     nameEl.querySelector(".funny-name-now").textContent = remember.get("funnyName") || "";
   }).observe(body, { attributes: true, attributeFilter: ["data-screen"] });

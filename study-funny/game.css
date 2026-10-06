@@ -189,10 +189,10 @@
   cursor: pointer;
 }
 
-/* on the mode screen the name line (with "change name") is the only name */
-.funny-body[data-screen="mode"] #study-info-detail {
+/* on the Ready screen the name line (with "change name") is the only name */
+.funny-body[data-screen="ready"] #study-info-detail {
   display: none;
 }
-.funny-body[data-screen="mode"] .funny-name {
+.funny-body[data-screen="ready"] .funny-name {
   margin-top: 4px;
 }
