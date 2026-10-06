@@ -352,7 +352,6 @@
       S.awaitBest = true; // the best run so far, to beat in this one
       sendMessage({ type: "study-leaderboard", mode: "endless", period: "all" });
     }
-    loginEl.hidden = screen !== "setup";
     if (screen === "trial" || screen === "feedback") wrapTitle();
     paintCombo();
   });
@@ -375,16 +374,13 @@
                         breaks: S.trial.breaks, decays: S.trial.decays, fever: S.fever } };
     },
     flashExtra: () => (S.trial.points > 0 ? [`<b>+${fmt(S.trial.points)}</b><small>points</small>`] : []),
-    // the start screen is the login
+    // no login step: the start screen opens the player by itself
     setup: (info) => {
       info.kicker.textContent = "Game";
-      info.title.textContent = "Who's playing?";
-      info.sub.innerHTML = info.supported
-        ? "Type your name to play. A new name makes a new player; your runs and records stay with it."
-        : "Connecting to the server…";
-      loginEl.hidden = false;
-      paintLogin(info);
-      if (info.supported && !remember.get("funnyToken") && !field("name").value) field("name").focus();
+      const failed = info.error && autoTried === "guest";
+      info.title.textContent = failed ? "Could not start" : "Getting ready…";
+      info.sub.textContent = !info.supported ? "Connecting to the server…" : failed ? "Reload the page to try again." : "";
+      setTimeout(autoOpen, 0);
     },
     summaryExtra: () => [[fmt(S.block.points), "points"], [`×${S.blockBest}`, "best combo"]]
   };
@@ -438,59 +434,64 @@
     paintScore();
   });
 
-  // ---------------------------------------------------------------- login
+  // ---------------------------------------------------------------- players
 
-  // players keep their progress by name; the last one on this computer can
-  // continue with one click (a token the server gave)
+  // No login step. The last player on this computer comes back by the token
+  // the server gave; a first visit plays under a made-up name (swift-fox-42).
+  // The mode screen offers "change name": a free name renames the player (the
+  // runs follow), a taken one is that player.
   const remember = {
     get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } },
     set: (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (_) { /* storage off */ } }
   };
-  const loginEl = document.createElement("form");
-  loginEl.className = "funny-login";
-  loginEl.hidden = true;
-  loginEl.innerHTML = `
-    <div class="funny-login-again" hidden><button type="button" data-action="token"></button><a href="#" data-action="logout">Not you?</a></div>
-    <div class="funny-login-fields">
-      <input name="name" maxlength="16" placeholder="Your name" autocomplete="username" spellcheck="false">
-      <button type="submit" data-action="name">Play</button>
-    </div>`;
-  $("study-prompt").appendChild(loginEl);
-  const field = (n) => loginEl.querySelector(`[name="${n}"]`);
+  let autoTried = null; // how this page last opened a player on its own: "token" | "guest"
 
-  function login(action) {
-    if (!window.STUDY_API.ready) return;
-    const account = action === "token"
-      ? { action, token: remember.get("funnyToken") }
-      : { action: "name", username: field("name").value.trim() };
-    window.STUDY_API.open({ account });
-  }
-  loginEl.addEventListener("submit", (e) => {
-    e.preventDefault();
-    login("name");
-  });
-  loginEl.addEventListener("click", (e) => {
-    const action = e.target.dataset && e.target.dataset.action;
-    if (action === "token") login(action);
-    if (action === "logout") {
-      e.preventDefault();
-      remember.set("funnyToken", null);
+  function autoOpen() {
+    if (body.dataset.screen !== "setup" || !window.STUDY_API.ready) return;
+    const failed = !!$("study-status").textContent;
+    if (failed && autoTried === "token") {
+      remember.set("funnyToken", null); // a token the server no longer knows: start as a guest
       remember.set("funnyName", null);
-      paintLogin({ supported: window.STUDY_API.ready });
+    } else if (autoTried) {
+      return;
     }
-  });
+    const token = remember.get("funnyToken");
+    autoTried = token ? "token" : "guest";
+    window.STUDY_API.open({ account: token ? { action: "token", token } : { action: "guest" } });
+  }
+
   document.addEventListener("study:account", (e) => {
     remember.set("funnyToken", e.detail.token);
     remember.set("funnyName", e.detail.username);
+    nameEl.querySelector(".funny-name-now").textContent = e.detail.username;
+    nameForm.hidden = true;
+    setTimeout(() => window.STUDY_API.refresh(), 0); // the header shows the new name
   });
 
-  function paintLogin(info) {
-    const name = remember.get("funnyName");
-    const again = loginEl.querySelector(".funny-login-again");
-    again.hidden = !(name && remember.get("funnyToken"));
-    again.querySelector("button").textContent = `Continue as ${name}`;
-    loginEl.querySelectorAll("button, input").forEach((el) => { el.disabled = !info.supported || !!info.pending; });
-  }
+  // the name, top left on the mode screen, with a way to change it
+  const nameEl = document.createElement("div");
+  nameEl.className = "funny-name";
+  nameEl.hidden = true;
+  nameEl.innerHTML = `<span class="funny-name-now"></span> <a href="#" class="funny-name-change">change name</a>
+    <form class="funny-name-form" hidden><input name="name" maxlength="16" placeholder="New name" autocomplete="username" spellcheck="false"><button type="submit">OK</button></form>`;
+  $("study-info-detail").parentElement.appendChild(nameEl);
+  const nameForm = nameEl.querySelector("form");
+  nameEl.querySelector(".funny-name-change").addEventListener("click", (e) => {
+    e.preventDefault();
+    nameForm.hidden = !nameForm.hidden;
+    if (!nameForm.hidden) nameForm.querySelector("input").focus();
+  });
+  nameForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const username = nameForm.querySelector("input").value.trim();
+    if (!username || !window.STUDY_API.ready) return;
+    window.STUDY_API.open({ account: { action: "rename", token: remember.get("funnyToken"), username } });
+  });
+  new MutationObserver(() => {
+    nameEl.hidden = body.dataset.screen !== "mode";
+    if (nameEl.hidden) nameForm.hidden = true;
+    nameEl.querySelector(".funny-name-now").textContent = remember.get("funnyName") || "";
+  }).observe(body, { attributes: true, attributeFilter: ["data-screen"] });
 
   // ---------------------------------------------------------------- score
 

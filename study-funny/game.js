@@ -290,7 +290,9 @@
   }
 
   function applySession(session) {
-    const first = !S.session || S.session.id !== session.id;
+    // an open this page asked for (a new player, or a rename) starts over at
+    // the modes even when the player is the same one
+    const first = !S.session || S.session.id !== session.id || S.pending === "open";
     S.session = session;
     S.cfg = session.config;
     S.done = new Set(session.done.map((d) => key(d.step, d.trial)));
@@ -738,7 +740,7 @@
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });
     } else if (screen === "mode") {
-      show({ kicker: who(), title: "Choose a mode" });
+      show({ title: "Choose a mode" });
       sheet.innerHTML = modesHtml();
       pill(clearPill, "", { hidden: true });
       pill(nextPill, "", { hidden: true });

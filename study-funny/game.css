@@ -142,3 +142,57 @@
 .funny-body[data-screen="summary"] #funny-score {
   visibility: hidden;
 }
+
+/* the player's name, top left on the mode screen, and the way to change it */
+.funny-name[hidden],
+.funny-name-form[hidden] {
+  display: none;
+}
+
+.funny-name {
+  margin-top: 6px;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.funny-name-change {
+  margin-left: 6px;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+.funny-name-form {
+  display: flex;
+  margin-top: 6px;
+  border: 1px solid var(--ink);
+  width: max-content;
+}
+
+.funny-name-form input {
+  width: 9rem;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  outline: none;
+}
+
+.funny-name-form button {
+  padding: 0 12px;
+  border: 0;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* on the mode screen the name line (with "change name") is the only name */
+.funny-body[data-screen="mode"] #study-info-detail {
+  display: none;
+}
+.funny-body[data-screen="mode"] .funny-name {
+  margin-top: 4px;
+}
