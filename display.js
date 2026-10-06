@@ -1583,7 +1583,9 @@ buildBadge?.addEventListener("click", () => {
 renderBuildBadge();
 
 window.addEventListener("resize", resizeCanvas);
-applyTheme(localStorage.getItem("displayTheme") || "editorial"); // Editorial is the default look
+// Editorial is the default look; a page without the style switch (Demo) is
+// always Editorial, whatever an earlier visit chose
+applyTheme(themeToggle ? localStorage.getItem("displayTheme") || "editorial" : "editorial");
 applyModeClasses();
 renderCandidates([]);
 updateUsbUi();

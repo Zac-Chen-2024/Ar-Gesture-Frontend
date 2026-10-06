@@ -8,6 +8,8 @@
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="stylesheet" href="styles.css?v=20261006-2" />
+    <!-- Demo is green (the home page's Demo colour) and always Editorial -->
+    <style>:root { --accent-main: #25915f; --accent-main-rgb: 37, 145, 95; }</style>
   </head>
   <body class="display-body" data-pair-qr>
     <main class="display-stage">
@@ -171,7 +173,6 @@
         <div id="cursor-marker" class="cursor-marker" aria-hidden="true"></div>
         <canvas id="display-canvas"></canvas>
         <div id="build-badge" class="build-badge" aria-hidden="true"></div>
-        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch display style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg></button>
         <div id="lan-badge" class="lan-badge" aria-hidden="true">LAN ⚡</div>
         <div id="usb-status" class="usb-status" aria-live="polite" hidden></div>
         <div id="touchpad-hint" class="touchpad-hint" aria-live="polite" hidden></div>
@@ -180,8 +181,7 @@
     <script src="config.js?v=20260929-1"></script>
     <script src="vendor/adb.bundle.js?v=20260929-1"></script>
     <script src="vendor/qrcode-generator.js?v=20261006-1"></script>
-    <script src="accent.js?v=20261006-2"></script>
-    <script src="display.js?v=20261006-5"></script>
+    <script src="display.js?v=20261006-6"></script>
     <script src="collection.js?v=20260929-1"></script>
   </body>
   </html>
