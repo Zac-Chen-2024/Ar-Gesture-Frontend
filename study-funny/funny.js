@@ -377,7 +377,7 @@
     flashExtra: () => (S.trial.points > 0 ? [`<b>+${fmt(S.trial.points)}</b><small>points</small>`] : []),
     // the start screen is the login
     setup: (info) => {
-      info.kicker.textContent = "Study · Funny";
+      info.kicker.textContent = "Game";
       info.title.textContent = "Who's playing?";
       info.sub.innerHTML = info.supported
         ? "Type your name to play. A new name makes a new player; your runs and records stay with it."

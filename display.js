@@ -1087,6 +1087,33 @@ async function handleRtcOffer(message) {
 
 const roomCodeBadge = document.getElementById("room-code");
 
+// Pairing code beside the session number (preview: pages opened with ?qr):
+// small, always there, larger while the mouse is over it. The phone camera
+// opens mobile.html?room=<code>, which joins this session directly.
+const PAIR_QR = new URLSearchParams(location.search).has("qr");
+
+function renderPairQr(code) {
+  if (!PAIR_QR || !roomCodeBadge || typeof qrcode !== "function") {
+    return;
+  }
+  let box = roomCodeBadge.querySelector(".pair-qr");
+  if (!box) {
+    box = document.createElement("a");
+    box.className = "pair-qr";
+    box.target = "_blank";
+    box.rel = "noopener";
+    roomCodeBadge.classList.add("has-qr");
+    roomCodeBadge.appendChild(box);
+  }
+  const url = `${location.origin}/mobile.html?room=${code}`;
+  const qr = qrcode(0, "M");
+  qr.addData(url);
+  qr.make();
+  box.href = url;
+  box.title = `Scan with the phone camera to join session ${code}`;
+  box.innerHTML = qr.createSvgTag({ cellSize: 2, margin: 2, scalable: true });
+}
+
 function updateRoomBadge(code, paired) {
   if (!roomCodeBadge) {
     return;
@@ -1094,6 +1121,7 @@ function updateRoomBadge(code, paired) {
   if (code) {
     currentRoomCode = code;
     roomCodeBadge.querySelector(".room-code-value").textContent = code;
+    renderPairQr(code);
   }
   roomCodeBadge.classList.toggle("is-paired", Boolean(paired));
   const statusEl = roomCodeBadge.querySelector(".room-code-status");

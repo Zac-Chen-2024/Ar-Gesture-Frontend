@@ -459,12 +459,20 @@ if (pickerRefresh) {
 // the session this phone was paired with; a dropped connection rejoins it
 let rejoinCode = null;
 
+// a phone that scanned a display's code opens mobile.html?room=1234 and joins
+// that session at once; without the parameter the session list is shown as before
+let scannedCode = new URLSearchParams(location.search).get("room");
+if (scannedCode && !/^\d{4}$/.test(scannedCode)) {
+  scannedCode = null;
+}
+
 function onSocketOpen() {
   sendMessage({ type: "join", role: "mobile", inputDevice: "phone",
     deviceInfo: { width: innerWidth, height: innerHeight, pixelRatio: devicePixelRatio,
       userAgent: navigator.userAgent } });
-  if (rejoinCode) {
-    sendMessage({ type: "join-room", code: rejoinCode });
+  const code = rejoinCode || scannedCode;
+  if (code) {
+    sendMessage({ type: "join-room", code });
   }
 }
 
@@ -537,6 +545,10 @@ function onSocketMessage(event) {
   }
 
   if (message.type === "room-joined") {
+    if (scannedCode) {
+      scannedCode = null;
+      history.replaceState(null, "", location.pathname); // later reloads rejoin as usual
+    }
     paired = true;
     roomCode = message.code;
     rejoinCode = message.code;
@@ -548,6 +560,10 @@ function onSocketMessage(event) {
   }
 
   if (message.type === "room-closed" || message.type === "room-error") {
+    if (scannedCode) {
+      scannedCode = null;
+      history.replaceState(null, "", location.pathname);
+    }
     rejoinCode = null; // the display is gone: pick a session again
     stopP2P();
     showPicker(message.message || "Session ended.");
