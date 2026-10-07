@@ -304,7 +304,7 @@ def main():
         write(f, body, (cx - side / 2, cy - side / 2, side, side), ground=INK)
         files.append(f)
     with zipfile.ZipFile(HERE / "xblab-logo.zip", "w", zipfile.ZIP_DEFLATED) as z:
-        for f in files + sorted(HERE.glob("xblab-motion-*.svg")) + [HERE / "README.md"]:
+        for f in files + sorted(HERE.glob("xblab-motion-*.svg")) + sorted(HERE.glob("xblab-motion-*.gif")) + [HERE / "README.md"]:
             z.write(f, f.name)
     print("\n".join(f.name for f in files))
 

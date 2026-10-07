@@ -12,7 +12,8 @@ their own).
 | `xblab-stacked-*.svg` | Mark over name. Square and narrow spaces. |
 | `xblab-symbol-*.svg` | The mark alone. Avatars, favicons. |
 | `xblab-app-icon-*.svg` | The mark reversed on an ink square. |
-| `xblab-motion-*.svg` | The animation (X → ∞ → mark → name) as animated SVG, plays once and holds; `-loop` repeats. Open in a browser, or use as `<img>`. |
+| `xblab-motion-*.svg` | The animation (X → ∞ → mark → name) as animated SVG, plays once and holds; `-loop` repeats. Open in a browser, or use as `<img>`. `-fast` is the same at 2.2× speed, used by the site's page transitions. |
+| `xblab-motion-*-loop.gif` | The looping motion as GIF, 960 × 540, 25 fps, for places that do not play SVG (slides, chat, email). |
 
 ## Rules
 
@@ -25,4 +26,4 @@ their own).
 - **Type:** X and Lab are TeX Gyre Pagella (Palatino); the B is drawn in the
   mark's pixels; the descriptor is Inter SemiBold with 0.2 em letter spacing.
 
-`build.py` rebuilds every file from the geometry.
+`build.py` rebuilds every file from the geometry; `motion.py` rebuilds the animations and `gif.py` the GIFs (run motion, gif, then build, so the zip has everything).

@@ -57,7 +57,7 @@
       /* the lab's logo over the title */
       .lab-logo {
         display: block;
-        height: 34px;
+        height: 56px;
         width: auto;
         margin: 0 auto;
       }
@@ -324,8 +324,9 @@
     </style>
   </head>
   <body>
+    <script src="transition.js?v=20261007-1"></script>
     <main class="card">
-      <img class="lab-logo" src="brand/xblab/xblab-primary-green.svg" alt="XBLab" />
+      <img class="lab-logo" src="brand/xblab/xblab-institutional-green.svg" alt="XBLab · Human–Computer Interaction" />
       <h1>Ar-Gesture</h1>
       <svg class="trace" viewBox="0 0 240 26" aria-hidden="true">
         <path pathLength="1" d="M6 18 C 40 2, 62 24, 96 12 S 150 2, 176 16 S 214 20, 232 8" />
@@ -364,6 +365,16 @@
       </nav>
       <p class="phone-link">No camera on the phone? Open <a href="mobile.html">Mobile</a> and tap the session number.</p>
     </main>
+    <script>
+      // A mode button fades the page out and plays the XBLab motion first.
+      document.querySelectorAll("a.btn.demo, a.btn.game").forEach((a) => {
+        a.addEventListener("click", (e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+          e.preventDefault();
+          window.XBLTransition.go(a.href, a.classList.contains("game") ? "red" : "green");
+        });
+      });
+    </script>
     <script>
       // Hovering a mode: the title's swipe is drawn again in that mode's colour.
       // Demo grows leaves along the swipes; Game throws quench sparks from the

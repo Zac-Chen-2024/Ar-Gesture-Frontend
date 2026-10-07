@@ -9,21 +9,34 @@ pixels too.
     python3 motion.py       # writes xblab-motion-*.svg
 """
 import math
+import re
 
 import build as B
 
 NP = 240
 W, H = 640, 360
-# the timeline, in ms
-T = dict(x=420, grow=900, stand=600, fill=650, part=350, scan=900, name=800, bscan=520)
-AT = dict(grow=T["x"])
-AT["stand"] = AT["grow"] + T["grow"]
-AT["fill"] = AT["stand"] + T["stand"]
-AT["part"] = AT["fill"] + T["fill"]
-AT["scan"] = AT["part"] + T["part"] * 0.6
-AT["name"] = AT["scan"] + T["scan"] + 80
-AT["bscan"] = AT["name"] + T["name"] * 0.55
-END = max(AT["name"] + T["name"], AT["bscan"] + T["bscan"]) + 200
+# the timeline, in ms (speed > 1 plays it faster, for page transitions)
+BASE = dict(x=420, grow=900, stand=600, fill=650, part=350, scan=900, name=800, bscan=520)
+T, AT, END = {}, {}, 0.0
+
+
+def timeline(speed=1.0):
+    global END
+    T.clear()
+    T.update({k: v / speed for k, v in BASE.items()})
+    AT.clear()
+    AT["grow"] = T["x"]
+    AT["stand"] = AT["grow"] + T["grow"]
+    AT["fill"] = AT["stand"] + T["stand"]
+    AT["part"] = AT["fill"] + T["fill"]
+    AT["scan"] = AT["part"] + T["part"] * 0.6
+    AT["name"] = AT["scan"] + T["scan"] + 80 / speed
+    AT["bscan"] = AT["name"] + T["name"] * 0.55
+    END = max(AT["name"] + T["name"], AT["bscan"] + T["bscan"]) + 200 / speed
+    return END
+
+
+timeline()
 
 
 def ease(t):
@@ -246,12 +259,25 @@ def build(accent, loop_it, total):
             f'<rect width="{W}" height="{H}" fill="{B.PAPER}"/>{body}</svg>\n')
 
 
+IDS = ("top", "bottom", "holes", "L", "R", "S", "N", "BS")
+
+
+def scoped(svg):
+    """Prefix the ids, so the svg can be put inline into any page."""
+    return re.sub(r'(id="|#)(' + "|".join(IDS) + r')(?=["\)])', r"\1xbl-\2", svg)
+
+
 def main():
     for colour, accent in B.ACCENTS.items():
-        once = build(accent, False, END)
-        (B.HERE / f"xblab-motion-{colour}.svg").write_text(once)
-        looped = build(accent, True, END + 1800)  # holds the lockup, then starts again
-        (B.HERE / f"xblab-motion-{colour}-loop.svg").write_text(looped)
+        end = timeline(1.0)
+        once = build(accent, False, end)
+        (B.HERE / f"xblab-motion-{colour}.svg").write_text(scoped(once))
+        looped = build(accent, True, end + 1800)  # holds the lockup, then starts again
+        (B.HERE / f"xblab-motion-{colour}-loop.svg").write_text(scoped(looped))
+        # for page transitions: the same, about twice as fast
+        end = timeline(2.2)
+        (B.HERE / f"xblab-motion-{colour}-fast.svg").write_text(scoped(build(accent, False, end)))
+        timeline(1.0)
         print(colour, len(once) // 1024, "KB")
 
 
