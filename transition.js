@@ -2,13 +2,14 @@
    of sparks flies (Game) while the page fades to paper; then the XBLab mark
    draws itself in the middle (X, ∞, the eight, the pixels) and the page
    opens. The page it opens starts on the finished mark and fades it away.
-   Load this script at the top of <body>, so an arriving page is covered
-   before it first paints. */
+   Load this script in <head>: an arriving page is covered (with the finished
+   mark, kept from the page before) before anything of it is painted. */
 (() => {
   const KEY = "xbl-transition";
   const ROOT = document.currentScript.src.replace(/transition\.js.*$/, "");
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const FADE_IN = 240, LOGO_AT = 280, FADE_OUT = 420;
+  const FADE_IN = 200, LOGO_AT = 170, FADE_OUT = 380;
+  const SIZE = "display:block;width:min(46vmin,360px);height:auto";
   const GREEN = "#25915f", GREEN_DARK = "#1c6f49";
   const wait = (ms) => new Promise((done) => setTimeout(done, ms));
   const ease = (t) => 1 - Math.pow(1 - t, 3);
@@ -17,7 +18,8 @@
     const o = document.createElement("div");
     o.className = "xbl-transition";
     o.style.cssText = `position:fixed;inset:0;z-index:2147483000;background:#faf8f3;display:grid;place-items:center;opacity:${opacity};transition:opacity ${FADE_IN}ms ease`;
-    document.body.appendChild(o);
+    // on <html> itself, so it can go up before <body> exists
+    (document.body || document.documentElement).appendChild(o);
     return o;
   }
   // the mark's motion as inline svg, paused at its start
@@ -29,7 +31,7 @@
     const svg = box.querySelector("svg");
     svg.removeAttribute("width");
     svg.removeAttribute("height");
-    svg.style.cssText = "display:block;width:min(46vmin,360px);height:auto";
+    svg.style.cssText = SIZE;
     svg.pauseAnimations();
     svg.setCurrentTime(0);
     const dur = parseFloat(svg.querySelector("animate").getAttribute("dur")) * 1000;
@@ -42,7 +44,7 @@
     c.className = "xbl-transition";
     c.width = innerWidth * dpr;
     c.height = innerHeight * dpr;
-    c.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;z-index:2147483001;pointer-events:none;transition:opacity 260ms ease";
+    c.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;z-index:2147483001;pointer-events:none;transition:opacity 220ms ease";
     document.body.appendChild(c);
     const ctx = c.getContext("2d");
     ctx.scale(dpr, dpr);
@@ -89,7 +91,7 @@
       if (!c.isConnected) return;
       const ms = now - t0;
       ctx.clearRect(0, 0, innerWidth, innerHeight);
-      if (kind === "sprig") sprig(ease(Math.min(1, ms / 420)));
+      if (kind === "sprig") sprig(ease(Math.min(1, ms / 340)));
       for (const s of sparks) {
         if (s.life <= 0) continue;
         s.vy += 0.2; s.vx *= 0.985;
@@ -114,16 +116,18 @@
     o.style.pointerEvents = "auto";
     const fx = flourish(colour === "red" ? "sparks" : "sprig", x ?? innerWidth / 2, y ?? innerHeight / 2);
     const loading = motion(colour).catch(() => null);
+    // the finished mark, small and still, for the next page to show at once
+    const still = fetch(`${ROOT}brand/xblab/xblab-mark-still-${colour}.svg`).then((r) => (r.ok ? r.text() : "")).catch(() => "");
     requestAnimationFrame(() => { o.style.opacity = "1"; });
     const m = await loading;
     if (!m) { location.href = href; return; }
     o.appendChild(m.svg);
     await wait(LOGO_AT);
     m.svg.unpauseAnimations();
-    await wait(260);
+    await wait(200);
     fx.style.opacity = "0"; // the flourish gives way to the mark
-    await wait(Math.max(0, m.dur - 260) + 100);
-    sessionStorage.setItem(KEY, JSON.stringify({ colour, at: Date.now() }));
+    await wait(Math.max(0, m.dur - 200) + 60);
+    sessionStorage.setItem(KEY, JSON.stringify({ colour, at: Date.now(), still: await still }));
     location.href = href;
   }
 
@@ -133,19 +137,19 @@
     arrived = JSON.parse(sessionStorage.getItem(KEY));
     sessionStorage.removeItem(KEY);
   } catch { arrived = null; }
-  if (arrived && Date.now() - arrived.at < 8000 && document.body && !calm) {
+  if (arrived && Date.now() - arrived.at < 8000 && !calm) {
     const o = cover(1);
     o.style.transition = `opacity ${FADE_OUT}ms ease`;
-    motion(arrived.colour).then((m) => {
-      m.svg.setCurrentTime(m.dur / 1000);
-      o.appendChild(m.svg);
-    }).catch(() => {}).finally(async () => {
-      if (document.readyState !== "complete") await new Promise((done) => addEventListener("load", done, { once: true }));
-      await wait(120);
+    o.innerHTML = arrived.still || ""; // in place before the first paint
+    const svg = o.querySelector("svg");
+    if (svg) { svg.removeAttribute("width"); svg.removeAttribute("height"); svg.style.cssText = SIZE; }
+    (async () => {
+      if (document.readyState === "loading") await new Promise((done) => document.addEventListener("DOMContentLoaded", done, { once: true }));
+      await wait(90);
       o.style.opacity = "0";
       await wait(FADE_OUT);
       o.remove();
-    });
+    })();
   }
   // back to the home page with the browser's Back: drop what was left from leaving
   addEventListener("pageshow", (e) => {

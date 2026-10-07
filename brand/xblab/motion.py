@@ -282,9 +282,16 @@ def main():
         looped = build(accent, True, end + 1800)  # holds the lockup, then starts again
         (B.HERE / f"xblab-motion-{colour}-loop.svg").write_text(scoped(looped))
         # for page transitions: the mark alone, ending once the pixels are in, fast
-        timeline(2.8)
-        end = AT["scan"] + T["scan"] + 60
+        timeline(3.6)
+        end = AT["scan"] + T["scan"] + 40
         (B.HERE / f"xblab-mark-motion-{colour}.svg").write_text(scoped(build(accent, False, end, with_name=False)))
+        # its last frame, still and small: an arriving page shows it at once
+        cells = B.mark_cells()
+        (B.HERE / f"xblab-mark-still-{colour}.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -150 300 300" width="300" height="300">'
+            f'<rect x="-150" y="-150" width="300" height="300" fill="{B.PAPER}"/>'
+            f'<path fill="{B.INK}" fill-rule="evenodd" d="{B.person_path(-B.C / 2)}"/>'
+            f'<path fill="{accent}" d="{B.cells_path(cells, B.C / 2, 0, B.P)}"/></svg>\n')
         timeline(1.0)
         print(colour, len(once) // 1024, "KB")
 
