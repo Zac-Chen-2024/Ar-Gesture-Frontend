@@ -284,6 +284,37 @@ def write(path, body, box, ground=None, pad=0.0):
                     f'width="{n(w)}" height="{n(h)}">{bg}{body}</svg>\n')
 
 
+def interactive_institutional():
+    """The institutional lockup for the home page: ink parts drawn, the pixels
+    (the mark's and the B's) one <rect class="px"> each, with a delay (--d)
+    that sweeps across them with a little jitter, so a colour change set in
+    CSS turns them over pixel by pixel."""
+    import random
+    rnd = random.Random(7)
+    INK_BOX.clear()
+    _, (bx, by, bw, bh) = mark(INK, "#000")
+    tag_per_name = name_width(1) / SANS.width(DESCRIPTOR, 1, TRACK)
+    size = bh / (CAP * (1 + LEAD) + CAP_UI * tag_per_name)
+    x0, base = bx + bw + SPACE, by + size * CAP
+    xd, x = ROMAN.path("X", x0, base, size)
+    bcells = ROMAN.raster("B", size, P)
+    bx0 = x
+    x += ROMAN.advance("B") * size
+    ld, x = ITALIC.path("Lab", x, base, size)
+    tag, _ = descriptor(x0 + size * 0.02, by + bh, size * tag_per_name, INK, 0.45)
+    cells = [(C / 2 + i * P, j * P) for i, j in mark_cells()] + [(bx0 + i * P, base + j * P) for i, j in bcells]
+    left, right = min(c[0] for c in cells), max(c[0] for c in cells)
+    rects = []
+    for cx, cy in sorted(cells):
+        delay = (cx - left) / (right - left) * 300 + rnd.random() * 110
+        rects.append(f'<rect class="px" x="{n(cx - 0.2)}" y="{n(cy - 0.2)}" width="{n(P + 0.4)}" height="{n(P + 0.4)}" style="--d:{delay:.0f}ms"/>')
+    x_, y_, w_, h_ = ink_box()
+    return (f'<svg class="lab-logo" viewBox="{n(x_)} {n(y_)} {n(w_)} {n(h_)}" role="img" aria-label="XBLab · Human–Computer Interaction">'
+            f'<path fill="{INK}" fill-rule="evenodd" d="{person_path(-C / 2)}"/>'
+            f'<path fill="{INK}" d="{xd} {ld}"/>{tag}'
+            f'<g shape-rendering="crispEdges">{"".join(rects)}</g></svg>')
+
+
 def main():
     files = []
     for colour, accent in ACCENTS.items():
@@ -303,6 +334,14 @@ def main():
         f = HERE / f"xblab-app-icon-{colour}.svg"
         write(f, body, (cx - side / 2, cy - side / 2, side, side), ground=INK)
         files.append(f)
+    # the home page carries the interactive lockup inline, between these markers
+    home = HERE.parent.parent / "index.html"
+    if home.exists():
+        page = home.read_text()
+        start, end = "<!-- xblab:start -->", "<!-- xblab:end -->"
+        if start in page and end in page:
+            page = page[:page.index(start) + len(start)] + interactive_institutional() + page[page.index(end):]
+            home.write_text(page)
     with zipfile.ZipFile(HERE / "xblab-logo.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in files + sorted(HERE.glob("xblab-motion-*.svg")) + sorted(HERE.glob("xblab-mark-*.svg")) + sorted(HERE.glob("xblab-motion-*.gif")) + [HERE / "README.md"]:
             z.write(f, f.name)
