@@ -238,9 +238,11 @@ def build(accent, loop_it, total, with_name=True):
             f'<clipPath id="N"><rect x="{n(bx + bw)}" y="-500" width="3000" height="1000"/></clipPath>'
             f'<clipPath id="BS"><rect x="-500" y="{n(b_top)}" width="3000" height="1000">{anim("y", by_, bscan_t, total, loop_it)}</rect></clipPath>'
             f'</defs>')
+    # each half is cut at the mirror first and then moved, so the cut moves with it
     half = lambda clip, col, sign, inner_clip="": (
-        f'<g clip-path="url(#{clip})"><g transform="translate(0 0)">'
+        f'<g transform="translate(0 0)">'
         + anim_t("translate", lambda t: f"{n(sign * part(t))} 0", part_t, total, loop_it, additive=False)
+        + f'<g clip-path="url(#{clip})">'
         + (f'<g clip-path="url(#{inner_clip})">' if inner_clip else "<g>")
         + f'<g>{rot}<use xlink:href="#top" {use_attrs(col)}/><use xlink:href="#bottom" {use_attrs(col)}/></g></g></g></g>')
     body = (defs
@@ -291,7 +293,7 @@ def main():
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -150 300 300" width="300" height="300">'
             f'<rect x="-150" y="-150" width="300" height="300" fill="{B.PAPER}"/>'
             f'<path fill="{B.INK}" fill-rule="evenodd" d="{B.person_path(-B.C / 2)}"/>'
-            f'<path fill="{accent}" d="{B.cells_path(cells, B.C / 2, 0, B.P)}"/></svg>\n')
+            f'<path fill="{accent}" shape-rendering="crispEdges" d="{B.cells_path(cells, B.C / 2, 0, B.P)}"/></svg>\n')
         timeline(1.0)
         print(colour, len(once) // 1024, "KB")
 

@@ -328,7 +328,7 @@
         }
       }
     </style>
-    <script src="transition.js?v=20261007-3"></script>
+    <script src="transition.js?v=20261007-4"></script>
   </head>
   <body>
     <main class="card">
@@ -372,14 +372,12 @@
     </main>
     <img class="lab-logo" src="brand/xblab/xblab-institutional-green.svg" alt="XBLab · Human–Computer Interaction" />
     <script>
-      // A mode button: a sprig or sparks where you click, then the XBLab mark draws itself.
+      // A mode button: the page fades and the XBLab mark draws itself first.
       document.querySelectorAll("a.btn.demo, a.btn.game").forEach((a) => {
         a.addEventListener("click", (e) => {
           if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
           e.preventDefault();
-          const r = a.querySelector(".art").getBoundingClientRect();
-          window.XBLTransition.go(a.href, a.classList.contains("game") ? "red" : "green",
-            e.clientX || r.left + r.width / 2, e.clientY || r.top + r.height / 2);
+          window.XBLTransition.go(a.href, a.classList.contains("game") ? "red" : "green");
         });
       });
     </script>
