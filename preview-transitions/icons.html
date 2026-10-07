@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XBLab · mark studies</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --paper: #faf8f3;
+        --ink: #111111;
+        --ink-soft: rgba(17, 17, 17, 0.64);
+        --ink-faint: rgba(17, 17, 17, 0.42);
+        --green: #25915f;
+        --red: #d6452b;
+        --accent: var(--green);
+        --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      }
+      body.is-red { --accent: var(--red); }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+      .page { max-width: 78rem; margin: 0 auto; padding: 0 32px 80px; }
+      .mast { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; padding: 44px 0 22px; border-bottom: 1px solid var(--ink); }
+      .kicker { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); }
+      h1 { margin: 10px 0 0; font-family: var(--font-serif); font-weight: 400; font-size: 3rem; line-height: 1; }
+      .seg { display: inline-flex; border: 1px solid var(--ink); }
+      .seg button { font: inherit; font-size: 12px; padding: 5px 12px; background: none; border: 0; cursor: pointer; color: var(--ink-soft); }
+      .seg button + button { border-left: 1px solid var(--ink); }
+      .seg button.is-on { background: var(--ink); color: var(--paper); }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 32px; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+      .card { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); display: flex; flex-direction: column; }
+      .card .big { display: grid; place-items: center; height: 300px; }
+      .card .big svg { height: 220px; width: auto; overflow: visible; }
+      .card .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; padding: 14px 18px; border-top: 1px solid rgba(17,17,17,.14); }
+      .card .row svg.lock { height: 44px; width: auto; overflow: visible; }
+      .card .row .smalls { display: flex; align-items: end; gap: 10px; }
+      .card .row .smalls svg { overflow: visible; }
+      .card .text { padding: 4px 18px 18px; }
+      .card h2 { margin: 6px 0 4px; font-family: var(--font-serif); font-weight: 400; font-size: 1.3rem; }
+      .card h2 b { font-weight: 400; color: var(--ink-faint); margin-right: 8px; }
+      .card p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+      .tile { background: var(--ink); }
+      .wordmark { font-family: var(--font-serif); fill: var(--ink); }
+      @media (max-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } }
+      @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="mast">
+        <div>
+          <p class="kicker">XBLab · mark studies</p>
+          <h1>Solid, cut by a mirror</h1>
+        </div>
+        <div class="seg"><button data-colour="green" class="is-on">Demo</button><button data-colour="red">Game</button></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <script>
+      // The figure eight, solid: two loops (a circle and the two tangents from
+      // the crossing) meeting at a point. The mirror is a cut down the middle:
+      // the right half is a B, the left half its reflection; the notches either
+      // side of the waist are the X.
+      const NS = "http://www.w3.org/2000/svg";
+      const INK = "var(--ink)", ACC = "var(--accent)", PAPER = "var(--paper)";
+      function el(tag, attrs, parent) {
+        const e = document.createElementNS(NS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(e);
+        return e;
+      }
+      function geometry({ k1 = 0.8, angle = 50, R = 60 } = {}) {
+        const a = (angle * Math.PI) / 180, r1 = R * k1, r2 = R;
+        return { a, r1, r2, d1: r1 / Math.sin(a), d2: r2 / Math.sin(a), R };
+      }
+      const circle = (cx, cy, r) => `M${cx - r} ${cy} A${r} ${r} 0 1 0 ${cx + r} ${cy} A${r} ${r} 0 1 0 ${cx - r} ${cy} Z`;
+      function teardrop(g, up) {
+        const r = up ? g.r1 : g.r2, d = up ? g.d1 : g.d2, s = up ? -1 : 1;
+        const tx = r * Math.cos(g.a), ty = s * (d - r * Math.sin(g.a));
+        return `M0 0 L${tx} ${ty} A${r} ${r} 0 1 ${up ? 0 : 1} ${-tx} ${ty} Z`;
+      }
+      // the solid eight, with optional round counters (holes) in each loop
+      function solid(g, counter) {
+        let d = teardrop(g, true) + " " + teardrop(g, false);
+        if (counter) d += " " + circle(0, -g.d1, g.r1 * counter) + " " + circle(0, g.d2, g.r2 * counter);
+        return d;
+      }
+      // a loop drawn as a heavy line (for the line study)
+      function outline(g) { return teardrop(g, true) + " " + teardrop(g, false); }
+      const box = (g, pad = 0) => ({ x: -g.r2 - pad, y: -(g.d1 + g.r1) - pad, w: 2 * (g.r2 + pad), h: g.d1 + g.r1 + g.d2 + g.r2 + 2 * pad });
+
+      // draw a study into a group: left and right halves, each clipped, a gap between
+      let uid = 0;
+      function halves(parent, g, { gap, left, right, counter, line }) {
+        const defs = el("defs", {}, parent);
+        const id = "h" + uid++;
+        const L = el("clipPath", { id: id + "l" }, defs), Rt = el("clipPath", { id: id + "r" }, defs);
+        const b = box(g, line || 0);
+        el("rect", { x: b.x - 10, y: b.y - 10, width: -b.x + 10 - gap / 2, height: b.h + 20 }, L);
+        el("rect", { x: gap / 2, y: b.y - 10, width: b.w, height: b.h + 20 }, Rt);
+        [[L, left], [Rt, right]].forEach(([clip, paint]) => {
+          if (!paint) return;
+          const grp = el("g", { "clip-path": `url(#${clip.id})` }, parent);
+          if (line) el("path", { d: outline(g), fill: "none", stroke: paint.fill, "stroke-width": line, "stroke-linejoin": "miter", "stroke-miterlimit": 10, opacity: paint.opacity ?? 1 }, grp);
+          else el("path", { d: solid(g, counter), fill: paint.fill, "fill-rule": "evenodd", opacity: paint.opacity ?? 1 }, grp);
+        });
+        return box(g, line ? line / 2 : 0);
+      }
+
+      const STUDIES = [
+        {
+          name: "Mirror",
+          text: "A solid eight cut down the middle. On the right, the computer: a B in the mode's colour. On the left, the person: its reflection in ink. The round counters make each half read as a letter, and the notches at the waist are the X.",
+          draw: (p, g) => halves(p, g, { gap: g.R * 0.14, left: { fill: INK }, right: { fill: ACC }, counter: 0.46 }),
+        },
+        {
+          name: "Reflection",
+          text: "One B in ink. Its reflection is the same B, fainter, as in a mirror. Quieter, and closer to the idea of a mirror than to two halves.",
+          draw: (p, g) => halves(p, g, { gap: g.R * 0.14, left: { fill: INK, opacity: 0.2 }, right: { fill: INK }, counter: 0.46 }),
+        },
+        {
+          name: "Silhouette",
+          text: "No counters: two solid halves of an hourglass eight. The most abstract of the studies and the strongest at small sizes. It reads less as letters and more as a sign.",
+          draw: (p, g) => halves(p, g, { gap: g.R * 0.12, left: { fill: INK }, right: { fill: ACC } }),
+        },
+        {
+          name: "Heavy line",
+          text: "The current idea redrawn: the line is three times heavier and has sharp joins, and the mirror becomes a cut instead of a drawn axis. This is the closest to the animation as it is.",
+          draw: (p, g) => halves(p, g, { gap: g.R * 0.14, left: { fill: INK }, right: { fill: ACC }, line: g.R * 0.36 }),
+        },
+        {
+          name: "Symmetric mirror",
+          text: "The Mirror study with equal loops. More balanced and more like ∞ standing up, but less like a B.",
+          geo: { k1: 1, angle: 50 },
+          draw: (p, g) => halves(p, g, { gap: g.R * 0.14, left: { fill: INK }, right: { fill: ACC }, counter: 0.46 }),
+        },
+        {
+          name: "Tile",
+          text: "The Mirror study reversed on an ink square, as an app icon or avatar. The cut runs through the whole square, so the mirror line meets the frame.",
+          tile: true,
+          draw: (p, g) => halves(p, g, { gap: g.R * 0.14, left: { fill: PAPER }, right: { fill: ACC }, counter: 0.46 }),
+        },
+      ];
+
+      const CAP = (() => {
+        const c = document.createElement("canvas").getContext("2d");
+        c.font = `100px ${getComputedStyle(document.documentElement).getPropertyValue("--font-serif")}`;
+        return c.measureText("XB").actualBoundingBoxAscent / 100 || 0.68;
+      })();
+      function fit(svg, b, pad) { svg.setAttribute("viewBox", `${b.x - pad} ${b.y - pad} ${b.w + 2 * pad} ${b.h + 2 * pad}`); }
+
+      function render() {
+        const grid = document.getElementById("grid");
+        grid.innerHTML = "";
+        STUDIES.forEach((s, i) => {
+          const g = geometry(s.geo);
+          const card = document.createElement("div");
+          card.className = "card";
+          grid.appendChild(card);
+          const big = document.createElement("div");
+          big.className = "big";
+          card.appendChild(big);
+          const svg = el("svg", {}, big);
+          if (s.tile) {
+            const b = box(g), side = b.h * 1.32;
+            el("rect", { x: -side / 2, y: b.y + b.h / 2 - side / 2, width: side, height: side, fill: INK }, svg);
+            s.draw(svg, g);
+            el("rect", { x: -g.R * 0.07, y: b.y + b.h / 2 - side / 2, width: g.R * 0.14, height: side, fill: PAPER }, svg);
+            fit(svg, { x: -side / 2, y: b.y + b.h / 2 - side / 2, w: side, h: side }, 2);
+          } else fit(svg, s.draw(svg, g), 4);
+
+          // the lockup and small sizes
+          const row = document.createElement("div");
+          row.className = "row";
+          card.appendChild(row);
+          const lock = el("svg", { class: "lock" }, row);
+          const onPaper = s.tile ? STUDIES[0].draw : s.draw; // the tile's reversed colours are for dark grounds
+          const b = onPaper(el("g", {}, lock), g);
+          const cap = b.h * 0.5, size = cap / CAP;
+          const word = el("text", { class: "wordmark", "font-size": size, x: b.x + b.w + g.R * 0.8, y: b.y + b.h / 2 + cap / 2 }, lock);
+          word.innerHTML = 'XB<tspan font-style="italic">Lab</tspan>';
+          fit(lock, { x: b.x, y: b.y, w: b.w + g.R * 0.8 + word.getComputedTextLength(), h: b.h }, 2);
+          const smalls = document.createElement("div");
+          smalls.className = "smalls";
+          row.appendChild(smalls);
+          [32, 16].forEach((px) => {
+            const sv = el("svg", { height: px }, smalls);
+            fit(sv, onPaper(el("g", {}, sv), g), 1);
+          });
+
+          const text = document.createElement("div");
+          text.className = "text";
+          text.innerHTML = `<h2><b>${String.fromCharCode(65 + i)}</b>${s.name}</h2><p>${s.text}</p>`;
+          card.appendChild(text);
+        });
+      }
+      document.querySelectorAll("[data-colour]").forEach((b) => b.addEventListener("click", () => {
+        document.body.classList.toggle("is-red", b.dataset.colour === "red");
+        document.querySelectorAll("[data-colour]").forEach((x) => x.classList.toggle("is-on", x === b));
+      }));
+      render();
+    </script>
+  </body>
+</html>
