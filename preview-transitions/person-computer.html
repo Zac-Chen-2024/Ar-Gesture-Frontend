@@ -32,6 +32,25 @@
       .hero { margin-top: 32px; border: 1px solid var(--ink); }
       .hero svg { display: block; width: 100%; height: auto; cursor: pointer; }
       .hint { margin: 10px 0 0; font-size: 12px; color: var(--ink-faint); }
+      .guide h3, h3.studies { margin: 46px 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); }
+      .locks { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+      .locks figure, .rules > div { margin: 0; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 18px 20px; display: flex; flex-direction: column; }
+      .rules figure { margin: 0; }
+      .locks .art { height: 230px; display: grid; place-items: center; }
+      .locks .art svg { max-width: 86%; max-height: 170px; overflow: visible; }
+      .locks h4, .rules h4 { margin: 12px 0 4px; font-family: var(--font-serif); font-weight: 400; font-size: 1.2rem; }
+      .locks p, .rules p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+      .rules { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+      .rules .art { min-height: 230px; display: grid; place-items: center; }
+      .rules .art svg { max-width: 92%; overflow: visible; }
+      .mins { display: grid; grid-template-columns: auto 1fr; gap: 14px 18px; align-items: center; padding: 10px 0; }
+      .mins span { font-size: 11px; letter-spacing: .06em; color: var(--ink-faint); }
+      .mins div { display: flex; align-items: center; gap: 22px; }
+      .mins svg { overflow: visible; }
+      .clear-line { fill: none; stroke: var(--accent); stroke-width: 0.8; stroke-dasharray: 4 3; }
+      .unit { fill: var(--accent); opacity: .35; }
+      .unit-label { font-family: var(--font-ui); font-size: 9px; fill: var(--ink-faint); }
+      @media (max-width: 860px) { .locks, .rules { grid-template-columns: 1fr; } }
       .grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 32px; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
       .card { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); display: flex; flex-direction: column; }
       .card .big { display: grid; place-items: center; height: 300px; }
@@ -69,6 +88,16 @@
       </div>
       <div class="hero"><svg viewBox="0 0 640 360" id="hero"></svg></div>
       <p class="hint">X → ∞ → it stands up → it fills → a scan line runs down the mirror and the far side turns to pixels → the name. Click to replay.</p>
+      <section class="guide">
+        <h3>Lockups</h3>
+        <div class="locks" id="locks"></div>
+        <h3>Clear space and minimum sizes</h3>
+        <div class="rules">
+          <div id="clear"></div>
+          <div id="mins"></div>
+        </div>
+      </section>
+      <h3 class="studies">Studies</h3>
       <div class="grid" id="grid"></div>
     </div>
 
@@ -161,19 +190,16 @@
         }
         return { adv, cells };
       }
-      // the name and the descriptor under it, together exactly as tall as the
-      // mark: the name's capitals start at the mark's top, the descriptor sits
-      // on its foot and runs the name's full width. The B is drawn in the
-      // mark's pixels, the rest in type.
-      const TAG = 0.15, LEAD = 0.36; // descriptor capitals and the space above them, in name capitals
+      // ---------- the name. "XB" and "Lab" in type, the B in the mark's pixels.
+      const LEAD = 0.36; // space between name and descriptor, in name capitals
+      const TRACK = 0.2; // the descriptor's letter spacing, in em
+      const DESCRIPTOR = "HUMAN–COMPUTER INTERACTION";
       const CAP_UI = (() => {
         const c = document.createElement("canvas").getContext("2d");
         c.font = `600 100px ${getComputedStyle(document.documentElement).getPropertyValue("--font-ui")}`;
         return c.measureText("HCI").actualBoundingBoxAscent / 100 || 0.72;
       })();
-      function name(parent, g, b, { gap = 0, colour = ACC } = {}) {
-        const cap = b.h / (1 + LEAD + TAG), size = cap / CAP;
-        const x0 = b.x + b.w + g.R * 0.7, base = b.y + cap;
+      function wordmark(parent, g, x0, base, size, { gap = 0, colour = ACC } = {}) {
         const word = el("g", {}, parent);
         const X = el("text", { class: "wordmark", "font-size": f(size), x: f(x0), y: f(base) }, word);
         X.textContent = "X";
@@ -186,11 +212,52 @@
         const cells = B.cells.map((q) => ({ ...q, e: el("rect", { x: f(q.x + o), y: f(q.y + o), width: f(sz), height: f(sz) }, pixB) }));
         const lab = el("text", { class: "wordmark", "font-size": f(size), x: f(x0 + wX + B.adv), y: f(base), "font-style": "italic" }, word);
         lab.textContent = "Lab";
-        const wName = wX + B.adv + lab.getComputedTextLength();
-        const tag = el("text", { class: "descriptor", "font-size": f((cap * TAG) / CAP_UI), x: f(x0 + size * 0.02), y: f(b.y + b.h),
-          textLength: f(wName - size * 0.04), lengthAdjust: "spacing" }, word);
-        tag.textContent = "HUMAN–COMPUTER INTERACTION";
-        return { word, smoothB, pixB, cells, base, cap, width: b.w + g.R * 0.7 + wName };
+        return { word, smoothB, pixB, cells, width: wX + B.adv + lab.getComputedTextLength() };
+      }
+      // the descriptor: fixed tracking, set left; its size is chosen so that it runs about the name's width
+      function descriptor(parent, x, base, size) {
+        const t = el("text", { class: "descriptor", "font-size": f(size), x: f(x), y: f(base), "letter-spacing": f(size * TRACK) }, parent);
+        t.textContent = DESCRIPTOR;
+        return t;
+      }
+      // widths per unit of font size, measured once on a scratch svg
+      let PER = null;
+      function per(g) {
+        if (PER) return PER;
+        const svg = el("svg", { style: "position:absolute;left:-9999px;top:0" }, document.body);
+        const w = wordmark(svg, g, 0, 0, 100);
+        const t = descriptor(svg, 0, 0, 100);
+        PER = { name: w.width / 100, tag: (t.getComputedTextLength() - 100 * TRACK) / 100 };
+        svg.remove();
+        return PER;
+      }
+      // a lockup beside the mark (whose box is b). mode:
+      //   primary        the name alone, capitals 55% of the mark, centred on it
+      //   institutional  name and descriptor together exactly as tall as the mark
+      function name(parent, g, b, { mode = "primary", gap = 0, colour = ACC } = {}) {
+        const space = 4 * g.p, x0 = b.x + b.w + space, P = per(g);
+        if (mode === "primary") {
+          const cap = b.h * 0.55, size = cap / CAP, base = b.y + b.h / 2 + cap / 2;
+          const w = wordmark(parent, g, x0, base, size, { gap, colour });
+          return { ...w, base, cap, width: b.w + space + w.width };
+        }
+        const tagPerName = P.name / P.tag; // descriptor size per name size, for equal widths
+        const size = b.h / (CAP * (1 + LEAD) + CAP_UI * tagPerName), cap = size * CAP, base = b.y + cap;
+        const group = el("g", {}, parent);
+        const w = wordmark(group, g, x0, base, size, { gap, colour });
+        descriptor(group, x0 + size * 0.02, b.y + b.h, size * tagPerName);
+        return { ...w, word: group, base, cap, width: b.w + space + w.width };
+      }
+      // the stacked lockup: the mark over the name, centred; returns the whole box
+      function stacked(parent, g, opts = {}) {
+        const b = mark(el("g", {}, parent), g, opts);
+        const P = per(g), cx = b.x + b.w / 2, cap = b.h * 0.42, size = cap / CAP, width = P.name * size;
+        const base = b.y + b.h + 4 * g.p + cap;
+        wordmark(parent, g, cx - width / 2, base, size, { colour: opts.right || ACC });
+        const tagSize = size * (P.name / P.tag);
+        descriptor(parent, cx - width / 2 + size * 0.02, base + LEAD * cap + tagSize * CAP_UI, tagSize);
+        const w = Math.max(b.w, width);
+        return { x: cx - w / 2, y: b.y, w, h: base + LEAD * cap + tagSize * CAP_UI - b.y };
       }
 
       const STUDIES = [
@@ -220,7 +287,7 @@
           const lock = el("svg", { class: "lock" }, row);
           const plain = s.ground ? {} : s.opts;
           const b = mark(el("g", {}, lock), g, plain);
-          const n = name(lock, g, b, { gap: (s.opts && s.opts.gap) || 0, colour: (plain && plain.right) || ACC });
+          const n = name(lock, g, b, { mode: "primary", gap: (s.opts && s.opts.gap) || 0, colour: (plain && plain.right) || ACC });
           fit(lock, { x: b.x, y: b.y, w: n.width, h: b.h }, 2);
           const smalls = document.createElement("div");
           smalls.className = "smalls";
@@ -241,6 +308,82 @@
         document.querySelectorAll("[data-colour]").forEach((x) => x.classList.toggle("is-on", x === b));
       }));
       render();
+
+      // ---------- the guidelines
+      function figure(box, title, text, ground) {
+        const fig = document.createElement("figure");
+        const art = document.createElement("div");
+        art.className = "art " + (ground || "");
+        fig.appendChild(art);
+        const svg = el("svg", {}, art);
+        const h = document.createElement("h4");
+        h.textContent = title;
+        const p = document.createElement("p");
+        p.innerHTML = text;
+        fig.append(h, p);
+        box.appendChild(fig);
+        return svg;
+      }
+      function guides() {
+        const g = geometry();
+        const locks = document.getElementById("locks");
+        locks.innerHTML = "";
+        // 1 primary
+        let svg = figure(locks, "Primary", "The mark and the name. The name's capitals are 55% of the mark's height, centred on it, four pixels away. For the site, slides and everyday use.");
+        let b = mark(el("g", {}, svg), g), n = name(svg, g, b, { mode: "primary" });
+        fit(svg, { x: b.x, y: b.y, w: n.width, h: b.h }, 2);
+        // 2 institutional
+        svg = figure(locks, "Institutional", "Name and descriptor together exactly as tall as the mark: capitals on its top, descriptor on its foot. The descriptor keeps a fixed letter spacing and is set left; its size makes it about as wide as the name. For papers, posters and formal use.");
+        b = mark(el("g", {}, svg), g); n = name(svg, g, b, { mode: "institutional" });
+        fit(svg, { x: b.x, y: b.y, w: n.width, h: b.h }, 2);
+        // 3 stacked
+        svg = figure(locks, "Stacked", "The mark over the name, centred, four pixels apart. For square and narrow spaces: title slides, badges, the end of a video.");
+        fit(svg, stacked(svg, g), 2);
+        svg.style.maxHeight = "200px";
+        // 4 symbol only
+        svg = figure(locks, "Symbol", "The mark alone, on paper or reversed on ink in a square. For avatars, app icons and the browser tab.");
+        const b1 = mark(el("g", {}, svg), g);
+        const side = b1.h + 8 * g.p, gx = b1.x + b1.w + 10 * g.p;
+        el("rect", { x: gx, y: b1.y - 4 * g.p, width: side, height: side, fill: INK }, svg);
+        const inner = el("g", { transform: `translate(${f(gx + side / 2 - (b1.x + b1.w / 2))} 0)` }, svg);
+        mark(inner, g, { left: PAPER });
+        fit(svg, { x: b1.x, y: b1.y - 4 * g.p, w: gx + side - b1.x, h: side }, 2);
+
+        // clear space: three pixels all round
+        const clear = document.getElementById("clear");
+        clear.innerHTML = "";
+        svg = figure(clear, "Clear space", "Keep at least three of the mark's pixels clear on every side. Nothing else (text, edges, other logos) comes inside this line.");
+        b = mark(el("g", {}, svg), g); n = name(svg, g, b, { mode: "primary" });
+        const u = 3 * g.p, L = { x: b.x - u, y: b.y - u, w: n.width + 2 * u, h: b.h + 2 * u };
+        el("rect", { class: "clear-line", x: f(L.x), y: f(L.y), width: f(L.w), height: f(L.h) }, svg);
+        [[L.x, b.y + b.h / 2 - g.p / 2, u, g.p], [b.x + b.w / 2 - g.p / 2 + g.c / 2, L.y, g.p, u], [b.x + n.width, b.y + b.h / 2 - g.p / 2, u, g.p]].forEach(([x, y, w, h]) => {
+          for (let k = 0; k < 3; k++) el("rect", { class: "unit", x: f(w > h ? x + k * g.p + 0.6 : x + 0.6), y: f(w > h ? y + 0.6 : y + k * g.p + 0.6), width: f(g.p - 1.2), height: f(g.p - 1.2) }, svg);
+        });
+        const lbl = el("text", { class: "unit-label", x: f(L.x), y: f(L.y - 6) }, svg);
+        lbl.textContent = "3 pixels";
+        fit(svg, { x: L.x, y: L.y - 16, w: L.w, h: L.h + 16 }, 4);
+
+        // minimum sizes
+        const mins = document.getElementById("mins");
+        mins.innerHTML = "";
+        const fig = document.createElement("figure");
+        fig.innerHTML = `<div class="mins"></div><h4>Minimum sizes</h4><p>Below 48 px tall, use the primary lockup: the descriptor can no longer be read. Below 24 px, use the symbol alone. Below 20 px, the mark's pixels get coarser (four to a loop) so the reflection still reads as pixels.</p>`;
+        mins.appendChild(fig);
+        const grid = fig.querySelector(".mins");
+        const rowOf = (label) => { const sp = document.createElement("span"); sp.textContent = label; const d = document.createElement("div"); grid.append(sp, d); return d; };
+        const draw = (row, px, kind) => {
+          const gg = px < 20 ? geometry({ px: 4, cut: 0.2 }) : g;
+          const sv = el("svg", { height: px }, row);
+          const bb = mark(el("g", {}, sv), gg);
+          if (kind === "symbol") return fit(sv, bb, 1);
+          const nn = name(sv, gg, bb, { mode: kind });
+          fit(sv, { x: bb.x, y: bb.y, w: nn.width, h: bb.h }, 1);
+        };
+        let r = rowOf("Institutional, 64 · 48 px"); draw(r, 64, "institutional"); draw(r, 48, "institutional");
+        r = rowOf("Primary, 40 · 24 px"); draw(r, 40, "primary"); draw(r, 24, "primary");
+        r = rowOf("Symbol, 32 · 20 · 16 px"); draw(r, 32, "symbol"); draw(r, 20, "symbol"); draw(r, 16, "symbol");
+      }
+      guides();
 
       // ---------- the motion
       let heroStyle = "solid";
@@ -320,7 +463,7 @@
           const nameClip = el("clipPath", { id: id + "n" }, defs);
           el("rect", { x: b.x + b.w, y: -1000, width: 3000, height: 2000 }, nameClip);
           const nameG = el("g", { "clip-path": `url(#${id}n)`, opacity: 0 }, wrap);
-          const n = name(nameG, g, b, { gap });
+          const n = name(nameG, g, b, { mode: "institutional", gap });
           // the B arrives as type and is scanned into pixels like the mark
           n.smoothB.setAttribute("opacity", 1);
           const bClip = el("clipPath", { id: id + "b" }, defs);
