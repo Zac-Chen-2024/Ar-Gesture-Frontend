@@ -45,6 +45,9 @@
       .card h2 b { font-weight: 400; color: var(--ink-faint); margin-right: 8px; }
       .card p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
       .wordmark { font-family: var(--font-serif); fill: var(--ink); }
+      .card .big.on-ink { background: var(--ink); }
+      .card .big.on-accent { background: var(--accent); }
+      .on-ink .wordmark { fill: var(--paper); }
       @media (max-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } }
       @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
     </style>
@@ -55,122 +58,44 @@
         <div>
           <p class="kicker">Person | Machine · mark</p>
           <h1>XB<i style="color:var(--ink-soft)">Lab</i></h1>
-          <p class="lede">The eight, cut by the mirror, no longer folds onto itself. The left half is the person, all round: a small head over a fuller body. The right half is the machine: two rectangles, a screen over a base. Round against square, body against machine, one the mirror of the other.</p>
+          <p class="lede">An eight of two circles, cut down the middle by a mirror. On the left the person stays round: a head over a body. On the right the machine squares up: a screen over a base, exactly as tall as the head and the body. Put back together, the two halves make a B.</p>
         </div>
         <div class="seg"><button data-colour="green" class="is-on">Demo</button><button data-colour="red">Game</button></div>
       </div>
       <div class="hero"><svg viewBox="0 0 640 360" id="hero"></svg></div>
-      <p class="hint">X → ∞ → it stands up → it fills → the eight comes apart: the person stays round, the machine squares up → the name. Click to replay.</p>
+      <p class="hint">X → ∞ → it stands up → it fills into two circles → the eight comes apart down the mirror: the person stays round, the machine squares up → the name. Click to replay.</p>
       <div class="grid" id="grid"></div>
     </div>
 
     <script>
+      // ---------- the mark. Everything is set by four numbers: the body's
+      // radius R, the head's radius (0.8 R), the cut (the mirror, and the slit
+      // between screen and base) and the machine's width.
       const NS = "http://www.w3.org/2000/svg";
       const INK = "var(--ink)", ACC = "var(--accent)", PAPER = "var(--paper)";
+      const f = (v) => +v.toFixed(2);
       function el(tag, attrs, parent) {
         const e = document.createElementNS(NS, tag);
         for (const k in attrs) e.setAttribute(k, attrs[k]);
         if (parent) parent.appendChild(e);
         return e;
       }
-      function geometry({ k1 = 0.8, angle = 50, R = 60 } = {}) {
-        const a = (angle * Math.PI) / 180, r1 = R * k1, r2 = R;
-        return { a, r1, r2, d1: r1 / Math.sin(a), d2: r2 / Math.sin(a), R, top: -(r1 / Math.sin(a) + r1), bottom: r2 / Math.sin(a) + r2 };
+      function geometry({ head = 0.8, R = 60, cut = 0.12, wide = 1.12 } = {}) {
+        const r1 = R * head, r2 = R, c = R * cut;
+        return { R, r1, r2, c, w: R * wide, top: -2 * r1, bottom: 2 * r2 };
       }
-      const f = (v) => +v.toFixed(2);
-      const circle = (cx, cy, r) => `M${f(cx - r)} ${f(cy)} A${r} ${r} 0 1 0 ${f(cx + r)} ${f(cy)} A${r} ${r} 0 1 0 ${f(cx - r)} ${f(cy)} Z`;
-
-      // A loop: a superellipse (|x|^n + |y|^n = r^n) and the two tangents from
-      // the crossing. n = 2 is a circle (the person); larger n is a rounded
-      // square (the computer). Each loop of the computer is solved so that its
-      // tangents leave the crossing at the person's angle and its far edge
-      // lines up with the person's, so the X and the outline run straight
-      // across the cut.
-      const SAMPLES = 360;
-      function squircle(r, n, from, to) {
-        const pts = [];
-        for (let i = 0; i <= SAMPLES; i++) {
-          const t = from + ((to - from) * i) / SAMPLES, c = Math.cos(t), s = Math.sin(t);
-          pts.push([r * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), r * Math.sign(s) * Math.pow(Math.abs(s), 2 / n)]);
-        }
-        return pts; // x right, y away from the crossing
+      // the person: the left halves of the two circles, touching at the waist
+      const personPath = (g, dx = 0) =>
+        `M${f(dx)} 0 A${g.r1} ${g.r1} 0 0 1 ${f(dx)} ${f(g.top)} Z M${f(dx)} 0 A${g.r2} ${g.r2} 0 0 0 ${f(dx)} ${f(g.bottom)} Z`;
+      // the machine: a screen and a base, as tall as the head and the body, the slit between them
+      const machinePath = (g, dx = 0) =>
+        `M${f(dx)} ${f(g.top)} H${f(dx + g.w)} V${f(-g.c / 2)} H${f(dx)} Z M${f(dx)} ${f(g.c / 2)} H${f(dx + g.w)} V${f(g.bottom)} H${f(dx)} Z`;
+      function mark(parent, g, { left = INK, right = ACC } = {}) {
+        el("path", { d: personPath(g, -g.c / 2), fill: left }, parent);
+        el("path", { d: machinePath(g, g.c / 2), fill: right }, parent);
+        return box(g);
       }
-      // the tangent point: of the right half, the point seen at the widest angle from the crossing
-      function tangent(r, d, n) {
-        let best = null;
-        for (const [x, y] of squircle(r, n, -Math.PI / 2, Math.PI / 2)) {
-          const ang = Math.atan2(x, d + y);
-          if (!best || ang > best.ang) best = { ang, x, y };
-        }
-        return best;
-      }
-      function solve(r, d, n, a) {
-        if (n === 2) return { r, d };
-        const reach = r + d;
-        let lo = r * 0.4, hi = r * 1.2;
-        for (let i = 0; i < 40; i++) {
-          const mid = (lo + hi) / 2;
-          if (tangent(mid, reach - mid, n).ang > a) hi = mid; else lo = mid;
-        }
-        return { r: lo, d: reach - lo };
-      }
-      // the right half of one loop, from the crossing: y is -1 up, +1 down
-      function halfLoop(g, up, n, counter) {
-        const s = up ? -1 : 1, base = solve(up ? g.r1 : g.r2, up ? g.d1 : g.d2, n, g.a);
-        const T = tangent(base.r, base.d, n);
-        const t0 = Math.atan2(Math.sign(T.y) * Math.pow(Math.abs(T.y) / base.r, n / 2), Math.pow(T.x / base.r, n / 2));
-        const arc = squircle(base.r, n, t0, Math.PI / 2);
-        const pt = ([x, y]) => `${f(x)} ${f(s * (base.d + y))}`;
-        let d = `M0 0 L${pt([T.x, T.y])} ` + arc.map((p) => "L" + pt(p)).join(" ") + " Z";
-        if (counter) {
-          const c = squircle(base.r * counter, n, -Math.PI / 2, Math.PI / 2);
-          d += " M" + c.map(pt).join(" L") + " Z";
-        }
-        return d;
-      }
-      // the machine: each loop of the right half is a plain rectangle, half of
-      // the square around the person's loop; a slit as wide as the mirror cut
-      // separates the two, and a square counter sits where the person's round
-      // one does
-      const BLOCK = 1.15;
-      function blocks(g, counter, slit) {
-        const w = BLOCK * g.r2; // both blocks the same width, a little wider than the person
-        const parts = [[g.top, -slit / 2, g.r1, -g.d1], [slit / 2, g.bottom, g.r2, g.d2]];
-        return parts.map(([y0, y1, r, cy]) => {
-          let d = `M0 ${f(y0)} H${f(w)} V${f(y1)} H0 Z`;
-          if (counter) { const h = r * counter; d += ` M0 ${f(cy - h)} H${f(h)} V${f(cy + h)} H0 Z`; }
-          return d;
-        }).join(" ");
-      }
-      // a whole loop pair, mirrored for the left half
-      function half(g, n, counter, mirror) {
-        const d = halfLoop(g, true, n, counter) + " " + halfLoop(g, false, n, counter);
-        return mirror ? d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (m, x, y) => `${f(-x)} ${y}`) : d;
-      }
-      const box = (g) => ({ x: -g.r2, y: g.top, w: g.r2 * (1 + BLOCK), h: g.bottom - g.top });
-
-      let uid = 0;
-      // both halves, a gap between them (the mirror)
-      function mark(parent, g, { gap = 0.14, left = INK, right = ACC, counter = 0.46, n = 4.5, leftOpacity = 1 } = {}) {
-        const id = "m" + uid++, b = box(g), cut = (g.R * gap) / 2;
-        const defs = el("defs", {}, parent);
-        const L = el("clipPath", { id: id + "l" }, defs), Rt = el("clipPath", { id: id + "r" }, defs);
-        el("rect", { x: b.x - 10, y: b.y - 10, width: -b.x + 10 - cut, height: b.h + 20 }, L);
-        el("rect", { x: cut, y: b.y - 10, width: b.w, height: b.h + 20 }, Rt);
-        el("path", { d: half(g, 2, counter, true), fill: left, opacity: leftOpacity, "fill-rule": "evenodd", "clip-path": `url(#${id}l)` }, parent);
-        const machine = n === "blocks" ? blocks(g, counter, g.R * gap) : half(g, n, counter, false);
-        el("path", { d: machine, fill: right, "fill-rule": "evenodd", "clip-path": `url(#${id}r)` }, parent);
-        return b;
-      }
-
-      const STUDIES = [
-        { name: "Person | Machine", text: "The person's round loops on the left; on the right, two plain rectangles stacked like a screen over a base, each half of the square around the person's loop. A slit as wide as the mirror cut separates them; square counters for screens.", opts: { n: "blocks" } },
-        { name: "Blocks, solid", text: "The rectangles without counters: two blocks against two curves. The plainest contrast between body and machine, and the strongest at small sizes.", opts: { n: "blocks", counter: 0 } },
-        { name: "Blocks, one colour", text: "In ink alone. Round against square still tells person from machine without colour.", opts: { n: "blocks", right: INK } },
-        { name: "Blocks, equal", text: "Head and body the same size, both blocks the same size: a calmer, more symmetrical stack.", geo: { k1: 1 }, opts: { n: "blocks" } },
-        { name: "Rounded square (for comparison)", text: "The earlier study: the computer drawn with the same construction as the person, but rounded-square loops, so the X runs straight across the cut.", opts: {} },
-        { name: "Rounded square, solid", text: "The same without counters.", opts: { counter: 0 } },
-      ];
+      const box = (g) => ({ x: -g.c / 2 - g.r2, y: g.top, w: g.r2 + g.c + g.w, h: g.bottom - g.top });
 
       const CAP = (() => {
         const c = document.createElement("canvas").getContext("2d");
@@ -178,7 +103,22 @@
         return c.measureText("XB").actualBoundingBoxAscent / 100 || 0.68;
       })();
       function fit(svg, b, pad) { svg.setAttribute("viewBox", `${b.x - pad} ${b.y - pad} ${b.w + 2 * pad} ${b.h + 2 * pad}`); }
+      // the name: capitals half the mark's height, centred on it, one cut and a half away
+      function name(parent, g, b) {
+        const cap = b.h * 0.5;
+        const word = el("text", { class: "wordmark", "font-size": f(cap / CAP), x: f(b.x + b.w + g.R * 0.7), y: f(b.y + b.h / 2 + cap / 2) }, parent);
+        word.innerHTML = 'XB<tspan font-style="italic">Lab</tspan>';
+        return { word, width: b.w + g.R * 0.7 + word.getComputedTextLength() };
+      }
 
+      const STUDIES = [
+        { name: "Person | Machine", text: "The person in ink, the machine in the mode's colour. Two half circles against two blocks of exactly their height: head and screen, body and base." },
+        { name: "One colour", text: "In ink alone. Round against square tells person from machine without any colour.", opts: { right: INK } },
+        { name: "Equal", text: "Head and body the same size, screen and base the same size. Calmer, but less of a B.", geo: { head: 1 } },
+        { name: "Reversed", text: "On ink: the person in paper, the machine in the mode's colour.", ground: "on-ink", opts: { left: PAPER } },
+        { name: "On colour", text: "On the mode's colour, both halves in paper and ink: for app icons and avatars.", ground: "on-accent", opts: { left: INK, right: PAPER } },
+        { name: "Wider machine", text: "The blocks drawn as wide as the circles are tall, for a heavier, more architectural mark.", geo: { wide: 1.4 } },
+      ];
       function render() {
         const grid = document.getElementById("grid");
         grid.innerHTML = "";
@@ -188,28 +128,25 @@
           card.className = "card";
           grid.appendChild(card);
           const big = document.createElement("div");
-          big.className = "big";
+          big.className = "big " + (s.ground || "");
           card.appendChild(big);
           const svg = el("svg", {}, big);
           fit(svg, mark(svg, g, s.opts), 4);
-
           const row = document.createElement("div");
           row.className = "row";
           card.appendChild(row);
           const lock = el("svg", { class: "lock" }, row);
-          const b = mark(el("g", {}, lock), g, s.opts);
-          const cap = b.h * 0.5, size = cap / CAP;
-          const word = el("text", { class: "wordmark", "font-size": size, x: b.x + b.w + g.R * 0.8, y: b.y + b.h / 2 + cap / 2 }, lock);
-          word.innerHTML = 'XB<tspan font-style="italic">Lab</tspan>';
-          fit(lock, { x: b.x, y: b.y, w: b.w + g.R * 0.8 + word.getComputedTextLength(), h: b.h }, 2);
+          const plain = s.ground ? {} : s.opts; // the lockup on paper
+          const b = mark(el("g", {}, lock), g, plain);
+          const n = name(lock, g, b);
+          fit(lock, { x: b.x, y: b.y, w: n.width, h: b.h }, 2);
           const smalls = document.createElement("div");
           smalls.className = "smalls";
           row.appendChild(smalls);
           [32, 16].forEach((px) => {
             const sv = el("svg", { height: px }, smalls);
-            fit(sv, mark(el("g", {}, sv), g, { ...s.opts, gap: 0.2 }), 1);
+            fit(sv, mark(el("g", {}, sv), geometry({ ...s.geo, cut: px < 20 ? 0.2 : 0.15 }), plain), 1);
           });
-
           const text = document.createElement("div");
           text.className = "text";
           text.innerHTML = `<h2><b>${String.fromCharCode(65 + i)}</b>${s.name}</h2><p>${s.text}</p>`;
@@ -221,169 +158,136 @@
         document.querySelectorAll("[data-colour]").forEach((x) => x.classList.toggle("is-on", x === b));
       }));
       render();
-    </script>
-    <script>
-    (() => {
-      // ---------- the motion. The mark: on the left the person's half of the
-      // solid eight, round; on the right the machine's, two blocks; the mirror
-      // cut between them. The eight is drawn as a line, stands up, fills, and
-      // comes apart down the middle, the right half squaring up as it goes.
-      const H = { gap: 0.14, counter: 0.46 };
-      const NP = 220;
-      const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-      const out = (t) => 1 - Math.pow(1 - t, 3);
-      const clamp = (v) => Math.max(0, Math.min(1, v));
-      const back = (t) => { const c = 1.4; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
-      const T = { x: 420, grow: 900, stand: 600, fill: 600, split: 900, name: 800 };
-      const AT = { grow: T.x, stand: T.x + T.grow, fill: T.x + T.grow + T.stand };
-      AT.split = AT.fill + T.fill; AT.name = AT.split + T.split - 150; const END = AT.name + T.name + 200;
 
-      function resample(pts, n) {
-        const d = [0];
-        for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-        const res = [], L = d[d.length - 1];
-        for (let k = 0, j = 1; k < n; k++) {
-          const s = (k / (n - 1)) * L;
-          while (j < d.length - 1 && d[j] < s) j++;
-          const t = (s - d[j - 1]) / (d[j] - d[j - 1] || 1);
-          res.push([pts[j - 1][0] + (pts[j][0] - pts[j - 1][0]) * t, pts[j - 1][1] + (pts[j][1] - pts[j - 1][1]) * t]);
+      // ---------- the motion
+      (() => {
+        const NP = 240;
+        const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+        const out = (t) => 1 - Math.pow(1 - t, 3);
+        const clamp = (v) => Math.max(0, Math.min(1, v));
+        const T = { x: 420, grow: 900, stand: 600, fill: 650, split: 1000, name: 800 };
+        const AT = { grow: T.x, stand: T.x + T.grow, fill: T.x + T.grow + T.stand };
+        AT.split = AT.fill + T.fill;
+        AT.name = AT.split + T.split - 120;
+        const END = AT.name + T.name + 200;
+
+        function resample(pts, n) {
+          const d = [0];
+          for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+          const res = [], L = d[d.length - 1];
+          for (let k = 0, j = 1; k < n; k++) {
+            const s = (k / (n - 1)) * L;
+            while (j < d.length - 1 && d[j] < s) j++;
+            const t = (s - d[j - 1]) / (d[j] - d[j - 1] || 1);
+            res.push([pts[j - 1][0] + (pts[j][0] - pts[j - 1][0]) * t, pts[j - 1][1] + (pts[j][1] - pts[j - 1][1]) * t]);
+          }
+          return res;
         }
-        return res;
-      }
-      const line = (a, b, n) => Array.from({ length: n }, (_, i) => [a[0] + ((b[0] - a[0]) * i) / (n - 1), a[1] + ((b[1] - a[1]) * i) / (n - 1)]);
-      const lerp = (A, B, m) => A.map((p, i) => [p[0] + (B[i][0] - p[0]) * m, p[1] + (B[i][1] - p[1]) * m]);
-      const pathOf = (pts, sx = 1, dx = 0) => "M" + pts.map((p) => `${f(p[0] * sx + dx)} ${f(p[1])}`).join(" L") + " Z";
-
-      // one loop of the right half, as the same three runs of points in both
-      // shapes: the inner edge out from the crossing, the outer side round to
-      // the top (or bottom), and the mirror line back
-      function roundHalf(g, up) {
-        const r = up ? g.r1 : g.r2, d = up ? g.d1 : g.d2, s = up ? -1 : 1;
-        const T = [r * Math.cos(g.a), s * (d - r * Math.sin(g.a))];
-        const arc = [];
-        for (let i = 0; i <= 200; i++) { const th = -g.a + ((Math.PI / 2 + g.a) * i) / 200; arc.push([r * Math.cos(th), s * (d + r * Math.sin(th))]); }
-        return [...resample(line([0, 0], T, 30), 40), ...resample(arc, 140), ...resample(line([0, s * (d + r)], [0, 0], 30), 40)];
-      }
-      function blockHalf(g, up) {
-        const s = up ? -1 : 1, w = BLOCK * g.r2, y0 = (s * g.R * H.gap) / 2, y1 = up ? g.top : g.bottom;
-        return [...resample(line([0, y0], [w, y0], 30), 40), ...resample([[w, y0], [w, y1], [0, y1]], 140), ...resample(line([0, y1], [0, y0], 30), 40)];
-      }
-      // the counters: half a circle, half a square
-      function roundHole(g, up) {
-        const r = (up ? g.r1 : g.r2) * H.counter, c = up ? -g.d1 : g.d2, pts = [];
-        for (let i = 0; i <= 200; i++) { const th = -Math.PI / 2 + (Math.PI * i) / 200; pts.push([r * Math.cos(th), c + r * Math.sin(th)]); }
-        return resample([...pts, [0, c + r], [0, c - r]], 120);
-      }
-      function squareHole(g, up) {
-        const r = (up ? g.r1 : g.r2) * H.counter, c = up ? -g.d1 : g.d2;
-        return resample([[0, c - r], [r, c - r], [r, c + r], [0, c + r], [0, c - r]], 120);
-      }
-      // the line eight, standing, sized to the mark
-      function eightLoop(g, from) {
-        const A = (g.bottom - g.top) / 2, wide = 2 * g.r2, pts = [];
-        for (let i = 0; i <= 2000; i++) { const t = from + (i / 2000) * Math.PI; pts.push([wide * Math.sin(t) * Math.cos(t), A * Math.sin(t)]); }
-        return resample(pts, NP);
-      }
-      function fullLoop(g, up) {
-        // the whole round loop from the crossing: right half out, left half back
-        const half = roundHalf(g, up).slice(0, 180); // inner edge and outer side, to the top
-        const mirror = half.slice().reverse().map(([x, y]) => [-x, y]);
-        return resample([...half, ...mirror], NP);
-      }
-
-      function stage(svg) {
-        svg.innerHTML = "";
-        const g = geometry();
-        const defs = el("defs", {}, svg);
-        const wrap = el("g", {}, svg);
-        const id = "s" + Math.random().toString(36).slice(2);
-        const clipL = el("clipPath", { id: id + "l" }, defs), clipR = el("clipPath", { id: id + "r" }, defs);
-        el("rect", { x: -1000, y: -1000, width: 1000, height: 2000 }, clipL);
-        el("rect", { x: 0, y: -1000, width: 1000, height: 2000 }, clipR);
-        // the line: drawn twice, ink on the person's side, colour on the machine's
-        const strokes = [[clipL, INK], [clipR, ACC]].map(([c, col]) => {
-          const grp = el("g", { "clip-path": `url(#${c.id})` }, wrap);
-          const turn = el("g", {}, grp);
-          return { turn, top: el("path", { fill: "none", stroke: col, "stroke-width": g.R * 0.1, "stroke-linecap": "round", "stroke-linejoin": "round" }, turn),
-            bottom: el("path", { fill: "none", stroke: col, "stroke-width": g.R * 0.1, "stroke-linecap": "round", "stroke-linejoin": "round" }, turn) };
-        });
-        // the solid halves
-        const left = el("path", { fill: INK, "fill-rule": "evenodd", opacity: 0 }, wrap);
-        const right = el("path", { fill: ACC, "fill-rule": "evenodd", opacity: 0 }, wrap);
-        const shapes = {
-          eight: { top: eightLoop(g, Math.PI), bottom: eightLoop(g, 0) },
-          loop: { top: fullLoop(g, true), bottom: fullLoop(g, false) },
-          round: { top: roundHalf(g, true), bottom: roundHalf(g, false) },
-          block: { top: blockHalf(g, true), bottom: blockHalf(g, false) },
-          rhole: { top: roundHole(g, true), bottom: roundHole(g, false) },
-          shole: { top: squareHole(g, true), bottom: squareHole(g, false) },
-        };
-        // the name
-        const box = { x: -g.r2 - (g.R * H.gap) / 2, y: g.top, w: g.r2 * (1 + BLOCK) + g.R * H.gap, h: g.bottom - g.top };
-        const nameClip = el("clipPath", { id: id + "n" }, defs);
-        el("rect", { x: box.x + box.w, y: -1000, width: 3000, height: 2000 }, nameClip);
-        const nameG = el("g", { "clip-path": `url(#${id}n)`, opacity: 0 }, wrap);
-        const cap = box.h * 0.5;
-        const word = el("text", { class: "wordmark", "font-size": cap / CAP, x: box.x + box.w + g.R * 0.8, y: box.y + box.h / 2 + cap / 2 }, nameG);
-        word.innerHTML = 'XB<tspan font-style="italic">Lab</tspan>';
-        const lockW = box.w + g.R * 0.8 + word.getComputedTextLength();
-        const k = Math.min(1, 440 / lockW, 220 / box.h);
-        const endPos = { x: 320 - (box.x + lockW / 2) * k, y: 180 - (box.y + box.h / 2) * k };
-
-        function strokeAt(which, m, n) {
-          const pts = lerp(shapes.eight[which], shapes.loop[which], m);
-          if (n >= NP / 2) return "M" + pts.map((p) => `${f(p[0])} ${f(p[1])}`).join(" L") + " Z";
-          const k = Math.max(0, Math.round(n));
-          const a = pts.slice(0, k), b = pts.slice(NP - k).reverse();
-          const seg = (q) => (q.length < 2 ? "" : "M" + q.map((p) => `${f(p[0])} ${f(p[1])}`).join(" L"));
-          return seg(a) + " " + seg(b);
+        const lerp = (A, B, m) => A.map((p, i) => [p[0] + (B[i][0] - p[0]) * m, p[1] + (B[i][1] - p[1]) * m]);
+        const closed = (pts, dx = 0, sx = 1) => "M" + pts.map((p) => `${f(p[0] * sx + dx)} ${f(p[1])}`).join(" L") + " Z";
+        const open = (pts) => (pts.length < 2 ? "" : "M" + pts.map((p) => `${f(p[0])} ${f(p[1])}`).join(" L"));
+        // the right half of a circle (up: the head) from the waist round to the top, then back down the mirror
+        function arcHalf(g, up) {
+          const r = up ? g.r1 : g.r2, s = up ? -1 : 1, pts = [];
+          for (let i = 0; i <= 240; i++) { const th = (Math.PI * i) / 240; pts.push([r * Math.sin(th), s * r * (1 - Math.cos(th))]); }
+          return [...resample(pts, 160), ...resample([[0, s * 2 * r], [0, 0]], 40)];
         }
-        return function render(ms) {
-          const kx = NP * 0.06 * out(clamp(ms / T.x));
-          const n = kx + (NP / 2 - kx) * ease(clamp((ms - AT.grow) / T.grow));
-          const up = ease(clamp((ms - AT.stand) / T.stand));
-          const fill = ease(clamp((ms - AT.fill) / T.fill));
-          const split = clamp((ms - AT.split) / T.split);
-          // line: drawn, turned upright, then pulled onto the loops' true shape as it fills
-          strokes.forEach((st) => {
-            st.turn.setAttribute("transform", `rotate(${-90 * (1 - up)})`);
-            st.top.setAttribute("d", strokeAt("top", fill, n));
-            st.bottom.setAttribute("d", strokeAt("bottom", fill, n));
-            st.top.parentNode.parentNode.setAttribute("opacity", String(1 - clamp((ms - AT.fill - T.fill * 0.5) / (T.fill * 0.5))));
+        // a block: from the slit out, up the far side, back along the top, and down the mirror
+        function blockHalf(g, up) {
+          const s = up ? -1 : 1, y0 = (s * g.c) / 2, y1 = up ? g.top : g.bottom;
+          return [...resample([[0, y0], [g.w, y0], [g.w, y1], [0, y1]], 160), ...resample([[0, y1], [0, y0]], 40)];
+        }
+        // the whole circle as a line from the waist: right half up, left half back
+        function circleLoop(g, up) {
+          const r = up ? g.r1 : g.r2, s = up ? -1 : 1, pts = [];
+          for (let i = 0; i <= 600; i++) { const th = (2 * Math.PI * i) / 600; pts.push([r * Math.sin(th), s * r * (1 - Math.cos(th))]); }
+          return resample(pts, NP);
+        }
+        // the round eight (lemniscate of Gerono), standing, as tall as the mark
+        function eightLoop(g, from) {
+          const A = (g.bottom - g.top) / 2, wide = 1.6 * g.r2, pts = [];
+          for (let i = 0; i <= 2000; i++) { const t = from + (i / 2000) * Math.PI; pts.push([wide * Math.sin(t) * Math.cos(t), A * Math.sin(t) + (g.bottom + g.top) / 2 * Math.abs(Math.sin(t)) * 0]); }
+          return resample(pts, NP);
+        }
+
+        function stage(svg) {
+          svg.innerHTML = "";
+          const g = geometry();
+          const defs = el("defs", {}, svg);
+          const wrap = el("g", {}, svg);
+          const id = "s" + Math.random().toString(36).slice(2);
+          const clipL = el("clipPath", { id: id + "l" }, defs), clipR = el("clipPath", { id: id + "r" }, defs);
+          el("rect", { x: -1000, y: -1000, width: 1000, height: 2000 }, clipL);
+          el("rect", { x: 0, y: -1000, width: 1000, height: 2000 }, clipR);
+          const sw = g.R * 0.09;
+          // the line: ink on the person's side of the mirror, colour on the machine's
+          const strokes = [[clipL, INK], [clipR, ACC]].map(([c, col]) => {
+            const grp = el("g", { "clip-path": `url(#${c.id})` }, wrap);
+            const turn = el("g", {}, grp);
+            const attrs = { fill: "none", stroke: col, "stroke-width": sw, "stroke-linecap": "round", "stroke-linejoin": "round" };
+            return { grp, turn, top: el("path", attrs, turn), bottom: el("path", attrs, turn) };
           });
-          // solid: fills in, then the halves part, the machine's half squaring up
-          // pulled well apart, the machine squaring up in between, then closed to the cut
-          const apart = (g.R * H.gap) / 2 * out(split) + g.R * 0.55 * Math.sin(Math.PI * ease(split));
-          const sq = ease(clamp((ms - AT.split) / (T.split * 0.85)));
-          const hole = out(clamp((ms - AT.fill - T.fill * 0.4) / (T.fill * 0.6)));
-          const holes = (which, shape) => lerp(shapes.rhole[which], shapes[shape][which], shape === "shole" ? sq : 0)
-            .map(([x, y]) => { const c = which === "top" ? -g.d1 : g.d2; return [x * hole, c + (y - c) * hole]; });
-          const leftD = ["top", "bottom"].map((w) => pathOf(shapes.round[w], -1, -apart) + " " + (hole > 0.01 ? pathOf(holes(w, "rhole"), -1, -apart) : "")).join(" ");
-          const rightD = ["top", "bottom"].map((w) => pathOf(lerp(shapes.round[w], shapes.block[w], sq), 1, apart) + " " + (hole > 0.01 ? pathOf(holes(w, "shole"), 1, apart) : "")).join(" ");
-          left.setAttribute("d", leftD);
-          right.setAttribute("d", rightD);
-          left.setAttribute("opacity", String(fill));
-          right.setAttribute("opacity", String(fill));
-          // the name: the mark steps aside, the name comes out from behind it
-          const nm = ease(clamp((ms - AT.name) / T.name));
-          const x = 320 + (endPos.x - 320) * nm, y = 180 + (endPos.y - 180) * nm, z = 1 + (k - 1) * nm;
-          wrap.setAttribute("transform", `translate(${f(x)} ${f(y)}) scale(${z.toFixed(4)})`);
-          nameG.setAttribute("opacity", String(clamp((ms - AT.name) / (T.name * 0.6))));
-          word.setAttribute("transform", `translate(${f(-(lockW - box.w) * 0.45 * (1 - out(clamp((ms - AT.name - 60) / T.name))))} 0)`);
-          return ms < END;
-        };
-      }
-      const heroSvg = document.getElementById("hero");
-      let render = null, run = 0;
-      function play() {
-        render = stage(heroSvg);
-        const id = ++run, t0 = performance.now();
-        (function frame(now) { if (id === run && render(now - t0)) requestAnimationFrame(frame); })(t0);
-      }
-      window.renderLogoAt = (ms) => { run++; (render || (render = stage(heroSvg)))(ms); };
-      heroSvg.addEventListener("click", play);
-      play();
-    })();
+          const left = el("path", { fill: INK, opacity: 0 }, wrap);
+          const right = el("path", { fill: ACC, opacity: 0 }, wrap);
+          const S = {
+            eight: { top: eightLoop(g, Math.PI), bottom: eightLoop(g, 0) },
+            circle: { top: circleLoop(g, true), bottom: circleLoop(g, false) },
+            arc: { top: arcHalf(g, true), bottom: arcHalf(g, false) },
+            block: { top: blockHalf(g, true), bottom: blockHalf(g, false) },
+          };
+          // the name
+          const b = box(g);
+          const nameClip = el("clipPath", { id: id + "n" }, defs);
+          el("rect", { x: b.x + b.w, y: -1000, width: 3000, height: 2000 }, nameClip);
+          const nameG = el("g", { "clip-path": `url(#${id}n)`, opacity: 0 }, wrap);
+          const n = name(nameG, g, b);
+          const k = Math.min(1, 440 / n.width, 220 / b.h);
+          const endPos = { x: 320 - (b.x + n.width / 2) * k, y: 180 - (b.y + b.h / 2) * k };
+          const startY = 180 - ((g.top + g.bottom) / 2) * 0; // the crossing sits in the middle
+
+          function line(which, m, cnt) {
+            const pts = lerp(S.eight[which], S.circle[which], m);
+            if (cnt >= NP / 2) return open(pts) + " Z";
+            const c = Math.max(0, Math.round(cnt));
+            return open(pts.slice(0, c)) + " " + open(pts.slice(NP - c).reverse());
+          }
+          return function draw(ms) {
+            const cnt = NP * 0.05 * out(clamp(ms / T.x)) + (NP / 2 - NP * 0.05) * ease(clamp((ms - AT.grow) / T.grow));
+            const up = ease(clamp((ms - AT.stand) / T.stand));
+            const fill = ease(clamp((ms - AT.fill) / T.fill));
+            const sp = clamp((ms - AT.split) / T.split);
+            strokes.forEach((st) => {
+              st.turn.setAttribute("transform", `rotate(${-90 * (1 - up)})`);
+              st.top.setAttribute("d", line("top", fill, cnt));
+              st.bottom.setAttribute("d", line("bottom", fill, cnt));
+              st.grp.setAttribute("opacity", String(1 - clamp((ms - AT.fill - T.fill * 0.55) / (T.fill * 0.45))));
+            });
+            // apart: pulled well apart, the machine squaring up meanwhile, then closed to the cut
+            const apart = (g.c / 2) * out(sp) + g.R * 0.5 * Math.sin(Math.PI * ease(sp));
+            const sq = ease(clamp((sp - 0.08) / 0.8));
+            left.setAttribute("d", ["top", "bottom"].map((w) => closed(S.arc[w], -apart, -1)).join(" "));
+            right.setAttribute("d", ["top", "bottom"].map((w) => closed(lerp(S.arc[w], S.block[w], sq), apart)).join(" "));
+            left.setAttribute("opacity", String(fill));
+            right.setAttribute("opacity", String(fill));
+            const nm = ease(clamp((ms - AT.name) / T.name));
+            const x = 320 + (endPos.x - 320) * nm, y = startY + (endPos.y - startY) * nm, z = 1 + (k - 1) * nm;
+            wrap.setAttribute("transform", `translate(${f(x)} ${f(y)}) scale(${z.toFixed(4)})`);
+            nameG.setAttribute("opacity", String(clamp((ms - AT.name) / (T.name * 0.6))));
+            n.word.setAttribute("transform", `translate(${f(-(n.width - b.w) * 0.45 * (1 - out(clamp((ms - AT.name - 60) / T.name))))} 0)`);
+            return ms < END;
+          };
+        }
+        const heroSvg = document.getElementById("hero");
+        let draw = null, run = 0;
+        function play() {
+          draw = stage(heroSvg);
+          const id = ++run, t0 = performance.now();
+          (function frame(now) { if (id === run && draw(now - t0)) requestAnimationFrame(frame); })(t0);
+        }
+        window.renderLogoAt = (ms) => { run++; (draw || (draw = stage(heroSvg)))(ms); };
+        heroSvg.addEventListener("click", play);
+        play();
+      })();
     </script>
   </body>
 </html>
