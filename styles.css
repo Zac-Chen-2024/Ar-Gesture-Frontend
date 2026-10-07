@@ -1295,21 +1295,15 @@ body[data-theme="editorial"] {
   color: rgba(17, 17, 17, 0.45);
   transition: color 140ms ease;
 }
-.home-link .home-mark {
-  display: block;
-  height: 22px;
-  width: auto;
-  margin-left: 2px;
-}
 /* the lab's name, faint in the bottom-right corner over the build number */
 .lab-mark {
   position: fixed;
   right: 12px;
   bottom: 24px;
-  z-index: 1;
+  z-index: 59; /* over the game's effects, under the build number */
   height: 26px;
   width: auto;
-  opacity: 0.5;
+  opacity: 0.62;
   pointer-events: none;
   -webkit-user-select: none;
   user-select: none;
