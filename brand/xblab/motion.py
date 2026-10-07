@@ -116,7 +116,7 @@ def span(start, length, steps=24):
     return [start + length * i / steps for i in range(steps + 1)]
 
 
-def build(accent, loop_it, total):
+def build(accent, loop_it, total, with_name=True):
     E, P, C = B.INK, B.P, B.C
     ev, sp, ab = [], [], []
     # the line's reach, its turn, its fill
@@ -255,6 +255,13 @@ def build(accent, loop_it, total):
             + f'<g fill="{accent}" shape-rendering="crispEdges">{"".join(bpix)}</g>'
             + tag
             + "</g></g></g></g>")
+    if not with_name:
+        # the mark alone, round the crossing: X, ∞, the eight, the pixels; no name
+        body = (defs + half("L", E, -1) + half("R", accent, 1, "S")
+                + f'<g fill="{accent}" shape-rendering="crispEdges">{"".join(pix)}{whole_pix}</g>' + scan_line)
+        x0, y0, w, h = -150, -150, 300, 300
+        return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="{x0} {y0} {w} {h}" width="{w}" height="{h}">'
+                f'<rect x="{x0}" y="{y0}" width="{w}" height="{h}" fill="{B.PAPER}"/>{body}</svg>\n')
     return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {W} {H}" width="{W}" height="{H}">'
             f'<rect width="{W}" height="{H}" fill="{B.PAPER}"/>{body}</svg>\n')
 
@@ -274,9 +281,10 @@ def main():
         (B.HERE / f"xblab-motion-{colour}.svg").write_text(scoped(once))
         looped = build(accent, True, end + 1800)  # holds the lockup, then starts again
         (B.HERE / f"xblab-motion-{colour}-loop.svg").write_text(scoped(looped))
-        # for page transitions: the same, about twice as fast
-        end = timeline(2.2)
-        (B.HERE / f"xblab-motion-{colour}-fast.svg").write_text(scoped(build(accent, False, end)))
+        # for page transitions: the mark alone, ending once the pixels are in, fast
+        timeline(2.8)
+        end = AT["scan"] + T["scan"] + 60
+        (B.HERE / f"xblab-mark-motion-{colour}.svg").write_text(scoped(build(accent, False, end, with_name=False)))
         timeline(1.0)
         print(colour, len(once) // 1024, "KB")
 
