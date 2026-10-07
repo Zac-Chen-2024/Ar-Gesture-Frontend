@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XB Lab · Loop mark</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --paper: #faf8f3;
+        --ink: #111111;
+        --ink-soft: rgba(17, 17, 17, 0.62);
+        --ink-faint: rgba(17, 17, 17, 0.45);
+        --green: #25915f;
+        --red: #d6452b;
+        --accent: var(--green);
+        --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      }
+      body.is-red { --accent: var(--red); }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+      .wrap { max-width: 68rem; margin: 0 auto; padding: 36px 24px 70px; }
+      header { display: flex; align-items: end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+      .kicker { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); }
+      h1 { margin: 8px 0 0; font-family: var(--font-serif); font-weight: 400; font-size: 2.6rem; line-height: 1; }
+      .controls { display: flex; gap: 8px; font-size: 13px; }
+      .controls button { font: inherit; padding: 6px 12px; background: none; border: 1px solid rgba(17,17,17,.3); cursor: pointer; color: var(--ink-soft); }
+      .controls button.is-on { border-color: var(--ink); color: var(--ink); }
+
+      .hero { margin-top: 26px; border: 1px solid var(--ink); display: grid; grid-template-columns: 1.5fr 1fr; }
+      .hero .stage { display: grid; place-items: center; min-height: 380px; border-right: 1px solid var(--ink); cursor: pointer; }
+      .hero .stage svg { height: 300px; width: 100%; max-width: 520px; overflow: visible; }
+      .hero .text { padding: 34px 32px; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+      .hero h2 { margin: 0; font-family: var(--font-serif); font-weight: 400; font-size: 1.7rem; }
+      .hero p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--ink-soft); }
+      .hero .hint { font-size: 12px; color: var(--ink-faint); }
+
+      h3 { margin: 44px 0 12px; font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); }
+      .row { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+      .cell { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 22px 16px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+      .cell svg { height: 130px; width: 130px; overflow: visible; }
+      .cell span { font-size: 12px; color: var(--ink-faint); text-align: center; }
+      .lockups { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--ink); }
+      .lockups > div { padding: 34px 24px; display: grid; place-items: center; }
+      .lockups > div + div { border-left: 1px solid var(--ink); }
+      .lockups > div.dark { background: var(--ink); }
+      .sizes { display: flex; align-items: end; gap: 26px; padding: 26px 20px; border: 1px solid var(--ink); }
+      .sizes svg { overflow: visible; }
+      @media (max-width: 760px) { .row { grid-template-columns: 1fr 1fr; } .hero, .lockups { grid-template-columns: 1fr; } .hero .stage { border-right: 0; border-bottom: 1px solid var(--ink); } .lockups > div + div { border-left: 0; border-top: 1px solid var(--ink); } }
+
+      /* the mark */
+      .ln { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .ink { stroke: var(--ink); }
+      .acc { stroke: var(--accent); }
+      .dot { fill: var(--accent); }
+      .paper { stroke: var(--paper); }
+      .paper-dot { fill: var(--paper); }
+      .wordmark { font-family: var(--font-serif); fill: var(--ink); }
+      .tag { font-family: var(--font-ui); letter-spacing: .2em; fill: var(--ink-faint); }
+      .dark .wordmark { fill: var(--paper); }
+      .dark .tag { fill: rgba(250, 248, 243, .55); }
+    </style>
+  </head>
+  <body>
+    <!-- The mark: one closed line, a figure eight standing up. Its crossing is
+         the X; standing, with its left side straight, it reads as a B. The
+         upper loop is the person (ink), the lower loop the computer (accent). -->
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <!-- in a 0..140 x 0..260 box; C = the crossing -->
+        <path id="loop-top" d="M71 127 L50 112 C42 106 40 98 40 88 V54 C40 38 46 30 60 30 H78 C116 30 124 84 94 106 Z" />
+        <path id="loop-bottom" d="M71 127 L50 142 C42 148 40 158 40 168 V206 C40 222 46 230 60 230 H82 C124 230 130 170 98 150 Z" />
+      </defs>
+    </svg>
+
+    <div class="wrap">
+      <header>
+        <div>
+          <p class="kicker">XB Lab · logo</p>
+          <h1>Loop</h1>
+        </div>
+        <div class="controls">
+          <button type="button" data-colour="green" class="is-on">Demo green</button>
+          <button type="button" data-colour="red">Game red</button>
+          <button type="button" id="replay">Replay</button>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="stage" id="stage" title="click to replay">
+          <svg viewBox="0 0 520 300" id="hero">
+            <defs><clipPath id="word-clip"><rect id="word-edge" x="188" y="0" width="400" height="300" /></clipPath></defs>
+            <g id="mark">
+              <g id="turn">
+                <path class="ln ink" id="h-top" stroke-width="10" />
+                <path class="ln acc" id="h-bottom" stroke-width="10" />
+                <circle class="dot" id="h-dot" cx="71" cy="127" r="0" />
+              </g>
+            </g>
+            <g clip-path="url(#word-clip)">
+              <text class="wordmark" id="h-word" x="196" y="166" font-size="80" opacity="0">XB<tspan fill="var(--accent)">Lab</tspan></text>
+              <text class="tag" id="h-tag" x="200" y="196" font-size="12" opacity="0">HUMAN–COMPUTER INTERACTION</text>
+            </g>
+          </svg>
+        </div>
+        <div class="text">
+          <h2>Infinity, standing up</h2>
+          <p>Lying down it is ∞, the loop of interaction: people act, the computer answers, people act again. Where the two loops cross there is an <b>X</b>. Stand the loop up and straighten its left side, and it is a <b>B</b>.</p>
+          <p>The upper loop is the person, in ink. The lower loop is the computer, in the mode's colour. The dot is the moment they meet, the same dot that ends every swipe on our keyboard.</p>
+          <p class="hint">X crosses → grows into ∞ → stands up → leans left and its left side straightens into B → XBLab slides out. Click to replay.</p>
+        </div>
+      </section>
+
+      <h3>Variants</h3>
+      <div class="row">
+        <div class="cell">
+          <svg viewBox="20 10 120 240"><use href="#loop-top" class="ln ink" stroke-width="10" /><use href="#loop-bottom" class="ln acc" stroke-width="10" /><circle class="dot" cx="71" cy="127" r="10" /></svg>
+          <span>Two loops, person and computer</span>
+        </div>
+        <div class="cell">
+          <svg viewBox="20 10 120 240"><use href="#loop-top" class="ln ink" stroke-width="10" /><use href="#loop-bottom" class="ln ink" stroke-width="10" /><circle class="dot" cx="71" cy="127" r="10" /></svg>
+          <span>Ink, with the coloured dot</span>
+        </div>
+        <div class="cell">
+          <svg viewBox="20 10 120 240"><use href="#loop-top" class="ln ink" stroke-width="10" /><use href="#loop-bottom" class="ln ink" stroke-width="10" /></svg>
+          <span>Ink only (print, stamps)</span>
+        </div>
+        <div class="cell">
+          <svg viewBox="20 10 120 240"><use href="#loop-top" class="ln ink" stroke-width="16" /><use href="#loop-bottom" class="ln acc" stroke-width="16" /><circle class="dot" cx="71" cy="127" r="13" /></svg>
+          <span>Bold (small sizes)</span>
+        </div>
+        <div class="cell">
+          <svg viewBox="-60 10 280 240"><g transform="rotate(-90 80 130)"><use href="#loop-top" class="ln ink" stroke-width="10" /><use href="#loop-bottom" class="ln acc" stroke-width="10" /><circle class="dot" cx="71" cy="127" r="10" /></g></svg>
+          <span>Lying down: ∞</span>
+        </div>
+        <div class="cell">
+          <svg viewBox="0 0 160 160"><rect width="160" height="160" rx="0" fill="var(--accent)" /><g transform="translate(30 16) scale(0.5)"><use href="#loop-top" class="ln paper" stroke-width="20" /><use href="#loop-bottom" class="ln paper" stroke-width="20" /></g></svg>
+          <span>App icon</span>
+        </div>
+      </div>
+
+      <h3>With the name</h3>
+      <div class="lockups">
+        <div>
+          <svg viewBox="0 0 420 140" width="100%" style="max-width: 420px">
+            <g transform="translate(0 6) scale(0.5)"><use href="#loop-top" class="ln ink" stroke-width="12" /><use href="#loop-bottom" class="ln acc" stroke-width="12" /><circle class="dot" cx="71" cy="127" r="12" /></g>
+            <text class="wordmark" x="92" y="78" font-size="58">XB<tspan fill="var(--accent)">Lab</tspan></text>
+            <text class="tag" x="94" y="106" font-size="11">HUMAN–COMPUTER INTERACTION</text>
+          </svg>
+        </div>
+        <div class="dark">
+          <svg viewBox="0 0 420 140" width="100%" style="max-width: 420px">
+            <g transform="translate(0 6) scale(0.5)"><use href="#loop-top" class="ln paper" stroke-width="12" /><use href="#loop-bottom" class="ln acc" stroke-width="12" /><circle class="dot" cx="71" cy="127" r="12" /></g>
+            <text class="wordmark" x="92" y="78" font-size="58">XB<tspan fill="var(--accent)">Lab</tspan></text>
+            <text class="tag" x="94" y="106" font-size="11">HUMAN–COMPUTER INTERACTION</text>
+          </svg>
+        </div>
+      </div>
+
+      <h3>Small sizes</h3>
+      <div class="sizes">
+        <svg viewBox="20 10 120 240" height="96"><use href="#loop-top" class="ln ink" stroke-width="12" /><use href="#loop-bottom" class="ln acc" stroke-width="12" /><circle class="dot" cx="71" cy="127" r="11" /></svg>
+        <svg viewBox="20 10 120 240" height="48"><use href="#loop-top" class="ln ink" stroke-width="16" /><use href="#loop-bottom" class="ln acc" stroke-width="16" /><circle class="dot" cx="71" cy="127" r="13" /></svg>
+        <svg viewBox="20 10 120 240" height="32"><use href="#loop-top" class="ln ink" stroke-width="18" /><use href="#loop-bottom" class="ln acc" stroke-width="18" /></svg>
+        <svg viewBox="20 10 120 240" height="16"><use href="#loop-top" class="ln ink" stroke-width="22" /><use href="#loop-bottom" class="ln acc" stroke-width="22" /></svg>
+      </div>
+    </div>
+
+    <script>
+      // The hero, frame by frame: an X crosses; its arms run on into ∞; the ∞
+      // stands up; it leans left, its left side straightens and it is a B;
+      // the name slides out to its right. Each loop is a list of points from
+      // the crossing round and back, so one shape can turn into the other.
+      const N = 180, C = { x: 71, y: 127 }, A = 100;
+      const SVGNS = "http://www.w3.org/2000/svg";
+      function resample(pts, n) {
+        const d = [0];
+        for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+        const out = [], L = d[d.length - 1];
+        for (let k = 0, j = 1; k < n; k++) {
+          const s = (k / (n - 1)) * L;
+          while (j < d.length - 1 && d[j] < s) j++;
+          const t = (s - d[j - 1]) / (d[j] - d[j - 1] || 1);
+          out.push({ x: pts[j - 1].x + (pts[j].x - pts[j - 1].x) * t, y: pts[j - 1].y + (pts[j].y - pts[j - 1].y) * t });
+        }
+        return out;
+      }
+      // the round eight (lemniscate of Gerono), standing: lower loop first
+      function lobe(from) {
+        const pts = [];
+        for (let i = 0; i <= 2000; i++) {
+          const t = from + (i / 2000) * Math.PI;
+          pts.push({ x: C.x + A * Math.sin(t) * Math.cos(t), y: C.y + A * Math.sin(t) });
+        }
+        return resample(pts, N);
+      }
+      // the B: the same loops, from the crossing, the same way round
+      function traced(d) {
+        const p = document.createElementNS(SVGNS, "path");
+        p.setAttribute("d", d);
+        const L = p.getTotalLength(), pts = [];
+        for (let i = 0; i <= 600; i++) { const q = p.getPointAtLength((i / 600) * L); pts.push({ x: q.x, y: q.y }); }
+        return resample(pts, N);
+      }
+      const eight = { top: lobe(Math.PI), bottom: lobe(0) };
+      const B = {
+        top: traced("M71 127 L94 106 C124 84 116 30 78 30 H60 C46 30 40 38 40 54 V88 C40 98 42 106 50 112 Z"),
+        bottom: traced("M71 127 L98 150 C130 170 124 230 82 230 H60 C46 230 40 222 40 206 V168 C40 158 42 148 50 142 Z"),
+      };
+
+      const el = { top: document.getElementById("h-top"), bottom: document.getElementById("h-bottom") };
+      const dot = document.getElementById("h-dot");
+      const turn = document.getElementById("turn");
+      const mark = document.getElementById("mark");
+      const word = document.getElementById("h-word");
+      const tag = document.getElementById("h-tag");
+      const edge = document.getElementById("word-edge");
+      const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+      const out = (t) => 1 - Math.pow(1 - t, 3);
+      const pop = (t) => { const c = 2.4; return t <= 0 ? 0 : 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+      const clamp = (v) => Math.max(0, Math.min(1, v));
+      const poly = (pts) => pts.length < 2 ? "" : "M" + pts.map((p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" L");
+
+      // the loop's points: the eight morphing into the B by m, and only the
+      // k points nearest the crossing at each end drawn
+      function draw(which, m, k) {
+        const a = eight[which], b = B[which], pts = a.map((p, i) => ({ x: p.x + (b[i].x - p.x) * m, y: p.y + (b[i].y - p.y) * m }));
+        if (k >= N / 2) { el[which].setAttribute("d", poly(pts) + " Z"); return; }
+        const n = Math.max(0, Math.round(k));
+        el[which].setAttribute("d", poly(pts.slice(0, n)) + " " + poly(pts.slice(N - n).reverse()));
+      }
+
+      const T = { x: 420, grow: 900, stand: 600, lean: 650, name: 700 };
+      let run = 0;
+      function play() {
+        const id = ++run, t0 = performance.now();
+        (function frame(now) {
+          if (id !== run) return;
+          if (render(now - t0)) requestAnimationFrame(frame);
+        })(t0);
+      }
+      // the picture at ms into the animation; false once it has finished
+      function render(ms) {
+        const at1 = T.x, at2 = at1 + T.grow, at3 = at2 + T.stand, at4 = at3 + T.lean, end = at4 + T.name + 300;
+        {
+          // 1. the X: short arms out of the crossing; 2. they run on round the loops
+          const kx = N * 0.07 * out(clamp(ms / T.x));
+          const k = kx + (N / 2 - kx) * ease(clamp((ms - at1) / T.grow));
+          // 3. standing up; 4. leaning left into the B
+          const up = ease(clamp((ms - at2) / T.stand));
+          const m = ease(clamp((ms - at3) / T.lean));
+          draw("top", m, k);
+          draw("bottom", m, k);
+          turn.setAttribute("transform", `rotate(${-90 * (1 - up)} ${C.x} ${C.y})`);
+          // 5. the dot lands, the mark steps left and the name slides out
+          dot.setAttribute("r", String(10 * pop(clamp((ms - at4 + 150) / 380))));
+          const n = ease(clamp((ms - at4) / T.name));
+          const tx = 189 + (40 - 189) * n;
+          mark.setAttribute("transform", `translate(${tx} ${150 - C.y})`);
+          edge.setAttribute("x", String(tx + 132)); // the name comes out from behind the mark's right side
+          word.setAttribute("transform", `translate(${-150 * (1 - n)} 0)`);
+          word.setAttribute("opacity", String(n));
+          tag.setAttribute("transform", `translate(${-150 * (1 - ease(clamp((ms - at4 - 120) / T.name)))} 0)`);
+          tag.setAttribute("opacity", String(clamp((ms - at4 - 120) / T.name)));
+          return ms < end;
+        }
+      }
+      window.renderLogoAt = render;
+      document.getElementById("stage").addEventListener("click", play);
+      document.getElementById("replay").addEventListener("click", play);
+      document.querySelectorAll("[data-colour]").forEach((b) => b.addEventListener("click", () => {
+        document.body.classList.toggle("is-red", b.dataset.colour === "red");
+        document.querySelectorAll("[data-colour]").forEach((x) => x.classList.toggle("is-on", x === b));
+      }));
+      play();
+    </script>
+  </body>
+</html>
