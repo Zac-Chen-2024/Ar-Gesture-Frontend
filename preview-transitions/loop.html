@@ -24,7 +24,7 @@
       header { display: flex; align-items: end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
       .kicker { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); }
       h1 { margin: 8px 0 0; font-family: var(--font-serif); font-weight: 400; font-size: 2.6rem; line-height: 1; }
-      .controls { display: flex; gap: 8px; font-size: 13px; }
+      .controls { display: flex; gap: 8px; font-size: 13px; flex-wrap: wrap; }
       .controls button { font: inherit; padding: 6px 12px; background: none; border: 1px solid rgba(17,17,17,.3); cursor: pointer; color: var(--ink-soft); }
       .controls button.is-on { border-color: var(--ink); color: var(--ink); }
 
@@ -83,7 +83,9 @@
         <div class="controls">
           <button type="button" data-version="current" class="is-on">Current</button>
           <button type="button" data-version="sym">Symmetric</button>
+          <button type="button" data-version="symShort">Symmetric, shorter</button>
           <button type="button" data-version="short">Shorter B</button>
+          <button type="button" data-version="shortest">Shortest B</button>
           <span style="width:14px"></span>
           <button type="button" data-colour="green" class="is-on">Demo green</button>
           <button type="button" data-colour="red">Game red</button>
@@ -94,7 +96,7 @@
       <section class="hero">
         <div class="stage" id="stage" title="click to replay">
           <svg viewBox="0 0 520 300" id="hero">
-            <defs><clipPath id="word-clip"><rect id="word-edge" x="188" y="0" width="400" height="300" /></clipPath></defs>
+            <defs><clipPath id="word-clip"><rect id="word-edge" x="134" y="-400" width="2000" height="1200" /></clipPath></defs>
             <g id="mark">
               <g id="turn">
                 <path class="ln ink" id="h-top" stroke-width="10" />
@@ -103,10 +105,10 @@
                 <path class="ln acc" id="h-stem-bottom" stroke-width="10" d="M70 124 V 215.2" pathLength="1" />
                 <circle class="dot" id="h-dot" cx="70" cy="124" r="0" />
               </g>
-            </g>
-            <g clip-path="url(#word-clip)">
-              <text class="wordmark" id="h-word" x="196" y="166" font-size="80" opacity="0">XB<tspan fill="var(--accent)">Lab</tspan></text>
-              <text class="tag" id="h-tag" x="200" y="196" font-size="12" opacity="0">HUMAN–COMPUTER INTERACTION</text>
+              <g clip-path="url(#word-clip)">
+                <text class="wordmark" id="h-word" opacity="0">XB<tspan fill="var(--accent)">Lab</tspan></text>
+                <text class="tag" id="h-tag" opacity="0">HUMAN–COMPUTER INTERACTION</text>
+              </g>
             </g>
           </svg>
         </div>
@@ -149,17 +151,17 @@
       <h3>With the name</h3>
       <div class="lockups">
         <div>
-          <svg viewBox="0 0 420 140" width="100%" style="max-width: 420px">
-            <g transform="translate(0 6) scale(0.5)"><use href="#loop-top" class="ln ink" stroke-width="12" /><use href="#loop-bottom" class="ln acc" stroke-width="12" /><circle class="dot" cx="70" cy="124" r="12" /></g>
-            <text class="wordmark" x="92" y="78" font-size="58">XB<tspan fill="var(--accent)">Lab</tspan></text>
-            <text class="tag" x="94" y="106" font-size="11">HUMAN–COMPUTER INTERACTION</text>
+          <svg class="lockup" width="100%" style="max-width: 420px">
+            <use href="#loop-top" class="ln ink" stroke-width="10" /><use href="#loop-bottom" class="ln acc" stroke-width="10" /><circle class="dot" cx="70" cy="124" r="10" />
+            <text class="wordmark">XB<tspan fill="var(--accent)">Lab</tspan></text>
+            <text class="tag">HUMAN–COMPUTER INTERACTION</text>
           </svg>
         </div>
         <div class="dark">
-          <svg viewBox="0 0 420 140" width="100%" style="max-width: 420px">
-            <g transform="translate(0 6) scale(0.5)"><use href="#loop-top" class="ln paper" stroke-width="12" /><use href="#loop-bottom" class="ln acc" stroke-width="12" /><circle class="dot" cx="70" cy="124" r="12" /></g>
-            <text class="wordmark" x="92" y="78" font-size="58">XB<tspan fill="var(--accent)">Lab</tspan></text>
-            <text class="tag" x="94" y="106" font-size="11">HUMAN–COMPUTER INTERACTION</text>
+          <svg class="lockup" width="100%" style="max-width: 420px">
+            <use href="#loop-top" class="ln paper" stroke-width="10" /><use href="#loop-bottom" class="ln acc" stroke-width="10" /><circle class="dot" cx="70" cy="124" r="10" />
+            <text class="wordmark">XB<tspan fill="var(--accent)">Lab</tspan></text>
+            <text class="tag">HUMAN–COMPUTER INTERACTION</text>
           </svg>
         </div>
       </div>
@@ -188,7 +190,9 @@
       const VERSIONS = {
         current: { A: 86, up: [1, 1], lo: [1, 1] },
         sym: { A: 86, up: [48 / UP_W, 86 / UP_H], lo: [48 / LO_W, 86 / LO_H] },
+        symShort: { A: 70, up: [48 / UP_W, 70 / UP_H], lo: [48 / LO_W, 70 / LO_H] },
         short: { A: 74, up: [1, 0.74 / 0.86], lo: [1, 0.74 / 0.86] },
+        shortest: { A: 62, up: [1, 0.62 / 0.86], lo: [1, 0.62 / 0.86] },
       };
       function scaled(d, kx, ky) {
         let cmd = "", i = 0;
@@ -233,6 +237,7 @@
       }
       let eight, B;
       function shape(name) {
+        current = name;
         const v = VERSIONS[name];
         A = v.A;
         const up = scaled(UP, ...v.up), lo = scaled(LO, ...v.lo);
@@ -245,13 +250,46 @@
         document.getElementById("loop-top").setAttribute("d", `${up} M70 ${top} V 124`);
         document.getElementById("loop-bottom").setAttribute("d", `${lo} M70 124 V ${bottom}`);
         document.querySelectorAll("[data-lying] path").forEach((p, i) => p.setAttribute("d", lying(i ? 0 : Math.PI)));
+        if (word) layout();
       }
       function lying(from) {
         const pts = [];
         for (let i = 0; i <= 120; i++) { const t = from + (i / 120) * Math.PI; pts.push(`${(C.x + WIDE * Math.sin(t) * Math.cos(t)).toFixed(1)} ${(C.y + A * Math.sin(t)).toFixed(1)}`); }
         return "M" + pts.join(" L");
       }
-      shape("current");
+      // the name beside the mark: its capitals exactly as tall as the mark,
+      // sitting on the mark's foot, the tag line under it
+      const CAP = (() => {
+        const c = document.createElement("canvas").getContext("2d");
+        c.font = `100px ${getComputedStyle(document.documentElement).getPropertyValue("--font-serif")}`;
+        const m = c.measureText("XB");
+        return m.actualBoundingBoxAscent / 100 || 0.7;
+      })();
+      const STROKE = 10;
+      function bounds() {
+        const v = VERSIONS[current];
+        return { left: C.x - LO_W * Math.max(v.up[0], v.lo[0]) - STROKE / 2, right: C.x + LO_W * Math.max(v.up[0], v.lo[0]) + STROKE / 2,
+          top: C.y - UP_H * v.up[1] - STROKE / 2, bottom: C.y + LO_H * v.lo[1] + STROKE / 2 };
+      }
+      function setName(word, tag) {
+        const b = bounds(), h = b.bottom - b.top, size = h / CAP;
+        word.setAttribute("font-size", size.toFixed(1));
+        word.setAttribute("x", (b.right + h * 0.2).toFixed(1));
+        word.setAttribute("y", b.bottom.toFixed(1));
+        tag.setAttribute("font-size", (h * 0.075).toFixed(1));
+        tag.setAttribute("x", (b.right + h * 0.2 + size * 0.03).toFixed(1));
+        tag.setAttribute("y", (b.bottom + h * 0.22).toFixed(1));
+        const w = Math.max(word.getComputedTextLength(), tag.getComputedTextLength() + size * 0.03);
+        return { left: b.left, right: b.right + h * 0.2 + w, top: b.top, bottom: b.bottom + h * 0.24 };
+      }
+      let current = "current", fit = null;
+      function layout() {
+        fit = setName(word, tag);
+        document.querySelectorAll("svg.lockup").forEach((svg) => {
+          const r = setName(svg.querySelector(".wordmark"), svg.querySelector(".tag")), pad = 16;
+          svg.setAttribute("viewBox", `${r.left - pad} ${r.top - pad} ${r.right - r.left + 2 * pad} ${r.bottom - r.top + 2 * pad}`);
+        });
+      }
 
       const el = { top: document.getElementById("h-top"), bottom: document.getElementById("h-bottom") };
       const dot = document.getElementById("h-dot");
@@ -262,6 +300,7 @@
       const word = document.getElementById("h-word");
       const tag = document.getElementById("h-tag");
       const edge = document.getElementById("word-edge");
+      shape("current");
       const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
       const out = (t) => 1 - Math.pow(1 - t, 3);
       const pop = (t) => { const c = 2.4; return t <= 0 ? 0 : 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
@@ -303,12 +342,16 @@
           // 5. the dot lands, the mark steps left and the name slides out
           dot.setAttribute("r", String(10 * pop(clamp((ms - at4 + 150) / 380))));
           const n = ease(clamp((ms - at4) / T.name));
-          const tx = 190 + (44 - 190) * n;
-          mark.setAttribute("transform", `translate(${tx} ${150 - C.y})`);
-          edge.setAttribute("x", String(tx + 132)); // the name comes out from behind the mark's right side
-          word.setAttribute("transform", `translate(${-150 * (1 - n)} 0)`);
+          // from the mark alone, centred, to mark and name together, centred and fitted
+          const s = Math.min(1, 480 / (fit.right - fit.left), 270 / (fit.bottom - fit.top));
+          const fx = 260 - ((fit.left + fit.right) / 2) * s, fy = 150 - ((fit.top + fit.bottom) / 2) * s;
+          const zoom = 1 + (s - 1) * n, x = 260 - C.x + (fx - (260 - C.x)) * n, y = 150 - C.y + (fy - (150 - C.y)) * n;
+          mark.setAttribute("transform", `translate(${x} ${y}) scale(${zoom})`);
+          edge.setAttribute("x", String(bounds().right + 2)); // the name comes out from behind the mark's right side
+          const slide = (fit.right - bounds().right) * 0.6;
+          word.setAttribute("transform", `translate(${-slide * (1 - n)} 0)`);
           word.setAttribute("opacity", String(n));
-          tag.setAttribute("transform", `translate(${-150 * (1 - ease(clamp((ms - at4 - 120) / T.name)))} 0)`);
+          tag.setAttribute("transform", `translate(${-slide * (1 - ease(clamp((ms - at4 - 120) / T.name)))} 0)`);
           tag.setAttribute("opacity", String(clamp((ms - at4 - 120) / T.name)));
           return ms < end;
         }
@@ -323,12 +366,7 @@
       }));
       document.querySelectorAll("[data-colour]").forEach((b) => b.addEventListener("click", () => {
         document.body.classList.toggle("is-red", b.dataset.colour === "red");
-        document.querySelectorAll("[data-version]").forEach((b) => b.addEventListener("click", () => {
-        shape(b.dataset.version);
-        document.querySelectorAll("[data-version]").forEach((x) => x.classList.toggle("is-on", x === b));
-        play();
-      }));
-      document.querySelectorAll("[data-colour]").forEach((x) => x.classList.toggle("is-on", x === b));
+        document.querySelectorAll("[data-colour]").forEach((x) => x.classList.toggle("is-on", x === b));
       }));
       play();
     </script>
