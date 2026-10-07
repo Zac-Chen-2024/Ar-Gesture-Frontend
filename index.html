@@ -79,6 +79,16 @@
       @media (prefers-reduced-motion: reduce) {
         .lab-logo .px { transition: none; }
       }
+      /* like the other pages: nothing selects or drags like a document */
+      html {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      img,
+      svg {
+        -webkit-user-drag: none;
+      }
       body {
         position: relative;
         padding-bottom: 120px; /* room for the logo on short screens */
