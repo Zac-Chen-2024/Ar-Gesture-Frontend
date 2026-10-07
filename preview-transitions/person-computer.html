@@ -510,7 +510,7 @@
             pixG.setAttribute("transform", `translate(${f(part)} 0)`);
             // the scan line runs down the machine's side; behind it the shape is pixels
             const sc = clamp((ms - AT.scan) / T.scan), y = g.top + (g.bottom - g.top) * ease(sc);
-            scanRect.setAttribute("y", f(y));
+            scanRect.setAttribute("y", f(sc > 0 ? y : -1000)); // before the scan it hides nothing (the eight is taller than the mark)
             scan.setAttribute("y1", f(y));
             scan.setAttribute("y2", f(y));
             scan.setAttribute("transform", `translate(${f(part)} 0)`);

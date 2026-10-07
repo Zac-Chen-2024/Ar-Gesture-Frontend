@@ -221,7 +221,7 @@ def build(accent, loop_it, total):
             f'{shapes["bottom"].replace("</path>", fill_op + stroke_w + start_op + "</path>")}{mask}'
             f'<clipPath id="L"><rect x="-500" y="-500" width="500" height="1000"/></clipPath>'
             f'<clipPath id="R"><rect x="0" y="-500" width="500" height="1000"/></clipPath>'
-            f'<clipPath id="S"><rect x="-500" y="{n(B.TOP - 10)}" width="1000" height="1000">{anim("y", scan_y, scan_t, total, loop_it)}</rect></clipPath>'
+            f'<clipPath id="S"><rect x="-500" y="-500" width="1000" height="1500">{anim("y", lambda t: scan_y(t) if t >= AT["scan"] else -500.0, [AT["scan"] - 1] + scan_t, total, loop_it)}</rect></clipPath>'
             f'<clipPath id="N"><rect x="{n(bx + bw)}" y="-500" width="3000" height="1000"/></clipPath>'
             f'<clipPath id="BS"><rect x="-500" y="{n(b_top)}" width="3000" height="1000">{anim("y", by_, bscan_t, total, loop_it)}</rect></clipPath>'
             f'</defs>')

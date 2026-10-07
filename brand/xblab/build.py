@@ -43,6 +43,23 @@ STACKED_CAP = 0.42
 DESCRIPTOR = "HUMAN–COMPUTER INTERACTION"
 
 
+# everything drawn into the current file widens this box: the files are cut to
+# what is really there (ascenders, the last row of pixels), not to the layout
+INK_BOX = []
+
+
+def ink(x0, y0, x1, y1):
+    INK_BOX.append((x0, y0, x1, y1))
+
+
+def ink_box(pad=1.0):
+    x0 = min(b[0] for b in INK_BOX) - pad
+    y0 = min(b[1] for b in INK_BOX) - pad
+    x1 = max(b[2] for b in INK_BOX) + pad
+    y1 = max(b[3] for b in INK_BOX) + pad
+    return x0, y0, x1 - x0, y1 - y0
+
+
 def n(v):
     return f"{v:.2f}".rstrip("0").rstrip(".")
 
@@ -95,6 +112,9 @@ def mark_cells():
 
 def cells_path(cells, ox, oy, p):
     """One outline round a set of grid cells (no seams between pixels)."""
+    if cells:
+        ink(ox + min(i for i, _ in cells) * p, oy + min(j for _, j in cells) * p,
+            ox + (max(i for i, _ in cells) + 1) * p, oy + (max(j for _, j in cells) + 1) * p)
     edges = {}
     for i, j in cells:
         # clockwise round each cell; an edge shared by two cells cancels out
@@ -133,6 +153,7 @@ def mark(person, computer):
     xs = [i for i, _ in cells]
     right = C / 2 + (max(xs) + 1) * P
     box = (-C / 2 - R2, TOP, right + C / 2 + R2, BOTTOM - TOP)
+    ink(-C / 2 - R2, TOP, -C / 2, BOTTOM)
     svg = (f'<path fill="{person}" fill-rule="evenodd" d="{person_path(-C / 2)}"/>'
            f'<path fill="{computer}" d="{cells_path(cells, C / 2, 0, P)}"/>')
     return svg, (box[0], box[1], right - box[0], box[3])
@@ -164,6 +185,11 @@ class Face:
             pen = SVGPathPen(self.gs, ntos=n)
             self.gs[self.glyph(ch)].draw(TransformPen(pen, (k, 0, 0, -k, x, base)))
             out.append(pen.getCommands())
+            bp = BoundsPen(self.gs)
+            self.gs[self.glyph(ch)].draw(bp)
+            if bp.bounds:
+                gx0, gy0, gx1, gy1 = bp.bounds
+                ink(x + gx0 * k, base - gy1 * k, x + gx1 * k, base - gy0 * k)
             x += self.advance(ch) * size + track * size
         return " ".join(out), x
 
@@ -263,12 +289,15 @@ def main():
     for colour, accent in ACCENTS.items():
         for kind in ("symbol", "primary", "institutional", "stacked"):
             for dark in (False, True):
-                body, box = lockup(kind, accent, dark)
+                INK_BOX.clear()
+                body, _ = lockup(kind, accent, dark)
                 f = HERE / f"xblab-{kind}-{colour}{'-on-dark' if dark else ''}.svg"
-                write(f, body, box)
+                write(f, body, ink_box())
                 files.append(f)
         # the app icon: the mark reversed on an ink square
-        body, (x, y, w, h) = lockup("symbol", accent, True)
+        INK_BOX.clear()
+        body, _ = lockup("symbol", accent, True)
+        x, y, w, h = ink_box(0)
         side = h + 8 * P
         cx, cy = x + w / 2, y + h / 2
         f = HERE / f"xblab-app-icon-{colour}.svg"
