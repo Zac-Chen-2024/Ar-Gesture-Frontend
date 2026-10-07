@@ -60,7 +60,10 @@
           <h1>XB<i style="color:var(--ink-soft)">Lab</i></h1>
           <p class="lede">A solid eight, cut by a mirror. The mirror is a screen. On this side is the person, drawn in one smooth line. On the other side is the same shape as the computer sees it: in pixels. Each half keeps its counters, so the two halves are two Bs, back to back.</p>
         </div>
-        <div class="seg"><button data-colour="green" class="is-on">Demo</button><button data-colour="red">Game</button></div>
+        <div style="display:grid;gap:8px;justify-items:end">
+          <div class="seg"><button data-pixels="solid" class="is-on">Pixels</button><button data-pixels="screen">Screen</button></div>
+          <div class="seg"><button data-colour="green" class="is-on">Demo</button><button data-colour="red">Game</button></div>
+        </div>
       </div>
       <div class="hero"><svg viewBox="0 0 640 360" id="hero"></svg></div>
       <p class="hint">X → ∞ → it stands up → it fills → a scan line runs down the mirror and the far side turns to pixels → the name. Click to replay.</p>
@@ -130,11 +133,50 @@
         return c.measureText("XB").actualBoundingBoxAscent / 100 || 0.68;
       })();
       function fit(svg, b, pad) { svg.setAttribute("viewBox", `${b.x - pad} ${b.y - pad} ${b.w + 2 * pad} ${b.h + 2 * pad}`); }
-      function name(parent, g, b) {
-        const cap = b.h * 0.5;
-        const word = el("text", { class: "wordmark", "font-size": f(cap / CAP), x: f(b.x + b.w + g.R * 0.7), y: f(b.y + b.h / 2 + cap / 2) }, parent);
-        word.innerHTML = 'XB<tspan font-style="italic">Lab</tspan>';
-        return { word, width: b.w + g.R * 0.7 + word.getComputedTextLength() };
+      // a letter sampled on a grid of p-sized pixels, sitting on the baseline:
+      // a cell is a pixel when the glyph covers enough of it
+      const SERIF = getComputedStyle(document.documentElement).getPropertyValue("--font-serif");
+      function pixelGlyph(ch, size, p) {
+        const S = 6, c = document.createElement("canvas");
+        c.width = Math.ceil(size * S * 1.1) + 8;
+        c.height = Math.ceil(size * S * 1.05);
+        const ctx = c.getContext("2d");
+        ctx.font = `${size * S}px ${SERIF}`;
+        const base = Math.round(size * S * 0.95);
+        ctx.fillText(ch, 0, base);
+        const adv = ctx.measureText(ch).width / S;
+        const data = ctx.getImageData(0, 0, c.width, c.height).data;
+        const cells = [], rows = Math.ceil((size * CAP) / p) + 1, cols = Math.ceil(adv / p) + 1, n = 4;
+        for (let j = 0; j < rows; j++) {
+          for (let i = 0; i < cols; i++) {
+            let cover = 0;
+            for (let u = 0; u < n; u++) for (let v = 0; v < n; v++) {
+              const X = Math.floor((i * p + ((u + 0.5) * p) / n) * S), Y = Math.floor(base - (j + 1) * p * S + ((v + 0.5) * p * S) / n);
+              if (X >= 0 && Y >= 0 && X < c.width && Y < c.height) cover += data[(Y * c.width + X) * 4 + 3] / 255;
+            }
+            if (cover / (n * n) >= 0.3) cells.push({ x: i * p, y: -(j + 1) * p });
+          }
+        }
+        return { adv, cells };
+      }
+      // the name: capitals half the mark's height, centred on it; the B is drawn
+      // in the mark's pixels, the rest in type
+      function name(parent, g, b, { gap = 0, colour = ACC } = {}) {
+        const cap = b.h * 0.5, size = cap / CAP;
+        const x0 = b.x + b.w + g.R * 0.7, base = b.y + b.h / 2 + cap / 2;
+        const word = el("g", {}, parent);
+        const X = el("text", { class: "wordmark", "font-size": f(size), x: f(x0), y: f(base) }, word);
+        X.textContent = "X";
+        const wX = X.getComputedTextLength();
+        const B = pixelGlyph("B", size, g.p);
+        const smoothB = el("text", { class: "wordmark", "font-size": f(size), x: f(x0 + wX), y: f(base), opacity: 0 }, word);
+        smoothB.textContent = "B";
+        const pixB = el("g", { fill: colour, "shape-rendering": gap ? "auto" : "crispEdges", transform: `translate(${f(x0 + wX)} ${f(base)})` }, word);
+        const sz = gap ? g.p * (1 - gap) : g.p + 0.35, o = gap ? (g.p * gap) / 2 : -0.175;
+        const cells = B.cells.map((q) => ({ ...q, e: el("rect", { x: f(q.x + o), y: f(q.y + o), width: f(sz), height: f(sz) }, pixB) }));
+        const lab = el("text", { class: "wordmark", "font-size": f(size), x: f(x0 + wX + B.adv), y: f(base), "font-style": "italic" }, word);
+        lab.textContent = "Lab";
+        return { word, smoothB, pixB, cells, base, cap, width: b.w + g.R * 0.7 + wX + B.adv + lab.getComputedTextLength() };
       }
 
       const STUDIES = [
@@ -164,7 +206,7 @@
           const lock = el("svg", { class: "lock" }, row);
           const plain = s.ground ? {} : s.opts;
           const b = mark(el("g", {}, lock), g, plain);
-          const n = name(lock, g, b);
+          const n = name(lock, g, b, { gap: (s.opts && s.opts.gap) || 0, colour: (plain && plain.right) || ACC });
           fit(lock, { x: b.x, y: b.y, w: n.width, h: b.h }, 2);
           const smalls = document.createElement("div");
           smalls.className = "smalls";
@@ -187,6 +229,7 @@
       render();
 
       // ---------- the motion
+      let heroStyle = "solid";
       (() => {
         const NP = 240;
         const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -197,7 +240,9 @@
         AT.part = AT.fill + T.fill;
         AT.scan = AT.part + T.part * 0.6;
         AT.name = AT.scan + T.scan + 80;
-        const END = AT.name + T.name + 200;
+        T.bscan = 520;
+        AT.bscan = AT.name + T.name * 0.55;
+        const END = Math.max(AT.name + T.name, AT.bscan + T.bscan) + 200;
 
         function resample(pts, n) {
           const d = [0];
@@ -237,7 +282,7 @@
           const strokes = [[clipL, INK], [clipR, ACC]].map(([c, col]) => {
             const grp = el("g", { "clip-path": `url(#${c.id})` }, wrap);
             const turn = el("g", {}, grp);
-            const at = { fill: "none", stroke: col, "stroke-width": g.R * 0.09, "stroke-linecap": "round", "stroke-linejoin": "round" };
+            const at = { fill: col, "fill-opacity": 0, "fill-rule": "evenodd", stroke: col, "stroke-width": g.R * 0.09, "stroke-linecap": "round", "stroke-linejoin": "round" };
             return { grp, turn, top: el("path", at, turn), bottom: el("path", at, turn) };
           });
           // the solid: the person's half, and the machine's half until the scan line passes
@@ -247,7 +292,10 @@
           const rightG = el("g", { "clip-path": `url(#${id}r)` }, wrap);
           const right = el("path", { fill: ACC, "fill-rule": "evenodd", "clip-path": `url(#${id}s)`, opacity: 0 }, rightG);
           const pixG = el("g", { fill: ACC, "shape-rendering": "crispEdges" }, wrap);
-          const pix = pixels(g).map((q) => ({ ...q, e: el("rect", { x: f(q.x - 0.175), y: f(q.y - 0.175), width: f(g.p + 0.35), height: f(g.p + 0.35), opacity: 0 }, pixG) }));
+          const gap = heroStyle === "screen" ? 0.16 : 0;
+          if (gap) pixG.setAttribute("shape-rendering", "auto");
+          const ps = gap ? g.p * (1 - gap) : g.p + 0.35, po = gap ? (g.p * gap) / 2 : -0.175;
+          const pix = pixels(g).map((q) => ({ ...q, e: el("rect", { x: f(q.x + po), y: f(q.y + po), width: f(ps), height: f(ps), opacity: 0 }, pixG) }));
           const scan = el("line", { x1: 0, x2: g.r2 + g.p * 1.5, stroke: ACC, "stroke-width": 1.4, opacity: 0 }, wrap);
           const S = {
             eight: { top: eightLoop(g, Math.PI), bottom: eightLoop(g, 0) },
@@ -258,7 +306,13 @@
           const nameClip = el("clipPath", { id: id + "n" }, defs);
           el("rect", { x: b.x + b.w, y: -1000, width: 3000, height: 2000 }, nameClip);
           const nameG = el("g", { "clip-path": `url(#${id}n)`, opacity: 0 }, wrap);
-          const n = name(nameG, g, b);
+          const n = name(nameG, g, b, { gap });
+          // the B arrives as type and is scanned into pixels like the mark
+          n.smoothB.setAttribute("opacity", 1);
+          const bClip = el("clipPath", { id: id + "b" }, defs);
+          const bRect = el("rect", { x: -1000, y: -1000, width: 4000, height: 4000 }, bClip);
+          n.smoothB.setAttribute("clip-path", `url(#${id}b)`);
+          const bTop = n.base - n.cap - g.p, bBottom = n.base + g.p;
           const k = Math.min(1, 440 / n.width, 230 / b.h);
           const endPos = { x: 320 - (b.x + n.width / 2) * k, y: 180 - (b.y + b.h / 2) * k };
 
@@ -272,18 +326,26 @@
             const cnt = NP * 0.05 * out(clamp(ms / T.x)) + (NP / 2 - NP * 0.05) * ease(clamp((ms - AT.grow) / T.grow));
             const up = ease(clamp((ms - AT.stand) / T.stand));
             const fill = ease(clamp((ms - AT.fill) / T.fill));
+            // the line is pulled onto the loops' true shape, fills from inside,
+            // and its stroke thins to nothing as the counters open: it ends as
+            // exactly the solid that takes over from it
+            const u = clamp((ms - AT.fill) / T.fill);
+            const m = ease(clamp(u / 0.6)), fo = ease(clamp((u - 0.15) / 0.5));
+            const thin = 1 - ease(clamp((u - 0.45) / 0.55)), hole = out(clamp((u - 0.45) / 0.55));
+            const holes = { top: hole > 0.01 ? " " + circle(0, -g.d1, g.r1 * g.counter * hole) : "", bottom: hole > 0.01 ? " " + circle(0, g.d2, g.r2 * g.counter * hole) : "" };
+            const solidNow = ms >= AT.part;
             strokes.forEach((st) => {
               st.turn.setAttribute("transform", `rotate(${-90 * (1 - up)})`);
-              st.top.setAttribute("d", line("top", fill, cnt));
-              st.bottom.setAttribute("d", line("bottom", fill, cnt));
-              st.grp.setAttribute("opacity", String(1 - clamp((ms - AT.fill - T.fill * 0.55) / (T.fill * 0.45))));
+              st.top.setAttribute("d", line("top", m, cnt) + (cnt >= NP / 2 ? holes.top : ""));
+              st.bottom.setAttribute("d", line("bottom", m, cnt) + (cnt >= NP / 2 ? holes.bottom : ""));
+              [st.top, st.bottom].forEach((p) => { p.setAttribute("fill-opacity", String(fo)); p.setAttribute("stroke-width", f(g.R * 0.09 * thin)); });
+              st.grp.setAttribute("opacity", solidNow ? 0 : 1);
             });
-            const hole = out(clamp((ms - AT.fill - T.fill * 0.35) / (T.fill * 0.65)));
-            const d = solid(g, hole);
+            const d = solid(g, 1);
             left.setAttribute("d", d);
             right.setAttribute("d", d);
-            left.setAttribute("opacity", String(fill));
-            right.setAttribute("opacity", String(fill));
+            left.setAttribute("opacity", solidNow ? 1 : 0);
+            right.setAttribute("opacity", solidNow ? 1 : 0);
             // the mirror opens a little
             const part = (g.c / 2) * ease(clamp((ms - AT.part) / T.part));
             left.parentNode.setAttribute("transform", `translate(${f(-part)} 0)`);
@@ -308,10 +370,21 @@
             wrap.setAttribute("transform", `translate(${f(x)} ${f(yy)}) scale(${z.toFixed(4)})`);
             nameG.setAttribute("opacity", String(clamp((ms - AT.name) / (T.name * 0.6))));
             n.word.setAttribute("transform", `translate(${f(-(n.width - b.w) * 0.45 * (1 - out(clamp((ms - AT.name - 60) / T.name))))} 0)`);
+            const bs = clamp((ms - AT.bscan) / T.bscan), by = bTop + (bBottom - bTop) * ease(bs);
+            bRect.setAttribute("y", f(by));
+            for (const q of n.cells) {
+              const yAbs = n.base + q.y, shown = bs >= 1 ? 1 : clamp((by - yAbs) / (g.p * 2.5));
+              q.e.setAttribute("opacity", String(shown));
+            }
             return ms < END;
           };
         }
         const heroSvg = document.getElementById("hero");
+        document.querySelectorAll("[data-pixels]").forEach((btn) => btn.addEventListener("click", () => {
+          heroStyle = btn.dataset.pixels;
+          document.querySelectorAll("[data-pixels]").forEach((x) => x.classList.toggle("is-on", x === btn));
+          play();
+        }));
         let draw = null, run = 0;
         function play() {
           draw = stage(heroSvg);
