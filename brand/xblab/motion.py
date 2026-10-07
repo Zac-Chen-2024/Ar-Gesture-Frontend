@@ -116,7 +116,7 @@ def span(start, length, steps=24):
     return [start + length * i / steps for i in range(steps + 1)]
 
 
-def build(accent, loop_it, total, with_name=True):
+def build(accent, loop_it, total, with_name=True, with_scan=True):
     E, P, C = B.INK, B.P, B.C
     ev, sp, ab = [], [], []
     # the line's reach, its turn, its fill
@@ -259,8 +259,12 @@ def build(accent, loop_it, total, with_name=True):
             + "</g></g></g></g>")
     if not with_name:
         # the mark alone, round the crossing: X, ∞, the eight, the pixels; no name
-        body = (defs + half("L", E, -1) + half("R", accent, 1, "S")
-                + f'<g fill="{accent}" shape-rendering="crispEdges">{"".join(pix)}{whole_pix}</g>' + scan_line)
+        # (without the scan it ends solid, the mirror open)
+        if with_scan:
+            body = (defs + half("L", E, -1) + half("R", accent, 1, "S")
+                    + f'<g fill="{accent}" shape-rendering="crispEdges">{"".join(pix)}{whole_pix}</g>' + scan_line)
+        else:
+            body = defs + half("L", E, -1) + half("R", accent, 1)
         x0, y0, w, h = -150, -150, 300, 300
         return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="{x0} {y0} {w} {h}" width="{w}" height="{h}">'
                 f'<rect x="{x0}" y="{y0}" width="{w}" height="{h}" fill="{B.PAPER}"/>{body}</svg>\n')
@@ -287,6 +291,18 @@ def main():
         timeline(3.6)
         end = AT["scan"] + T["scan"] + 40
         (B.HERE / f"xblab-mark-motion-{colour}.svg").write_text(scoped(build(accent, False, end, with_name=False)))
+        # the mark drawn only as far as the solid eight, the mirror open (the
+        # scan is then done by the page transition), and its two still states
+        end = AT["part"] + T["part"] + 40
+        (B.HERE / f"xblab-mark-draw-{colour}.svg").write_text(scoped(build(accent, False, end, with_name=False, with_scan=False)))
+        person = B.person_path(-B.C / 2)
+        head = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -150 300 300" width="300" height="300">'
+        (B.HERE / f"xblab-mark-solid-{colour}.svg").write_text(
+            head + f'<path fill="{B.INK}" fill-rule="evenodd" d="{person}"/>'
+            f'<path fill="{accent}" fill-rule="evenodd" transform="scale(-1 1)" d="{person}"/></svg>\n')
+        (B.HERE / f"xblab-mark-pixels-{colour}.svg").write_text(
+            head + f'<path fill="{B.INK}" fill-rule="evenodd" d="{person}"/>'
+            f'<path fill="{accent}" shape-rendering="crispEdges" d="{B.cells_path(B.mark_cells(), B.C / 2, 0, B.P)}"/></svg>\n')
         # its last frame, still and small: an arriving page shows it at once
         cells = B.mark_cells()
         (B.HERE / f"xblab-mark-still-{colour}.svg").write_text(
