@@ -45,6 +45,8 @@
       .card h2 b { font-weight: 400; color: var(--ink-faint); margin-right: 8px; }
       .card p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
       .wordmark { font-family: var(--font-serif); fill: var(--ink); }
+      .descriptor { font-family: var(--font-ui); font-weight: 600; fill: var(--ink-faint); }
+      .on-ink .descriptor { fill: rgba(250, 248, 243, .55); }
       .card .big.on-ink { background: var(--ink); }
       .card .big.on-accent { background: var(--accent); }
       .on-ink .wordmark { fill: var(--paper); }
@@ -159,11 +161,19 @@
         }
         return { adv, cells };
       }
-      // the name: capitals half the mark's height, centred on it; the B is drawn
-      // in the mark's pixels, the rest in type
+      // the name and the descriptor under it, together exactly as tall as the
+      // mark: the name's capitals start at the mark's top, the descriptor sits
+      // on its foot and runs the name's full width. The B is drawn in the
+      // mark's pixels, the rest in type.
+      const TAG = 0.15, LEAD = 0.36; // descriptor capitals and the space above them, in name capitals
+      const CAP_UI = (() => {
+        const c = document.createElement("canvas").getContext("2d");
+        c.font = `600 100px ${getComputedStyle(document.documentElement).getPropertyValue("--font-ui")}`;
+        return c.measureText("HCI").actualBoundingBoxAscent / 100 || 0.72;
+      })();
       function name(parent, g, b, { gap = 0, colour = ACC } = {}) {
-        const cap = b.h * 0.5, size = cap / CAP;
-        const x0 = b.x + b.w + g.R * 0.7, base = b.y + b.h / 2 + cap / 2;
+        const cap = b.h / (1 + LEAD + TAG), size = cap / CAP;
+        const x0 = b.x + b.w + g.R * 0.7, base = b.y + cap;
         const word = el("g", {}, parent);
         const X = el("text", { class: "wordmark", "font-size": f(size), x: f(x0), y: f(base) }, word);
         X.textContent = "X";
@@ -176,7 +186,11 @@
         const cells = B.cells.map((q) => ({ ...q, e: el("rect", { x: f(q.x + o), y: f(q.y + o), width: f(sz), height: f(sz) }, pixB) }));
         const lab = el("text", { class: "wordmark", "font-size": f(size), x: f(x0 + wX + B.adv), y: f(base), "font-style": "italic" }, word);
         lab.textContent = "Lab";
-        return { word, smoothB, pixB, cells, base, cap, width: b.w + g.R * 0.7 + wX + B.adv + lab.getComputedTextLength() };
+        const wName = wX + B.adv + lab.getComputedTextLength();
+        const tag = el("text", { class: "descriptor", "font-size": f((cap * TAG) / CAP_UI), x: f(x0 + size * 0.02), y: f(b.y + b.h),
+          textLength: f(wName - size * 0.04), lengthAdjust: "spacing" }, word);
+        tag.textContent = "HUMAN–COMPUTER INTERACTION";
+        return { word, smoothB, pixB, cells, base, cap, width: b.w + g.R * 0.7 + wName };
       }
 
       const STUDIES = [
