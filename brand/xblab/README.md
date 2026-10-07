@@ -12,7 +12,8 @@ their own).
 | `xblab-stacked-*.svg` | Mark over name. Square and narrow spaces. |
 | `xblab-symbol-*.svg` | The mark alone. Avatars, favicons. |
 | `xblab-app-icon-*.svg` | The mark reversed on an ink square. |
-| `xblab-motion-*.svg` | The animation (X → ∞ → mark → name) as animated SVG, plays once and holds; `-loop` repeats. Open in a browser, or use as `<img>`. `-fast` is the same at 2.2× speed, used by the site's page transitions. |
+| `xblab-motion-*.svg` | The animation (X → ∞ → mark → name) as animated SVG, plays once and holds; `-loop` repeats. Open in a browser, or use as `<img>`. |
+| `xblab-mark-motion-*.svg` | The mark alone drawing itself (X → ∞ → eight → pixels), about 1.4 s; used by the site's page transitions. |
 | `xblab-motion-*-loop.gif` | The looping motion as GIF, 960 × 540, 25 fps, for places that do not play SVG (slides, chat, email). |
 
 ## Rules
