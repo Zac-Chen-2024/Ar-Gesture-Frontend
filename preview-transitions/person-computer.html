@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XBLab · person | computer</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --paper: #faf8f3;
+        --ink: #111111;
+        --ink-soft: rgba(17, 17, 17, 0.64);
+        --ink-faint: rgba(17, 17, 17, 0.42);
+        --green: #25915f;
+        --red: #d6452b;
+        --accent: var(--green);
+        --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      }
+      body.is-red { --accent: var(--red); }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+      .page { max-width: 78rem; margin: 0 auto; padding: 0 32px 80px; }
+      .mast { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; padding: 44px 0 22px; border-bottom: 1px solid var(--ink); }
+      .kicker { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); }
+      h1 { margin: 10px 0 0; font-family: var(--font-serif); font-weight: 400; font-size: 3rem; line-height: 1; }
+      .lede { max-width: 44rem; margin: 18px 0 0; font-size: 14px; line-height: 1.6; color: var(--ink-soft); }
+      .seg { display: inline-flex; border: 1px solid var(--ink); }
+      .seg button { font: inherit; font-size: 12px; padding: 5px 12px; background: none; border: 0; cursor: pointer; color: var(--ink-soft); }
+      .seg button + button { border-left: 1px solid var(--ink); }
+      .seg button.is-on { background: var(--ink); color: var(--paper); }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 32px; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+      .card { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); display: flex; flex-direction: column; }
+      .card .big { display: grid; place-items: center; height: 300px; }
+      .card .big svg { height: 220px; width: auto; overflow: visible; }
+      .card .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; padding: 14px 18px; border-top: 1px solid rgba(17,17,17,.14); }
+      .card .row svg.lock { height: 44px; width: auto; overflow: visible; }
+      .card .row .smalls { display: flex; align-items: end; gap: 10px; }
+      .card .row .smalls svg { overflow: visible; }
+      .card .text { padding: 4px 18px 18px; }
+      .card h2 { margin: 6px 0 4px; font-family: var(--font-serif); font-weight: 400; font-size: 1.3rem; }
+      .card h2 b { font-weight: 400; color: var(--ink-faint); margin-right: 8px; }
+      .card p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+      .wordmark { font-family: var(--font-serif); fill: var(--ink); }
+      @media (max-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } }
+      @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="mast">
+        <div>
+          <p class="kicker">XBLab · mark studies</p>
+          <h1>Person | Machine</h1>
+          <p class="lede">The eight, cut by the mirror, no longer folds onto itself. The left half is the person, all round: a small head over a fuller body. The right half is the machine: two rectangles, a screen over a base. Round against square, body against machine, one the mirror of the other.</p>
+        </div>
+        <div class="seg"><button data-colour="green" class="is-on">Demo</button><button data-colour="red">Game</button></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <script>
+      const NS = "http://www.w3.org/2000/svg";
+      const INK = "var(--ink)", ACC = "var(--accent)", PAPER = "var(--paper)";
+      function el(tag, attrs, parent) {
+        const e = document.createElementNS(NS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(e);
+        return e;
+      }
+      function geometry({ k1 = 0.8, angle = 50, R = 60 } = {}) {
+        const a = (angle * Math.PI) / 180, r1 = R * k1, r2 = R;
+        return { a, r1, r2, d1: r1 / Math.sin(a), d2: r2 / Math.sin(a), R, top: -(r1 / Math.sin(a) + r1), bottom: r2 / Math.sin(a) + r2 };
+      }
+      const f = (v) => +v.toFixed(2);
+      const circle = (cx, cy, r) => `M${f(cx - r)} ${f(cy)} A${r} ${r} 0 1 0 ${f(cx + r)} ${f(cy)} A${r} ${r} 0 1 0 ${f(cx - r)} ${f(cy)} Z`;
+
+      // A loop: a superellipse (|x|^n + |y|^n = r^n) and the two tangents from
+      // the crossing. n = 2 is a circle (the person); larger n is a rounded
+      // square (the computer). Each loop of the computer is solved so that its
+      // tangents leave the crossing at the person's angle and its far edge
+      // lines up with the person's, so the X and the outline run straight
+      // across the cut.
+      const SAMPLES = 360;
+      function squircle(r, n, from, to) {
+        const pts = [];
+        for (let i = 0; i <= SAMPLES; i++) {
+          const t = from + ((to - from) * i) / SAMPLES, c = Math.cos(t), s = Math.sin(t);
+          pts.push([r * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), r * Math.sign(s) * Math.pow(Math.abs(s), 2 / n)]);
+        }
+        return pts; // x right, y away from the crossing
+      }
+      // the tangent point: of the right half, the point seen at the widest angle from the crossing
+      function tangent(r, d, n) {
+        let best = null;
+        for (const [x, y] of squircle(r, n, -Math.PI / 2, Math.PI / 2)) {
+          const ang = Math.atan2(x, d + y);
+          if (!best || ang > best.ang) best = { ang, x, y };
+        }
+        return best;
+      }
+      function solve(r, d, n, a) {
+        if (n === 2) return { r, d };
+        const reach = r + d;
+        let lo = r * 0.4, hi = r * 1.2;
+        for (let i = 0; i < 40; i++) {
+          const mid = (lo + hi) / 2;
+          if (tangent(mid, reach - mid, n).ang > a) hi = mid; else lo = mid;
+        }
+        return { r: lo, d: reach - lo };
+      }
+      // the right half of one loop, from the crossing: y is -1 up, +1 down
+      function halfLoop(g, up, n, counter) {
+        const s = up ? -1 : 1, base = solve(up ? g.r1 : g.r2, up ? g.d1 : g.d2, n, g.a);
+        const T = tangent(base.r, base.d, n);
+        const t0 = Math.atan2(Math.sign(T.y) * Math.pow(Math.abs(T.y) / base.r, n / 2), Math.pow(T.x / base.r, n / 2));
+        const arc = squircle(base.r, n, t0, Math.PI / 2);
+        const pt = ([x, y]) => `${f(x)} ${f(s * (base.d + y))}`;
+        let d = `M0 0 L${pt([T.x, T.y])} ` + arc.map((p) => "L" + pt(p)).join(" ") + " Z";
+        if (counter) {
+          const c = squircle(base.r * counter, n, -Math.PI / 2, Math.PI / 2);
+          d += " M" + c.map(pt).join(" L") + " Z";
+        }
+        return d;
+      }
+      // the machine: each loop of the right half is a plain rectangle, half of
+      // the square around the person's loop; a slit as wide as the mirror cut
+      // separates the two, and a square counter sits where the person's round
+      // one does
+      function blocks(g, counter, slit) {
+        const parts = [[g.top, -slit / 2, g.r1, -g.d1], [slit / 2, g.bottom, g.r2, g.d2]];
+        return parts.map(([y0, y1, w, cy]) => {
+          let d = `M0 ${f(y0)} H${f(w)} V${f(y1)} H0 Z`;
+          if (counter) { const h = (g.r1 + g.r2) / 2 * counter * (w / ((g.r1 + g.r2) / 2)); d += ` M0 ${f(cy - h)} H${f(h)} V${f(cy + h)} H0 Z`; }
+          return d;
+        }).join(" ");
+      }
+      // a whole loop pair, mirrored for the left half
+      function half(g, n, counter, mirror) {
+        const d = halfLoop(g, true, n, counter) + " " + halfLoop(g, false, n, counter);
+        return mirror ? d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (m, x, y) => `${f(-x)} ${y}`) : d;
+      }
+      const box = (g) => ({ x: -g.r2, y: g.top, w: 2 * g.r2, h: g.bottom - g.top });
+
+      let uid = 0;
+      // both halves, a gap between them (the mirror)
+      function mark(parent, g, { gap = 0.14, left = INK, right = ACC, counter = 0.46, n = 4.5, leftOpacity = 1 } = {}) {
+        const id = "m" + uid++, b = box(g), cut = (g.R * gap) / 2;
+        const defs = el("defs", {}, parent);
+        const L = el("clipPath", { id: id + "l" }, defs), Rt = el("clipPath", { id: id + "r" }, defs);
+        el("rect", { x: b.x - 10, y: b.y - 10, width: -b.x + 10 - cut, height: b.h + 20 }, L);
+        el("rect", { x: cut, y: b.y - 10, width: b.w, height: b.h + 20 }, Rt);
+        el("path", { d: half(g, 2, counter, true), fill: left, opacity: leftOpacity, "fill-rule": "evenodd", "clip-path": `url(#${id}l)` }, parent);
+        const machine = n === "blocks" ? blocks(g, counter, g.R * gap) : half(g, n, counter, false);
+        el("path", { d: machine, fill: right, "fill-rule": "evenodd", "clip-path": `url(#${id}r)` }, parent);
+        return b;
+      }
+
+      const STUDIES = [
+        { name: "Person | Machine", text: "The person's round loops on the left; on the right, two plain rectangles stacked like a screen over a base, each half of the square around the person's loop. A slit as wide as the mirror cut separates them; square counters for screens.", opts: { n: "blocks" } },
+        { name: "Blocks, solid", text: "The rectangles without counters: two blocks against two curves. The plainest contrast between body and machine, and the strongest at small sizes.", opts: { n: "blocks", counter: 0 } },
+        { name: "Blocks, one colour", text: "In ink alone. Round against square still tells person from machine without colour.", opts: { n: "blocks", right: INK } },
+        { name: "Blocks, equal", text: "Head and body the same size, both blocks the same size: a calmer, more symmetrical stack.", geo: { k1: 1 }, opts: { n: "blocks" } },
+        { name: "Rounded square (for comparison)", text: "The earlier study: the computer drawn with the same construction as the person, but rounded-square loops, so the X runs straight across the cut.", opts: {} },
+        { name: "Rounded square, solid", text: "The same without counters.", opts: { counter: 0 } },
+      ];
+
+      const CAP = (() => {
+        const c = document.createElement("canvas").getContext("2d");
+        c.font = `100px ${getComputedStyle(document.documentElement).getPropertyValue("--font-serif")}`;
+        return c.measureText("XB").actualBoundingBoxAscent / 100 || 0.68;
+      })();
+      function fit(svg, b, pad) { svg.setAttribute("viewBox", `${b.x - pad} ${b.y - pad} ${b.w + 2 * pad} ${b.h + 2 * pad}`); }
+
+      function render() {
+        const grid = document.getElementById("grid");
+        grid.innerHTML = "";
+        STUDIES.forEach((s, i) => {
+          const g = geometry(s.geo);
+          const card = document.createElement("div");
+          card.className = "card";
+          grid.appendChild(card);
+          const big = document.createElement("div");
+          big.className = "big";
+          card.appendChild(big);
+          const svg = el("svg", {}, big);
+          fit(svg, mark(svg, g, s.opts), 4);
+
+          const row = document.createElement("div");
+          row.className = "row";
+          card.appendChild(row);
+          const lock = el("svg", { class: "lock" }, row);
+          const b = mark(el("g", {}, lock), g, s.opts);
+          const cap = b.h * 0.5, size = cap / CAP;
+          const word = el("text", { class: "wordmark", "font-size": size, x: b.x + b.w + g.R * 0.8, y: b.y + b.h / 2 + cap / 2 }, lock);
+          word.innerHTML = 'XB<tspan font-style="italic">Lab</tspan>';
+          fit(lock, { x: b.x, y: b.y, w: b.w + g.R * 0.8 + word.getComputedTextLength(), h: b.h }, 2);
+          const smalls = document.createElement("div");
+          smalls.className = "smalls";
+          row.appendChild(smalls);
+          [32, 16].forEach((px) => {
+            const sv = el("svg", { height: px }, smalls);
+            fit(sv, mark(el("g", {}, sv), g, { ...s.opts, gap: 0.2 }), 1);
+          });
+
+          const text = document.createElement("div");
+          text.className = "text";
+          text.innerHTML = `<h2><b>${String.fromCharCode(65 + i)}</b>${s.name}</h2><p>${s.text}</p>`;
+          card.appendChild(text);
+        });
+      }
+      document.querySelectorAll("[data-colour]").forEach((b) => b.addEventListener("click", () => {
+        document.body.classList.toggle("is-red", b.dataset.colour === "red");
+        document.querySelectorAll("[data-colour]").forEach((x) => x.classList.toggle("is-on", x === b));
+      }));
+      render();
+    </script>
+  </body>
+</html>
