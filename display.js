@@ -167,10 +167,12 @@ const ACTION_ZONE_Y = { relative: 1.8, absolute: 1.35 }; // mirrors the server
 const BAR_BAND_H = 0.45; // visual height of the bar band above the zone line
 const CLEAR_ZONE_X = [-5, -4]; // Q's left edge to Z's left edge; mirrors the server
 
+const KEY_ROW_FLOOR_Y = 2.25; // the cursor stops halfway down the Space/Clear row (mirrors unify.py)
+
 function clampTracePoint(point) {
   const mode = currentMappingMode === "absolute" ? "absolute" : "relative";
   const top = CANDIDATE_ZONE_Y[mode] - BAR_BAND_H;
-  const bottom = ACTION_ZONE_Y[mode] + BAR_BAND_H;
+  const bottom = hasKeyRow() ? KEY_ROW_FLOOR_Y : ACTION_ZONE_Y[mode] + BAR_BAND_H;
   if (point.y < top) return { x: point.x, y: top };
   if (point.y > bottom) return { x: point.x, y: bottom };
   return point;
@@ -207,21 +209,29 @@ function updateCursorByKey(keyName) {
   moveCursor(getKeyCenter(keyName || "G"));
 }
 
+// The main display shows Unify's key row (Space from X to K, Clear under Q)
+// in every relative mode; study screens keep their own bottom bar.
+function hasKeyRow() {
+  return currentMappingMode !== "absolute" && !document.body.classList.contains("study-body");
+}
+
 function applyModeClasses() {
   const isAbsoluteMode = currentMappingMode === "absolute";
   document.body.classList.toggle("is-absolute-mode", isAbsoluteMode);
   document.body.classList.toggle("is-continuous-mode", !isAbsoluteMode && currentInputMode === "continuous");
   document.body.classList.toggle("is-cursor-visual-mode", currentVisualMode === "cursor");
   document.body.classList.toggle("is-unify-mode", !isAbsoluteMode && isUnifyMode());
+  document.body.classList.toggle("has-key-row", hasKeyRow());
   const unifyKeys = [document.getElementById("unify-space"), document.getElementById("unify-clear")];
   unifyKeys.forEach((key) => {
     if (key) {
       // the space key: Unify, and Double (it finishes a spelled word there)
-      key.hidden = !isUnifyMode() || (key.id === "unify-space" && currentInputMode === "unify-lp");
+      key.hidden = !(isUnifyMode() || hasKeyRow()) || (key.id === "unify-space" && currentInputMode === "unify-lp");
     }
   });
   if (!isUnifyMode()) {
     unifyKeys.forEach((key) => key?.classList.remove("is-unify-hover"));
+    document.querySelectorAll(".key.is-unify-holding").forEach((key) => key.classList.remove("is-unify-holding"));
     document.querySelectorAll(".key.is-unify-hover").forEach((key) => key.classList.remove("is-unify-hover"));
   }
   if (touchpadActive) {
@@ -383,6 +393,7 @@ function renderSpellingState(state) {
     key.classList.toggle("is-spelling-target", (currentSpelling.active || currentSpelling.armed)
       && key.dataset.key.toLowerCase() === currentSpelling.preview);
   });
+  renderSpellingHold();
   if (currentSpelling.active && (!wasActive || oldActions !== JSON.stringify(currentSpelling.actions))) {
     renderSpellingActions();
   }
@@ -391,6 +402,30 @@ function renderSpellingState(state) {
       control.disabled = currentSpelling.active;
     });
   }
+}
+
+// Resting on a key to start spelling fills it from the bottom, as a Long press
+// does; the fill shows after a short rest and is full when the hold completes.
+const SPELL_FILL_AFTER_MS = 250;
+let spellingHoldShown = null;
+
+function renderSpellingHold() {
+  const s = currentSpelling;
+  const holding = !s.active && s.preview && s.holdSeconds && !isUnifyMode() ? `${s.preview}:${s.holdId}` : null;
+  if (holding === spellingHoldShown && !s.armed) return;
+  document.querySelectorAll(".key.is-spell-holding").forEach((key) => {
+    key.classList.remove("is-spell-holding", "is-unify-holding");
+    key.style.removeProperty("animation-delay");
+  });
+  spellingHoldShown = holding;
+  if (!holding) return;
+  const key = document.querySelector(`.key[data-key="${s.preview.toUpperCase()}"]`);
+  if (!key) return;
+  const total = s.holdSeconds * 1000;
+  key.style.setProperty("--hold-ms", `${Math.max(1, total - SPELL_FILL_AFTER_MS)}ms`);
+  key.style.animationDelay = s.armed ? `-${total}ms` : `${SPELL_FILL_AFTER_MS}ms`;
+  void key.offsetWidth; // restart the fill
+  key.classList.add("is-unify-holding", "is-spell-holding");
 }
 
 function escapeHtml(s) {
@@ -1243,9 +1278,10 @@ socket.addEventListener("message", (event) => {
   }
 
   if (message.type === "action-hover") {
-    document.getElementById("unify-space")?.classList.toggle("is-unify-hover", message.slot === "unify-space");
+    document.getElementById("unify-space")?.classList.toggle("is-unify-hover", message.slot === "unify-space"
+      || (message.slot === "spelling-space" && !isUnifyMode() && currentSpelling.active && !!currentSpelling.text));
     document.getElementById("unify-clear")?.classList.toggle("is-unify-hover",
-      isUnifyMode() && message.active === true);
+      (isUnifyMode() || hasKeyRow()) && message.active === true);
     const space = document.getElementById("spelling-space");
     if (space) space.classList.toggle("is-hover", currentSpelling.active && !!currentSpelling.text
       && message.slot === "spelling-space");

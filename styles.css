@@ -1274,6 +1274,10 @@ body[data-theme="editorial"] {
 
 /* Unify: the space key under C–M, the key a click would hit, and the word still open to change */
 #unify-space[hidden], #unify-clear[hidden], .is-unify-mode #action-clear { display: none; }
+/* the key row stands in for the Clear pill and the spelling Space bar */
+.has-key-row #action-clear, .has-key-row #spelling-space { display: none; }
+/* Clear is inert while a word is being spelled */
+.has-key-row.is-spelling #unify-clear { opacity: .35; }
 #unify-space, #unify-clear { position: absolute; box-sizing: border-box; margin: 0; max-height: none; font-size: clamp(.8rem, 1.7vmin, 1.15rem); letter-spacing: .04em; }
 .key.is-unify-hover { outline: 2px solid currentColor; outline-offset: -3px; }
 .is-unify-mode .key-anchor, [data-theme="editorial"].is-unify-mode .key-anchor { background: transparent; } /* no home key: the cursor stays put */
