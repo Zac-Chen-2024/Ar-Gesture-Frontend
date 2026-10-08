@@ -30,14 +30,17 @@ let currentMappingMode = "relative";
 let currentInputMode = "continuous";
 // Unify and its two variants without a space key (Double, LongPress)
 const UNIFY_MODES = ["unify", "unify-double", "unify-lp"];
-// Traditional is listed under Unify but is Continuous at heart: it draws and
-// moves like Continuous, and only its spelling bar is Unify's.
+// Traditional and Cover are listed under Unify but are Continuous at heart:
+// they draw and move like Continuous, and only their spelling bar is Unify's.
+// Cover starts spelling with a double tap instead of a hold.
+const WORD_BAR_MODES = ["traditional", "cover"];
+
 function inUnifyGroup() {
-  return isUnifyMode() || currentInputMode === "traditional";
+  return isUnifyMode() || WORD_BAR_MODES.includes(currentInputMode);
 }
 
 function isContinuousLike() {
-  return currentInputMode === "continuous" || currentInputMode === "traditional";
+  return currentInputMode === "continuous" || WORD_BAR_MODES.includes(currentInputMode);
 }
 
 function isUnifyMode() {
@@ -309,7 +312,7 @@ function candidateWeight(word) {
 // display-only; selection happens by the cursor (touchpad) sliding onto a
 // segment, decided on the server. Weights must match the server.
 function renderCandidates(candidates) {
-  if (currentSpelling.active && currentInputMode !== "traditional") {
+  if (currentSpelling.active && !WORD_BAR_MODES.includes(currentInputMode)) {
     renderSpellingActions();
     return;
   }
@@ -397,8 +400,9 @@ function renderSpellingState(state) {
     const letter = (currentSpelling.preview || "").toUpperCase();
     const hint = currentSpelling.active
       ? (letter ? `Spelling · lift to add ${letter}`
-        : currentInputMode === "traditional" ? "Spelling · Space for the word as typed, or pick in the bar"
+        : WORD_BAR_MODES.includes(currentInputMode) ? "Spelling · Space for the word as typed, or pick in the bar"
         : (space ? "Spelling · slide down to Space to commit" : "Spelling · slide up to commit or cancel"))
+      : currentInputMode === "cover" ? "Double-tap a letter to spell a word (it replaces the swipe that got you there)."
       : (currentSpelling.armed ? `Hold complete · lift to spell ${letter}` : "Hold a letter for 1 s to spell a word.");
     if (letterBadge.textContent !== hint) letterBadge.textContent = hint;
   }
@@ -407,7 +411,7 @@ function renderSpellingState(state) {
       && key.dataset.key.toLowerCase() === currentSpelling.preview);
   });
   renderSpellingHold();
-  if (currentSpelling.active && currentInputMode !== "traditional"
+  if (currentSpelling.active && !WORD_BAR_MODES.includes(currentInputMode)
       && (!wasActive || oldActions !== JSON.stringify(currentSpelling.actions))) {
     renderSpellingActions();
   }
@@ -425,7 +429,8 @@ let spellingHoldShown = null;
 
 function renderSpellingHold() {
   const s = currentSpelling;
-  const holding = !s.active && s.preview && s.holdSeconds && !isUnifyMode() ? `${s.preview}:${s.holdId}` : null;
+  const holding = !s.active && s.preview && s.holdSeconds && !isUnifyMode() && currentInputMode !== "cover"
+    ? `${s.preview}:${s.holdId}` : null;
   if (holding === spellingHoldShown && !s.armed) return;
   document.querySelectorAll(".key.is-spell-holding").forEach((key) => {
     key.classList.remove("is-spell-holding", "is-unify-holding");
