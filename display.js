@@ -30,6 +30,16 @@ let currentMappingMode = "relative";
 let currentInputMode = "continuous";
 // Unify and its two variants without a space key (Double, LongPress)
 const UNIFY_MODES = ["unify", "unify-double", "unify-lp"];
+// Traditional is listed under Unify but is Continuous at heart: it draws and
+// moves like Continuous, and only its spelling bar is Unify's.
+function inUnifyGroup() {
+  return isUnifyMode() || currentInputMode === "traditional";
+}
+
+function isContinuousLike() {
+  return currentInputMode === "continuous" || currentInputMode === "traditional";
+}
+
 function isUnifyMode() {
   return UNIFY_MODES.includes(currentInputMode);
 }
@@ -167,6 +177,7 @@ const ACTION_ZONE_Y = { relative: 1.8, absolute: 1.35 }; // mirrors the server
 const BAR_BAND_H = 0.45; // visual height of the bar band above the zone line
 const CLEAR_ZONE_X = [-5, -4]; // Q's left edge to Z's left edge; mirrors the server
 
+const KEY_ROW_ZONE_Y = 1.5; // the key row starts at the keyboard's bottom edge (mirrors the server)
 const KEY_ROW_FLOOR_Y = 2.25; // the cursor stops halfway down the Space/Clear row (mirrors unify.py)
 
 function clampTracePoint(point) {
@@ -218,7 +229,7 @@ function hasKeyRow() {
 function applyModeClasses() {
   const isAbsoluteMode = currentMappingMode === "absolute";
   document.body.classList.toggle("is-absolute-mode", isAbsoluteMode);
-  document.body.classList.toggle("is-continuous-mode", !isAbsoluteMode && currentInputMode === "continuous");
+  document.body.classList.toggle("is-continuous-mode", !isAbsoluteMode && isContinuousLike());
   document.body.classList.toggle("is-cursor-visual-mode", currentVisualMode === "cursor");
   document.body.classList.toggle("is-unify-mode", !isAbsoluteMode && isUnifyMode());
   document.body.classList.toggle("has-key-row", hasKeyRow());
@@ -226,7 +237,7 @@ function applyModeClasses() {
   unifyKeys.forEach((key) => {
     if (key) {
       // the space key: Unify, and Double (it finishes a spelled word there)
-      key.hidden = !(isUnifyMode() || hasKeyRow()) || (key.id === "unify-space" && currentInputMode === "unify-lp");
+      key.hidden = !(isUnifyMode() || hasKeyRow());
     }
   });
   if (!isUnifyMode()) {
@@ -238,10 +249,10 @@ function applyModeClasses() {
     setTouchpadHint(isUnifyMode() ? TOUCHPAD_UNIFY_HINT : TOUCHPAD_IDLE_HINT);
   }
   // Word start shows Unify for all three; the variant switch picks one
-  syncSegmented(inputModeSwitch, isUnifyMode() ? "unify" : inputModeSelect.value);
+  syncSegmented(inputModeSwitch, inUnifyGroup() ? "unify" : inputModeSelect.value);
   const variantSetting = document.getElementById("unify-variant-setting");
   if (variantSetting) {
-    variantSetting.hidden = !isUnifyMode();
+    variantSetting.hidden = !inUnifyGroup();
   }
   syncSegmented(unifyVariantSwitch, currentInputMode);
   inputModeSelect.disabled = isAbsoluteMode;
@@ -298,7 +309,7 @@ function candidateWeight(word) {
 // display-only; selection happens by the cursor (touchpad) sliding onto a
 // segment, decided on the server. Weights must match the server.
 function renderCandidates(candidates) {
-  if (currentSpelling.active) {
+  if (currentSpelling.active && currentInputMode !== "traditional") {
     renderSpellingActions();
     return;
   }
@@ -385,7 +396,9 @@ function renderSpellingState(state) {
     letterBadge.setAttribute("aria-hidden", String(!visible));
     const letter = (currentSpelling.preview || "").toUpperCase();
     const hint = currentSpelling.active
-      ? (letter ? `Spelling · lift to add ${letter}` : (space ? "Spelling · slide down to Space to commit" : "Spelling · slide up to commit or cancel"))
+      ? (letter ? `Spelling · lift to add ${letter}`
+        : currentInputMode === "traditional" ? "Spelling · Space for the word as typed, or pick in the bar"
+        : (space ? "Spelling · slide down to Space to commit" : "Spelling · slide up to commit or cancel"))
       : (currentSpelling.armed ? `Hold complete · lift to spell ${letter}` : "Hold a letter for 1 s to spell a word.");
     if (letterBadge.textContent !== hint) letterBadge.textContent = hint;
   }
@@ -394,7 +407,8 @@ function renderSpellingState(state) {
       && key.dataset.key.toLowerCase() === currentSpelling.preview);
   });
   renderSpellingHold();
-  if (currentSpelling.active && (!wasActive || oldActions !== JSON.stringify(currentSpelling.actions))) {
+  if (currentSpelling.active && currentInputMode !== "traditional"
+      && (!wasActive || oldActions !== JSON.stringify(currentSpelling.actions))) {
     renderSpellingActions();
   }
   if (wasActive !== currentSpelling.active) {
@@ -580,7 +594,7 @@ const VARIANT_HINTS = {
   "unify-lp": {
     W0: "Unify · Long press · trace a word, click its last letter · hold a letter to spell",
     W1: "Unify · Long press · click a candidate to switch · or trace the next word",
-    S: "Unify · Long press · spelling · finish the word in the bar"
+    S: "Unify · Long press · spelling · click Space for the word as typed, or pick in the bar"
   }
 };
 
@@ -836,7 +850,7 @@ function endTouchpadStroke() {
   if (
     currentInputMode === "center" ||
     touchpadPos.y <= CANDIDATE_ZONE_Y.relative ||
-    touchpadPos.y >= ACTION_ZONE_Y.relative
+    touchpadPos.y >= (hasKeyRow() ? KEY_ROW_ZONE_Y : ACTION_ZONE_Y.relative)
   ) {
     touchpadPos = { x: 0, y: 0 };
   }
@@ -1064,7 +1078,7 @@ function p2pGlobalPoint(msg) {
   if (currentMappingMode === "absolute") {
     return { x: msg.x * 10 - 5, y: msg.y * 3 - 1.5 };
   }
-  const start = currentInputMode === "continuous"
+  const start = isContinuousLike()
     ? keyboardUnitsOfKey(currentCursorKey)
     : { x: 0, y: 0 };
   return { x: start.x + msg.x, y: start.y + msg.y };
@@ -1478,7 +1492,7 @@ mappingModeSelect?.addEventListener("change", () => {
 inputModeSwitch?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-value]");
   if (!button || button.disabled || button.dataset.value === inputModeSelect.value
-      || (button.dataset.value === "unify" && isUnifyMode())) {
+      || (button.dataset.value === "unify" && inUnifyGroup())) {
     return;
   }
   inputModeSelect.value = button.dataset.value;
