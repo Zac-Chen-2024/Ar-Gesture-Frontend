@@ -164,6 +164,13 @@ function layoutActionPill(anchorRect) {
   };
   placeKey(document.getElementById("unify-space"), "X", "K");
   placeKey(document.getElementById("unify-clear"), "Q", "Q");
+  // Clear's right edge sits under Z's left border: one border wider, so the two lines meet
+  const clear = document.getElementById("unify-clear");
+  const z = document.querySelector('[data-key="Z"]');
+  if (clear && z) {
+    const border = parseFloat(getComputedStyle(z).borderLeftWidth) || 0;
+    clear.style.width = `${z.getBoundingClientRect().left - shellRect.left + border - parseFloat(clear.style.left)}px`;
+  }
 }
 
 function clearCanvas() {
