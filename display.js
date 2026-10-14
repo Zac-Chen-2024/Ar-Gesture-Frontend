@@ -30,10 +30,10 @@ let currentMappingMode = "relative";
 let currentInputMode = "continuous";
 // Unify and its two variants without a space key (Double, LongPress)
 const UNIFY_MODES = ["unify", "unify-double", "unify-lp"];
-// Traditional and Cover are listed under Unify but are Continuous at heart:
+// Long press ("traditional") and Revert are listed under Unify but are Continuous at heart:
 // they draw and move like Continuous, and only their spelling bar is Unify's.
-// Cover starts spelling with a double tap instead of a hold.
-const WORD_BAR_MODES = ["traditional", "cover"];
+// Revert starts spelling with a double tap instead of a hold.
+const WORD_BAR_MODES = ["traditional", "revert"];
 
 function inUnifyGroup() {
   return isUnifyMode() || WORD_BAR_MODES.includes(currentInputMode);
@@ -402,7 +402,7 @@ function renderSpellingState(state) {
       ? (letter ? `Spelling · lift to add ${letter}`
         : WORD_BAR_MODES.includes(currentInputMode) ? "Spelling · Space for the word as typed, or pick in the bar"
         : (space ? "Spelling · slide down to Space to commit" : "Spelling · slide up to commit or cancel"))
-      : currentInputMode === "cover" ? "Double-tap a letter to spell a word (it replaces the swipe that got you there)."
+      : currentInputMode === "revert" ? "Double-tap a letter to spell a word (it replaces the swipe that got you there)."
       : (currentSpelling.armed ? `Hold complete · lift to spell ${letter}` : "Hold a letter for 1 s to spell a word.");
     if (letterBadge.textContent !== hint) letterBadge.textContent = hint;
   }
@@ -429,7 +429,7 @@ let spellingHoldShown = null;
 
 function renderSpellingHold() {
   const s = currentSpelling;
-  const holding = !s.active && s.preview && s.holdSeconds && !isUnifyMode() && currentInputMode !== "cover"
+  const holding = !s.active && s.preview && s.holdSeconds && !isUnifyMode() && currentInputMode !== "revert"
     ? `${s.preview}:${s.holdId}` : null;
   if (holding === spellingHoldShown && !s.armed) return;
   document.querySelectorAll(".key.is-spell-holding").forEach((key) => {
@@ -1203,6 +1203,7 @@ socket.addEventListener("message", (event) => {
     // script but have no Unify switch, and keep the server's default)
     if (unifyVariantSwitch) {
       sendMessage({ type: "mode-set", mode: "unify-double" });
+      sendMessage({ type: "version-set", version: "omact" }); // Standard: the algorithm is not chosen here for now
     }
     return;
   }
