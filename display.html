@@ -7,12 +7,12 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20261008-1" />
+    <link rel="stylesheet" href="styles.css?v=20261015-1" />
     <!-- Demo is green (the home page's Demo colour) and always Editorial -->
     <style>:root { --accent-main: #25915f; --accent-main-rgb: 37, 145, 95; }</style>
     <script src="transition.js?v=20261007-5"></script>
   </head>
-  <body class="display-body" data-pair-qr>
+  <body class="display-body" data-pair-qr data-touchpad-start>
     <a class="home-link" href="./" aria-label="Back to the home page"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>Home</a>
     <main class="display-stage">
       <section class="display-frame" aria-label="Gesture display area">
@@ -30,53 +30,6 @@
               <select id="mapping-mode" class="mode-select" aria-label="Mapping mode">
                 <option value="relative">Relative</option>
                 <option value="absolute">Absolute</option>
-              </select>
-            </label>
-            -->
-            <div class="setting">
-              <span class="setting-label">Word start</span>
-              <select id="input-mode" class="mode-select" aria-label="Input mode" hidden>
-                <option value="center">Center</option>
-                <option value="continuous" selected>Continuous</option>
-                <option value="unify">Unify</option>
-                <option value="unify-double">Unify · Double</option>
-                <option value="traditional">Unify · Long press</option>
-                <option value="revert">Unify · Revert</option>
-              </select>
-              <div class="segmented" id="input-mode-switch" role="radiogroup" aria-label="Input mode">
-                <button type="button" role="radio" data-value="center">Center</button>
-                <button type="button" role="radio" data-value="continuous">Continuous</button>
-                <button type="button" role="radio" data-value="unify">Unify</button>
-              </div>
-            </div>
-            <div class="setting" id="unify-variant-setting" hidden>
-              <span class="setting-label">Unify</span>
-              <div class="segmented" id="unify-variant" role="radiogroup" aria-label="Unify variant">
-                <button type="button" role="radio" data-value="unify">Space</button>
-                <button type="button" role="radio" data-value="unify-double">Double</button>
-                <!-- the first Long press (unify-lp) is archived; "Long press" is now the
-                     traditional mode: Continuous with a hold into spelling -->
-                <button type="button" role="radio" data-value="traditional">Long press</button>
-                <button type="button" role="radio" data-value="revert">Revert</button>
-              </div>
-            </div>
-            <!-- Trace is hidden for now: always Gesture (cursor + drawn trail;
-                 Cursor = dot only). Kept for later — uncomment to bring it back.
-            <label class="setting">
-              <span class="setting-label">Trace</span>
-              <select id="visual-mode" class="mode-select" aria-label="Visualization mode">
-                <option value="cursor">Cursor</option>
-                <option value="gesture">Gesture</option>
-              </select>
-            </label>
-            -->
-            <!-- Phone keys is hidden for now: always Hide. Kept for later —
-                 uncomment to bring the selector back (display.js handles both).
-            <label class="setting">
-              <span class="setting-label">Phone keys</span>
-              <select id="mobile-keyboard-mode" class="mode-select" aria-label="Mobile keyboard reference">
-                <option value="show">Show</option>
-                <option value="hide" selected>Hide</option>
               </select>
             </label>
             -->
@@ -110,6 +63,54 @@
               <span class="setting-label">USB</span>
               <button id="usb-connect" class="mode-select usb-connect" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Connect phone</button>
             </div>
+            <div class="setting">
+              <span class="setting-label">Word start</span>
+              <select id="input-mode" class="mode-select" aria-label="Input mode" hidden>
+                <option value="center">Center</option>
+                <option value="continuous" selected>Continuous</option>
+                <option value="unify">Unify</option>
+                <option value="unify-double">Unify · Double</option>
+                <option value="traditional">Unify · Long press</option>
+                <option value="revert">Unify · Revert</option>
+              </select>
+              <div class="segmented" id="input-mode-switch" role="radiogroup" aria-label="Input mode">
+                <button type="button" role="radio" data-value="center">Center</button>
+                <button type="button" role="radio" data-value="continuous">Continuous</button>
+                <button type="button" role="radio" data-value="unify">Unify</button>
+              </div>
+            </div>
+            <div class="setting" id="unify-variant-setting" hidden>
+              <span class="setting-label">Unify</span>
+              <div class="segmented" id="unify-variant" role="radiogroup" aria-label="Unify variant">
+                <button type="button" role="radio" data-value="unify">Space</button>
+                <button type="button" role="radio" data-value="unify-double">Double</button>
+                <!-- Long press (traditional) and Revert are hidden for now; the modes
+                     stay (the select options above, the server). Uncomment to bring them back.
+                <button type="button" role="radio" data-value="traditional">Long press</button>
+                <button type="button" role="radio" data-value="revert">Revert</button>
+                -->
+              </div>
+            </div>
+            <!-- Trace is hidden for now: always Gesture (cursor + drawn trail;
+                 Cursor = dot only). Kept for later — uncomment to bring it back.
+            <label class="setting">
+              <span class="setting-label">Trace</span>
+              <select id="visual-mode" class="mode-select" aria-label="Visualization mode">
+                <option value="cursor">Cursor</option>
+                <option value="gesture">Gesture</option>
+              </select>
+            </label>
+            -->
+            <!-- Phone keys is hidden for now: always Hide. Kept for later —
+                 uncomment to bring the selector back (display.js handles both).
+            <label class="setting">
+              <span class="setting-label">Phone keys</span>
+              <select id="mobile-keyboard-mode" class="mode-select" aria-label="Mobile keyboard reference">
+                <option value="show">Show</option>
+                <option value="hide" selected>Hide</option>
+              </select>
+            </label>
+            -->
           </div>
           <div id="room-code" class="room-code">
             <span class="room-code-label">Session</span>
@@ -188,7 +189,7 @@
     <script src="config.js?v=20260929-1"></script>
     <script src="vendor/adb.bundle.js?v=20260929-1"></script>
     <script src="vendor/qrcode-generator.js?v=20261006-1"></script>
-    <script src="display.js?v=20261014-2"></script>
+    <script src="display.js?v=20261015-1"></script>
     <script src="collection.js?v=20260929-1"></script>
   </body>
   </html>

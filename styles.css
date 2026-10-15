@@ -1286,8 +1286,9 @@ body[data-theme="editorial"] {
 .unify-provisional { border-bottom: 2px dashed currentColor; }
 .unify-letters { border-bottom: 2px solid #247153; color: #247153; }
 
-/* Unify · Long press: the key fills while it is held */
-.key.is-unify-holding { background-image: linear-gradient(to top, rgba(36, 113, 83, .28) 50%, transparent 50%); background-size: 100% 200%; background-position: top; animation: unify-hold var(--hold-ms, 500ms) linear forwards; }
+/* Unify · Long press: the key fills while it is held. Scoped under body so it
+   beats the G anchor's background reset (Editorial + Continuous-like modes). */
+body .keyboard-shell .key.is-unify-holding { background-image: linear-gradient(to top, rgba(36, 113, 83, .28) 50%, transparent 50%); background-size: 100% 200%; background-position: top; animation: unify-hold var(--hold-ms, 500ms) linear forwards; }
 @keyframes unify-hold { to { background-position: bottom; } }
 #unify-variant-setting[hidden] { display: none; }
 .candidate-seg.is-literal { font-style: normal; }
@@ -1299,6 +1300,15 @@ body[data-theme="editorial"] {
   background: #fff; transform-origin: top right; transition: transform 160ms ease, box-shadow 160ms ease; }
 .pair-qr svg { display: block; width: 100%; height: 100%; }
 .pair-qr:hover { transform: scale(3.6); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); }
+
+/* Demo, Device = Touchpad: a Start button takes the QR's spot */
+.room-code.is-touchpad .pair-qr { display: none; }
+.touchpad-start { grid-column: 2; grid-row: 1 / span 3; align-self: stretch; min-width: 56px; min-height: 56px; margin: 0; padding: 0 12px;
+  border: 0; border-radius: 0; background: var(--accent-main, #111); color: #fff; font: 600 12px/1 var(--font-ui);
+  letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.touchpad-start[hidden] { display: none; }
+.touchpad-start:hover:not(:disabled) { filter: brightness(1.1); }
+.touchpad-start:disabled { background: transparent; color: var(--ink-faint, #888); box-shadow: inset 0 0 0 1px currentColor; cursor: default; letter-spacing: .04em; }
 
 /* back to the home page, top left (Demo and Game) */
 .home-link {

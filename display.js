@@ -545,7 +545,11 @@ function setUsbStatus(text) {
 // ---- Device / Link segmented switches ----
 // Device: Touchpad | Phone. Link only applies to the phone, and Connect phone
 // only to Link=USB. Touchpad is never restored on load: it needs a click to
-// lock the pointer, and Esc always drops back to Phone.
+// lock the pointer. Pages with data-touchpad-start (the Demo): choosing
+// Touchpad only selects it, a Start button in the QR's spot locks the pointer,
+// and Esc comes back to Start with Touchpad kept, so Word start can still be
+// changed. Elsewhere the Touchpad click itself starts and Esc drops to Phone.
+const TOUCHPAD_START = document.body.hasAttribute("data-touchpad-start");
 const deviceSwitch = document.getElementById("device-mode");
 const linkSwitch = document.getElementById("link-mode");
 const linkSetting = document.getElementById("link-setting");
@@ -571,6 +575,43 @@ function updateUsbUi() {
   const showUsb = isPhone && linkMode() === "usb";
   [linkSetting, linkArrow].forEach((el) => { if (el) el.hidden = !isPhone; });
   [usbSetting, usbArrow].forEach((el) => { if (el) el.hidden = !showUsb; });
+  renderTouchpadStart();
+}
+
+// the Start button sits where the pairing QR is (the QR is for the phone)
+function renderTouchpadStart() {
+  const badge = document.getElementById("room-code");
+  if (!TOUCHPAD_START || !badge) {
+    return;
+  }
+  const show = deviceMode === "touchpad";
+  let button = badge.querySelector(".touchpad-start");
+  if (show && !button) {
+    button = document.createElement("button");
+    button.type = "button";
+    button.className = "touchpad-start";
+    // this click is the user activation that pointer lock requires
+    button.addEventListener("click", () => {
+      if (deviceMode === "touchpad" && !touchpadSocket) {
+        enterTouchpad();
+        renderTouchpadStart();
+      }
+    });
+    badge.appendChild(button);
+  }
+  badge.classList.toggle("is-touchpad", show);
+  if (button) {
+    button.hidden = !show;
+    const running = !!touchpadSocket;
+    button.disabled = running;
+    button.textContent = running ? "Esc to stop" : "Start";
+  }
+  const status = badge.querySelector(".room-code-status");
+  if (status && show && !touchpadSocket) {
+    status.textContent = "press Start";
+  } else if (status && !show && status.textContent === "press Start") {
+    status.textContent = badge.classList.contains("is-paired") ? "phone paired" : "waiting for phone…";
+  }
 }
 
 deviceSwitch?.addEventListener("click", (event) => {
@@ -582,7 +623,9 @@ deviceSwitch?.addEventListener("click", (event) => {
   updateUsbUi();
   // this click is the user activation that pointer lock requires
   if (deviceMode === "touchpad") {
-    enterTouchpad();
+    if (!TOUCHPAD_START) {
+      enterTouchpad(); // the Demo waits for its Start button instead
+    }
   } else {
     exitTouchpad();
   }
@@ -804,10 +847,11 @@ function exitTouchpad(reason) {
     setUsbStatus(reason);
     setTimeout(() => setUsbStatus(""), 4000);
   }
-  if (deviceMode === "touchpad") {
+  if (deviceMode === "touchpad" && !TOUCHPAD_START) {
     deviceMode = "phone";
     updateUsbUi();
   }
+  renderTouchpadStart(); // the Demo keeps Touchpad and shows Start again
 }
 
 function startTouchpadStroke() {
@@ -874,7 +918,7 @@ function endTouchpadStroke() {
 }
 
 document.addEventListener("pointerlockchange", () => {
-  if (deviceMode === "touchpad" && document.pointerLockElement !== frame) {
+  if (deviceMode === "touchpad" && touchpadSocket && document.pointerLockElement !== frame) {
     exitTouchpad();
   }
 });
@@ -882,7 +926,7 @@ document.addEventListener("pointerlockchange", () => {
 document.addEventListener("keydown", (event) => {
   // Esc normally just releases the lock (handled above); this covers the
   // case where the lock never engaged
-  if (event.key === "Escape" && deviceMode === "touchpad") {
+  if (event.key === "Escape" && deviceMode === "touchpad" && touchpadSocket) {
     exitTouchpad();
   }
 });
@@ -1195,6 +1239,7 @@ function updateRoomBadge(code, paired) {
     const pairedLabel = deviceMode === "touchpad" ? "touchpad active" : "phone paired";
     statusEl.textContent = paired ? pairedLabel : "waiting for phone…";
   }
+  renderTouchpadStart();
 }
 
 socket.addEventListener("open", () => {
