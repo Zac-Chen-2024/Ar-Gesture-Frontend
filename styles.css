@@ -1290,7 +1290,7 @@ body[data-theme="editorial"] {
    beats the G anchor's background reset (Editorial + Continuous-like modes). */
 body .keyboard-shell .key.is-unify-holding { background-image: linear-gradient(to top, rgba(36, 113, 83, .28) 50%, transparent 50%); background-size: 100% 200%; background-position: top; animation: unify-hold var(--hold-ms, 500ms) linear forwards; }
 @keyframes unify-hold { to { background-position: bottom; } }
-#unify-variant-setting[hidden] { display: none; }
+#unify-variant-setting[hidden], .segmented button[hidden] { display: none; }
 .candidate-seg.is-literal { font-style: normal; }
 
 /* Pairing code beside the session number (pages opened with ?qr) */

@@ -575,6 +575,8 @@ function updateUsbUi() {
   const showUsb = isPhone && linkMode() === "usb";
   [linkSetting, linkArrow].forEach((el) => { if (el) el.hidden = !isPhone; });
   [usbSetting, usbArrow].forEach((el) => { if (el) el.hidden = !showUsb; });
+  // Touchpad offers Unify's Space and Double only; Long press and Revert are phone modes
+  unifyVariantSwitch?.querySelectorAll("[data-phone-only]").forEach((button) => { button.hidden = !isPhone; });
   renderTouchpadStart();
 }
 
@@ -621,6 +623,10 @@ deviceSwitch?.addEventListener("click", (event) => {
   }
   deviceMode = button.dataset.value;
   updateUsbUi();
+  if (deviceMode === "touchpad" && unifyVariantSwitch && WORD_BAR_MODES.includes(currentInputMode)) {
+    inputModeSelect.value = "unify-double"; // Long press / Revert have no touchpad version here
+    inputModeSelect.dispatchEvent(new Event("change"));
+  }
   // this click is the user activation that pointer lock requires
   if (deviceMode === "touchpad") {
     if (!TOUCHPAD_START) {
