@@ -1,0 +1,25 @@
+/* /band: the main display, driven by the Neural Band. The phone's settings and
+   session badge give way to the band's own badge. Every Word start is offered:
+   the stroke modes treat a pinch as the phone's finger. */
+#room-code,
+#device-setting,
+#link-arrow,
+#link-setting,
+#usb-arrow,
+#usb-setting {
+  display: none !important;
+}
+
+.band-badge .band-gain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.85;
+}
+.band-badge .band-gain input { width: 96px; accent-color: currentColor; }
+.band-badge .band-gain output { min-width: 4.2em; text-align: right; font-variant-numeric: tabular-nums; }
+.band-badge .band-raw-link { font-size: 11px; color: inherit; opacity: 0.6; }
+.band-badge .band-raw-link:hover { opacity: 1; }
+.band-badge.is-frozen .room-code-value { opacity: 0.55; }

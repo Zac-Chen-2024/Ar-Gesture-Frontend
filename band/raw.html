@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neural Band Raw</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="../favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+    <style>
+      /* The study pages' editorial look: paper, serif type, hairlines, one red accent. */
+      :root {
+        --paper: #faf8f3;
+        --ink: #111111;
+        --ink-soft: rgba(17, 17, 17, 0.62);
+        --ink-faint: rgba(17, 17, 17, 0.45);
+        --hair: rgba(17, 17, 17, 0.14);
+        --red: #d6452b;
+        --blue: #2b6cd6;
+        --green: #2e8b57;
+        --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino,
+          "Book Antiqua", Georgia, serif;
+        --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #141413;
+          --ink: #f1efe8;
+          --ink-soft: rgba(241, 239, 232, 0.66);
+          --ink-faint: rgba(241, 239, 232, 0.45);
+          --hair: rgba(241, 239, 232, 0.16);
+          --red: #ef6a4f;
+          --blue: #6e9ff0;
+          --green: #5cc08a;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-ui);
+        -webkit-font-smoothing: antialiased;
+      }
+      main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 40px; }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--ink);
+      }
+      h1 { margin: 0; font-family: var(--font-serif); font-weight: 400; font-size: 30px; }
+      .sub { margin-top: 4px; color: var(--ink-soft); font-size: 14px; }
+      .session { text-align: right; }
+      .session .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+      .session .code { font-family: var(--font-serif); font-size: 44px; line-height: 1; letter-spacing: 0.08em; }
+      .status { margin-top: 6px; font-size: 14px; }
+      .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--ink-faint); vertical-align: 1px; }
+      .dot.on { background: var(--green); }
+      .dot.wait { background: var(--red); }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        border-bottom: 1px solid var(--hair);
+      }
+      .stat { padding: 14px 12px 14px 0; }
+      .stat .k { font-size: 12px; color: var(--ink-faint); }
+      .stat .v { font-family: var(--font-serif); font-size: 26px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+      .stat .v small { font-family: var(--font-ui); font-size: 12px; color: var(--ink-soft); margin-left: 3px; }
+      .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 24px; margin-top: 22px; }
+      @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+      section h2 { margin: 0 0 8px; font-family: var(--font-serif); font-weight: 400; font-size: 18px; }
+      section .hint { font-size: 12px; color: var(--ink-faint); margin: -4px 0 8px; }
+      canvas { display: block; width: 100%; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+      .plots canvas + h2 { margin-top: 20px; }
+      .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; }
+      .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: 3px; margin-right: 5px; }
+      #gestures { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair); font-size: 13px; max-height: 360px; overflow-y: auto; }
+      #gestures li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--hair); }
+      #gestures .time { color: var(--ink-faint); font-family: var(--font-mono); font-size: 12px; }
+      #gestures .late { color: var(--red); font-size: 12px; }
+      #gestures .empty { display: block; color: var(--ink-faint); }
+      .counts { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; line-height: 1.6; }
+      .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--hair); font-size: 13px; color: var(--ink-soft); }
+      button {
+        font: inherit; color: var(--ink); background: transparent;
+        border: 1px solid var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer;
+      }
+      button:disabled { opacity: 0.4; cursor: default; }
+      button.rec { border-color: var(--red); color: var(--red); }
+      .device { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+      .collect { margin-top: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--hair); }
+      .collect-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-soft); }
+      #collect-summary { margin-top: 12px; font-size: 14px; }
+      #collect-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; margin-top: 14px; }
+      .card { padding: 10px; border: 1px solid var(--hair); }
+      .card canvas { border: 0; margin: 0 auto 6px; width: 150px; }
+      .card.bad { border-color: var(--red); }
+      .card-title { font-size: 13px; }
+      .card-detail { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+      .card.bad .card-detail { color: var(--red); }
+      .card-gyro { font-size: 11px; color: var(--ink-faint); margin-top: 2px; font-family: var(--font-mono); }
+      #prompt {
+        position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center;
+        background: color-mix(in srgb, var(--paper) 94%, transparent);
+      }
+      #prompt[hidden] { display: none; }
+      #prompt-step { font-size: 14px; color: var(--ink-faint); letter-spacing: 0.06em; }
+      #prompt-text { font-family: var(--font-serif); font-size: clamp(26px, 5vw, 48px); max-width: 900px; line-height: 1.25; }
+      #prompt-phase { font-size: 22px; padding: 6px 18px; border-radius: 999px; border: 1px solid var(--ink-faint); color: var(--ink-soft); }
+      #prompt[data-phase="record"] #prompt-phase { border-color: var(--red); background: var(--red); color: var(--paper); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Neural Band · 原始数据</h1>
+          <div class="sub">在 Kinesis 里选这个会话码，腕带的原始数据会显示在这里。用腕带打字请去 <a href="./" style="color: inherit">/band</a>。</div>
+        </div>
+        <div class="session">
+          <div class="label">Session</div>
+          <div class="code" id="code">····</div>
+          <div class="status"><span class="dot" id="dot"></span><span id="status">连接服务器…</span></div>
+          <div class="device" id="device"></div>
+        </div>
+      </header>
+
+      <div class="stats">
+        <div class="stat"><div class="k">陀螺仪</div><div class="v" id="s-gyro">–<small>Hz</small></div></div>
+        <div class="stat"><div class="k">姿态四元数</div><div class="v" id="s-quat">–<small>Hz</small></div></div>
+        <div class="stat"><div class="k">批次</div><div class="v" id="s-batch">–<small>/s</small></div></div>
+        <div class="stat"><div class="k">Kinesis → 本页延迟 p50 / p95</div><div class="v" id="s-e2e">–<small>ms</small></div></div>
+        <div class="stat"><div class="k">腕带 → Mac 迟到（late）</div><div class="v" id="s-late">–<small>%</small></div></div>
+        <div class="stat"><div class="k">手势事件</div><div class="v" id="s-gest">0</div></div>
+      </div>
+
+      <section class="collect">
+        <h2 style="margin-top: 0">动作采集</h2>
+        <p class="hint">语音提示依次做 12 个动作（手臂平移、只转手腕、激光笔指向，各向右、左、上、下），每个动作单独录下来，最后看映射出来的轨迹对不对。约 1.5 分钟。</p>
+        <div class="collect-bar">
+          <button id="collect" disabled>开始采集</button>
+          <span id="collect-info">腕带加入后可以开始</span>
+        </div>
+        <div id="collect-summary"></div>
+        <div id="collect-results"></div>
+      </section>
+
+      <div class="grid">
+        <section class="plots">
+          <h2>指向（前臂方向，由姿态四元数换算）</h2>
+          <p class="hint">向右为正的方位角、向上为正的俯仰角，最近 10 秒</p>
+          <canvas id="aim" height="220"></canvas>
+          <div class="legend"><span><i style="background: var(--blue)"></i>左右（右为正）</span><span><i style="background: var(--red)"></i>上下（上为正）</span><span>每格 10°</span></div>
+          <h2>陀螺仪</h2>
+          <p class="hint">三轴原始计数 × 0.07 ≈ °/s，最近 10 秒</p>
+          <canvas id="gyro" height="160"></canvas>
+          <div class="legend"><span><i style="background: var(--blue)"></i>x</span><span><i style="background: var(--red)"></i>y</span><span><i style="background: var(--green)"></i>z</span></div>
+        </section>
+        <section>
+          <h2>指向轨迹</h2>
+          <p class="hint">最近 3 秒，中心为第一次收到数据时的方向，每格 10°</p>
+          <canvas id="trail" height="260"></canvas>
+          <h2 style="margin-top: 20px">手势</h2>
+          <ul id="gestures"><li class="empty">还没有收到手势</li></ul>
+          <div class="counts" id="counts"></div>
+        </section>
+      </div>
+
+      <div class="controls">
+        <button id="record" disabled>开始录制</button>
+        <span id="record-info">录下收到的全部批次，停止后下载为 JSONL</span>
+      </div>
+    </main>
+    <div id="prompt" hidden>
+      <div id="prompt-step"></div>
+      <div id="prompt-text"></div>
+      <div id="prompt-phase"></div>
+    </div>
+    <script src="../config.js?v=20260929-1"></script>
+    <script src="band.js?v=20261017-2"></script>
+    <script src="collect.js?v=20261017-1"></script>
+  </body>
+</html>

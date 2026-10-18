@@ -49,6 +49,13 @@ bar: the letters as typed (in quotes) or a completion. Double also keeps the
 space key: while spelling it enters the letters as typed (the completions stay
 in the bar); otherwise it does nothing. Long press has no space key.
 
+**Neural Band** (`/band`, a page of its own): the display, driven by a Meta
+Neural Band through [Kinesis](https://github.com/callbacked/kinesis) on a Mac.
+Join the page's **Band** code from Kinesis; turning the forearm moves the cursor
+(the slider sets degrees per key) and an index pinch is the touchpad's button in
+Unify, or the phone's finger in the stroke modes. `/band/raw.html` shows the raw
+streams and runs a guided collection of movements.
+
 **Display style**: the small half-filled circle in the bottom-left corner
 switches between two looks; the choice is saved per browser.
 
