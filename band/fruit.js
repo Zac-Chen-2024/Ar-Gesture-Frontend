@@ -3,8 +3,8 @@
 //
 // The forearm's direction is the blade (relative, like a mouse: it stops at the
 // board's edges). A swing faster than SLICE_DPS through a fruit cuts it; a slower
-// pass only touches. An index pinch starts a round and, during one, brings the
-// blade back to the middle. The mouse plays too.
+// pass only touches. An index pinch starts a round; a middle-finger pinch brings
+// the blade back to the middle. The mouse plays too (right button: the middle).
 //
 // The band's raw events come from a band room on the server (band_relay.py), as on
 // /band/raw.html. ?ws=ws://localhost:8790 points it at another server.
@@ -116,8 +116,9 @@
         moveBlade(dR * pxPerDeg, -dU * pxPerDeg, Math.hypot(dR, dU) / (t - lastAimT));
       }
       lastAim = aim; lastAimT = t;
-    } else if (e.event === "gesture" && e.finger === "index" && e.action === "press" && !e.late) {
-      pinch();
+    } else if (e.event === "gesture" && e.action === "press" && !e.late) {
+      if (e.finger === "index") pinch();
+      else if (e.finger === "middle") centreBlade();
     }
   }
 
@@ -176,10 +177,10 @@
     startBtn.textContent = button; startBtn.hidden = !button; statusEl.textContent = status;
   }
 
-  function pinch() {
-    if (state === "play") { centreBlade(); return; }
-    start();
-  }
+  // the index finger starts a round; during one it does nothing
+  function pinch() { if (state !== "play") start(); }
+  addEventListener("mousedown", (e) => { if (e.button === 2) centreBlade(); });
+  addEventListener("contextmenu", (e) => e.preventDefault());
 
   function start() {
     state = "play";

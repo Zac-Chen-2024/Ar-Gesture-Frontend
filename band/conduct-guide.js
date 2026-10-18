@@ -38,7 +38,7 @@ export class Guide {
     this.el.querySelector("[data-act=skip]").addEventListener("click", (e) => { e.stopPropagation(); this.next(); });
     this.el.querySelector("[data-act=leave]").addEventListener("click", (e) => { e.stopPropagation(); this.leave(); });
     this.el.addEventListener("mousedown", (e) => e.stopPropagation());
-    for (const type of ["ictus", "press", "release", "balance"]) {
+    for (const type of ["ictus", "press", "release", "balance", "centre"]) {
       api.bus.addEventListener(type, (e) => { if (this.lesson && !this.passed) this.lesson[type]?.(e.detail); });
     }
     this.lessons = this.build();
@@ -52,9 +52,10 @@ export class Guide {
     return [
       {
         id: "point", title: "Point", art: ART.point,
-        text: "Your forearm is the baton. Point it at the middle of the stage, and pinch once: that is your centre.",
+        text: "Your forearm is the baton. Hold it level, pointing at the middle of the screen, and pinch with your middle finger: that is your centre. Do it again whenever the baton drifts sideways.",
         enter() { g.dots(0, 1); },
-        press() { api.centre(); g.dots(1, 1); g.pass(); },
+        centre() { g.dots(1, 1); g.pass(); },
+        press() { g.say("the middle finger sets the centre; the index finger is for the players"); },
       },
       {
         id: "beat", title: "The beat", art: ART.beat,

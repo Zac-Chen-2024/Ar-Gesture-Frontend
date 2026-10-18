@@ -11,10 +11,12 @@
 // section is selected (lit, forward), and raising or lowering the arm while holding
 // sets its balance. Pinch a section at its entrance (the red marks on the timeline)
 // to cue it in; an entrance not cued comes in timid. Pinch on the last chord to
-// release it. A pinch at nothing sets the centre again.
+// release it. The index finger does all of that; the middle finger's pinch sets
+// the centre again (the mouse: right button, or C).
 //
-// A pinch sets the centre (the baton's direction now becomes "at the orchestra").
-// The mouse conducts too: move to point, click to set the centre.
+// The centre is where the baton points when the middle finger pinches: that
+// direction becomes "the middle of the stage". The mouse conducts too: move to
+// point, the left button is the index pinch, the right button the middle one.
 import * as THREE from "three";
 import { Orchestra, PIECES, LEVELS, BEATS_PER_BAR } from "./conduct-music.js";
 import { Guide, GUIDE_NOTES, GUIDE_PIECE } from "./conduct-guide.js";
@@ -433,7 +435,7 @@ function placeCapsule(c, a, b) {
 
 // ---------------------------------------------------------------- the band's orientation → the hall
 let handSign = 1;
-let centre = null;            // {az, el}: where "at the orchestra" is, in the band's world
+let centre = null;            // {az}: which way "at the orchestra" is, around gravity
 // the centre is the middle of the stage, seen from the podium: a little below the eye
 const STAGE_MIDDLE = new THREE.Vector3(0, 0.4, -4.6);
 const NEUTRAL_EL = Math.atan2(STAGE_MIDDLE.y - EYE.y, EYE.z - STAGE_MIDDLE.z);
@@ -449,18 +451,21 @@ function rotateBand(q, v) {
   return [vx + w * tx + (y * tz - z * ty), vy + w * ty + (z * tx - x * tz), vz + w * tz + (x * ty - y * tx)];
 }
 
-// a band-world vector (z up, azimuth counterclockwise) in the hall, relative to the centre
+// a band-world vector (z up, azimuth counterclockwise) in the hall. Only the
+// direction around gravity is relative to the centre; the height is the band's own
+// (it knows where down is): a level forearm points at the middle of the stage. So
+// setting the centre again never moves the baton up or down.
 function toHall([x, y, z]) {
   const az = Math.atan2(y, x), horiz = Math.hypot(x, y);
   const right = -(az - centre.az);
   const v = new THREE.Vector3(Math.sin(right) * horiz, z, -Math.cos(right) * horiz);
-  return v.applyAxisAngle(new THREE.Vector3(1, 0, 0), NEUTRAL_EL - centre.el);
+  return v.applyAxisAngle(new THREE.Vector3(1, 0, 0), NEUTRAL_EL);
 }
 
 function onQuat(v) {
   const f = rotateBand(v, [0, handSign, 0]);
   if (pendingCentre || !centre) {
-    centre = { az: Math.atan2(f[1], f[0]), el: Math.asin(Math.max(-1, Math.min(1, f[2]))) };
+    centre = { az: Math.atan2(f[1], f[0]) };
     pendingCentre = false;
   }
   forearmDir = toHall(f).normalize();
@@ -604,7 +609,8 @@ function renderScore(onBeat) {
   barEl.textContent = started ? `${bar} / ${bars}` : `– / ${bars}`;
   markedEl.innerHTML = started ? `Marked <em>${DYNAMICS[orchestra.marked[bar - 1]]}</em>` : "Marked –";
   playhead.style.left = `${Math.min(1, b / orchestra.totalBeats) * 100}%`;
-  cueEl.textContent = orchestra.state === "waiting"
+  cueEl.textContent = performance.now() - centredAt < 1400 ? "Centre set"
+    : orchestra.state === "waiting"
     ? (orchestra.prep === null ? "Give one beat to prepare; they come in on the next" : "And…")
     : orchestra.state === "held" ? "They wait for your next beat"
     : comingCue ? `Cue the ${comingCue.label.toLowerCase()}: point and pinch` : selectedType ? `${labelOf(selectedType)?.el.firstChild.textContent ?? ""} — raise or lower to balance` : "";
@@ -731,12 +737,25 @@ function finish() {
 
 beginBtn.addEventListener("click", (e) => { e.stopPropagation(); takePodium(); });
 beginBtn.addEventListener("mousedown", (e) => e.stopPropagation());
-addEventListener("mousedown", (e) => { if (e.button === 0 && playing()) press(); });
+addEventListener("mousedown", (e) => {
+  if (e.button === 0 && playing()) press();
+  else if (e.button === 2) recentre();
+});
 addEventListener("mouseup", (e) => { if (e.button === 0) release(); });
+addEventListener("contextmenu", (e) => e.preventDefault());
 addEventListener("keydown", (e) => {
   if (e.key === "Escape") { body.classList.remove("is-live"); orchestra.reset(); release(); }
-  if (e.key === "c") pendingCentre = true;
+  if (e.key === "c") recentre();
 });
+
+// the middle finger's pinch: where the baton points now is the middle of the stage
+let centredAt = -Infinity;
+function recentre() {
+  pendingCentre = true;
+  centredAt = performance.now();
+  emit("centre");
+  if (!playing()) statusEl.textContent = "Centre set";
+}
 
 // ---------------------------------------------------------------- the left hand: select, balance, cue, release
 let selectedType = null, holdFrom = null, comingCue = null, cutoffClean = null;
@@ -762,7 +781,7 @@ function press() {
     orchestra.cutoff();
     return;
   }
-  if (!pointedType) { pendingCentre = true; return; }
+  if (!pointedType) return; // at nothing: the index finger only selects, cues and releases
   // a cue: the section is one of an entrance coming now
   const b = orchestra.beat;
   for (const c of orchestra.cues) {
@@ -824,7 +843,7 @@ const intro = { kicker: kickerEl.textContent, title: titleEl.textContent, sub: s
 const guide = new Guide({
   bus, orchestra,
   state: () => ({ dynamicIndex, tempo, selectedType, pointedType }),
-  centre: () => { pendingCentre = true; },
+  centre: () => recentre(),
   highlight: (types) => { guideHighlight = new Set(types); },
   ripple: (type) => ripple(type),
   note: (type, text) => noteOn(type, text),
@@ -902,7 +921,7 @@ function connectBand() {
         else if (e.event === "gesture" && e.finger === "index" && !e.late) {
           if (e.action === "press") press();
           else if (e.action === "release") release();
-        }
+        } else if (e.event === "gesture" && e.finger === "middle" && e.action === "press" && !e.late) recentre();
       }
     }
   });
