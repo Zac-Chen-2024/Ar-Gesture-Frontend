@@ -49,12 +49,23 @@ bar: the letters as typed (in quotes) or a completion. Double also keeps the
 space key: while spelling it enters the letters as typed (the completions stay
 in the bar); otherwise it does nothing. Long press has no space key.
 
-**Neural Band** (`/band`, a page of its own): the display, driven by a Meta
-Neural Band through [Kinesis](https://github.com/callbacked/kinesis) on a Mac.
-Join the page's **Band** code from Kinesis; turning the forearm moves the cursor
-(the slider sets degrees per key) and an index pinch is the touchpad's button in
-Unify, or the phone's finger in the stroke modes. `/band/raw.html` shows the raw
-streams and runs a guided collection of movements.
+**Neural Band** (`/band`, pages of their own): a Meta Neural Band through
+[Kinesis](https://github.com/callbacked/kinesis) on a Mac. `/band` is its own
+copy of the home page. Join the page's **Band** code from Kinesis.
+
+- **Demo** (`display.html`): the display. Turning the forearm moves the cursor
+  (Sensitivity sets degrees per key); an index pinch is the touchpad's button in
+  Unify, or the phone's finger in the stroke modes.
+- **Game** (`conduct.html`): conduct Mozart (the Twinkle Variations, K. 265, and
+  the opening of the Symphony No. 40, K. 550) in a hall drawn as a seating chart.
+  The beats set the tempo, their size the dynamic; pointing and holding the pinch
+  brings a section forward and raising the arm balances it; pinch the marked
+  entrances to cue them, and the last chord to release it. Easy keeps the strings,
+  Medium adds the winds, Hard has everyone. **Learn first** walks through eight
+  short lessons. Samples: FluidR3 GM by Frank Wen (CC BY 3.0); three.js (MIT) in
+  `band/vendor/`.
+- `fruit.html` slices fruit with a fast swing; `raw.html` shows the raw streams
+  and runs a guided collection of movements.
 
 **Display style**: the small half-filled circle in the bottom-left corner
 switches between two looks; the choice is saved per browser.

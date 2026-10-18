@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -23,18 +23,6 @@
         --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino,
           "Book Antiqua", Georgia, serif;
         --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --paper: #141413;
-          --ink: #f1efe8;
-          --ink-soft: rgba(241, 239, 232, 0.66);
-          --ink-faint: rgba(241, 239, 232, 0.45);
-          --hair: rgba(241, 239, 232, 0.16);
-          --red: #ef6a4f;
-          --blue: #6e9ff0;
-          --green: #5cc08a;
-        }
       }
       * { box-sizing: border-box; }
       body {
@@ -89,7 +77,7 @@
       .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--hair); font-size: 13px; color: var(--ink-soft); }
       button {
         font: inherit; color: var(--ink); background: transparent;
-        border: 1px solid var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer;
+        border: 1px solid var(--ink); border-radius: 0; padding: 6px 14px; cursor: pointer;
       }
       button:disabled { opacity: 0.4; cursor: default; }
       button.rec { border-color: var(--red); color: var(--red); }
@@ -113,7 +101,7 @@
       #prompt[hidden] { display: none; }
       #prompt-step { font-size: 14px; color: var(--ink-faint); letter-spacing: 0.06em; }
       #prompt-text { font-family: var(--font-serif); font-size: clamp(26px, 5vw, 48px); max-width: 900px; line-height: 1.25; }
-      #prompt-phase { font-size: 22px; padding: 6px 18px; border-radius: 999px; border: 1px solid var(--ink-faint); color: var(--ink-soft); }
+      #prompt-phase { font-size: 22px; padding: 6px 18px; border-radius: 0; border: 1px solid var(--ink-faint); color: var(--ink-soft); }
       #prompt[data-phase="record"] #prompt-phase { border-color: var(--red); background: var(--red); color: var(--paper); }
     </style>
   </head>
@@ -121,32 +109,32 @@
     <main>
       <header>
         <div>
-          <h1>Neural Band · 原始数据</h1>
-          <div class="sub">在 Kinesis 里选这个会话码，腕带的原始数据会显示在这里。用腕带打字请去 <a href="./" style="color: inherit">/band</a>。</div>
+          <h1>Neural Band · Raw data</h1>
+          <div class="sub">Join this Band code from Kinesis to see the band's raw streams. To type with the band, open <a href="display.html" style="color: inherit">Demo</a>.</div>
         </div>
         <div class="session">
-          <div class="label">Session</div>
+          <div class="label">Band</div>
           <div class="code" id="code">····</div>
-          <div class="status"><span class="dot" id="dot"></span><span id="status">连接服务器…</span></div>
+          <div class="status"><span class="dot" id="dot"></span><span id="status">connecting…</span></div>
           <div class="device" id="device"></div>
         </div>
       </header>
 
       <div class="stats">
-        <div class="stat"><div class="k">陀螺仪</div><div class="v" id="s-gyro">–<small>Hz</small></div></div>
-        <div class="stat"><div class="k">姿态四元数</div><div class="v" id="s-quat">–<small>Hz</small></div></div>
-        <div class="stat"><div class="k">批次</div><div class="v" id="s-batch">–<small>/s</small></div></div>
-        <div class="stat"><div class="k">Kinesis → 本页延迟 p50 / p95</div><div class="v" id="s-e2e">–<small>ms</small></div></div>
-        <div class="stat"><div class="k">腕带 → Mac 迟到（late）</div><div class="v" id="s-late">–<small>%</small></div></div>
-        <div class="stat"><div class="k">手势事件</div><div class="v" id="s-gest">0</div></div>
+        <div class="stat"><div class="k">Gyro</div><div class="v" id="s-gyro">–<small>Hz</small></div></div>
+        <div class="stat"><div class="k">Orientation</div><div class="v" id="s-quat">–<small>Hz</small></div></div>
+        <div class="stat"><div class="k">Batches</div><div class="v" id="s-batch">–<small>/s</small></div></div>
+        <div class="stat"><div class="k">Kinesis → page, p50 / p95</div><div class="v" id="s-e2e">–<small>ms</small></div></div>
+        <div class="stat"><div class="k">Late on the Mac</div><div class="v" id="s-late">–<small>%</small></div></div>
+        <div class="stat"><div class="k">Gestures</div><div class="v" id="s-gest">0</div></div>
       </div>
 
       <section class="collect">
-        <h2 style="margin-top: 0">动作采集</h2>
-        <p class="hint">语音提示依次做 12 个动作（手臂平移、只转手腕、激光笔指向，各向右、左、上、下），每个动作单独录下来，最后看映射出来的轨迹对不对。约 1.5 分钟。</p>
+        <h2 style="margin-top: 0">Guided collection</h2>
+        <p class="hint">Twelve spoken movements (move the arm, turn the wrist, point; each right, left, up and down), each recorded on its own, then drawn as the pointer mapping sees them. About a minute and a half.</p>
         <div class="collect-bar">
-          <button id="collect" disabled>开始采集</button>
-          <span id="collect-info">腕带加入后可以开始</span>
+          <button id="collect" disabled>Start</button>
+          <span id="collect-info">Starts once the band joins</span>
         </div>
         <div id="collect-summary"></div>
         <div id="collect-results"></div>
@@ -154,28 +142,28 @@
 
       <div class="grid">
         <section class="plots">
-          <h2>指向（前臂方向，由姿态四元数换算）</h2>
-          <p class="hint">向右为正的方位角、向上为正的俯仰角，最近 10 秒</p>
+          <h2>Pointer (the forearm, from orientation)</h2>
+          <p class="hint">Right and up are positive; the last 10 s</p>
           <canvas id="aim" height="220"></canvas>
-          <div class="legend"><span><i style="background: var(--blue)"></i>左右（右为正）</span><span><i style="background: var(--red)"></i>上下（上为正）</span><span>每格 10°</span></div>
-          <h2>陀螺仪</h2>
-          <p class="hint">三轴原始计数 × 0.07 ≈ °/s，最近 10 秒</p>
+          <div class="legend"><span><i style="background: var(--blue)"></i>right</span><span><i style="background: var(--red)"></i>up</span><span>10° a line</span></div>
+          <h2>Gyro</h2>
+          <p class="hint">Raw counts × 0.07 ≈ °/s; the last 10 s</p>
           <canvas id="gyro" height="160"></canvas>
           <div class="legend"><span><i style="background: var(--blue)"></i>x</span><span><i style="background: var(--red)"></i>y</span><span><i style="background: var(--green)"></i>z</span></div>
         </section>
         <section>
-          <h2>指向轨迹</h2>
-          <p class="hint">最近 3 秒，中心为第一次收到数据时的方向，每格 10°</p>
+          <h2>Pointer trail</h2>
+          <p class="hint">The last 3 s, centred where the first sample pointed; 10° a line</p>
           <canvas id="trail" height="260"></canvas>
-          <h2 style="margin-top: 20px">手势</h2>
-          <ul id="gestures"><li class="empty">还没有收到手势</li></ul>
+          <h2 style="margin-top: 20px">Gestures</h2>
+          <ul id="gestures"><li class="empty">No gestures yet</li></ul>
           <div class="counts" id="counts"></div>
         </section>
       </div>
 
       <div class="controls">
-        <button id="record" disabled>开始录制</button>
-        <span id="record-info">录下收到的全部批次，停止后下载为 JSONL</span>
+        <button id="record" disabled>Record</button>
+        <span id="record-info">Keeps every batch received; stopping downloads them as JSON lines</span>
       </div>
     </main>
     <div id="prompt" hidden>
@@ -184,7 +172,7 @@
       <div id="prompt-phase"></div>
     </div>
     <script src="../config.js?v=20260929-1"></script>
-    <script src="band.js?v=20261017-2"></script>
-    <script src="collect.js?v=20261017-1"></script>
+    <script src="band.js?v=20261018-1"></script>
+    <script src="collect.js?v=20261018-1"></script>
   </body>
 </html>

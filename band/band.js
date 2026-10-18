@@ -37,7 +37,7 @@ function setStatus(text, state) {
 }
 
 function connect() {
-  setStatus("连接服务器…");
+  setStatus("connecting…");
   const ws = new WebSocket(WS_URL);
   socket = ws;
   ws.addEventListener("open", () => {
@@ -54,7 +54,7 @@ function connect() {
     paired = false;
     codeEl.textContent = "····";
     deviceEl.textContent = "";
-    setStatus("和服务器断开，正在重连…", "wait");
+    setStatus("reconnecting…", "wait");
     setTimeout(connect, 1500);
   });
 }
@@ -63,7 +63,7 @@ function onMessage(message) {
   switch (message.type) {
     case "room-created":
       codeEl.textContent = message.code;
-      setStatus("等待 Kinesis 加入", "wait");
+      setStatus("waiting for band…", "wait");
       break;
     case "band-joined": {
       paired = true;
@@ -71,19 +71,19 @@ function onMessage(message) {
       const info = message.deviceInfo || {};
       handSign = info.hand === "left" ? -1 : 1;
       deviceEl.textContent = [info.app, info.hand && `${info.hand} hand`].filter(Boolean).join(" · ");
-      setStatus("腕带已加入", "on");
+      setStatus("band live", "on");
       recordButton.disabled = false;
       break;
     }
     case "band-left":
       paired = false;
       deviceEl.textContent = "";
-      setStatus("腕带已离开，等待重新加入", "wait");
+      setStatus("waiting for band…", "wait");
       break;
     case "band-status":
       if (message.hand) handSign = message.hand === "left" ? -1 : 1;
-      if (message.connected === false) setStatus("Kinesis 已加入，腕带未连接", "wait");
-      else if (paired) setStatus("腕带已加入", "on");
+      if (message.connected === false) setStatus("band not connected", "wait");
+      else if (paired) setStatus("band live", "on");
       break;
     case "band-batch":
       onBatch(message);
@@ -159,7 +159,7 @@ function addGesture(e) {
   const empty = gestureList.querySelector(".empty");
   if (empty) empty.remove();
   const li = document.createElement("li");
-  const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+  const time = new Date().toLocaleTimeString("en-GB", { hour12: false });
   li.innerHTML = `<span class="time"></span><span></span><span class="late"></span>`;
   li.children[0].textContent = time;
   li.children[1].textContent = `${e.finger} · ${label}`;
@@ -285,9 +285,9 @@ function frame() {
 recordButton.addEventListener("click", () => {
   if (!recording) {
     recording = [];
-    recordButton.textContent = "停止并下载";
+    recordButton.textContent = "Stop and download";
     recordButton.classList.add("rec");
-    recordInfo.textContent = "录制中…";
+    recordInfo.textContent = "Recording…";
     return;
   }
   const lines = recording.map((b) => JSON.stringify(b)).join("\n") + "\n";
@@ -296,15 +296,15 @@ recordButton.addEventListener("click", () => {
   link.href = URL.createObjectURL(blob);
   link.download = `band-${codeEl.textContent}-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`;
   link.click();
-  recordInfo.textContent = `已下载 ${recording.length} 个批次`;
+  recordInfo.textContent = `Downloaded ${recording.length} batches`;
   recording = null;
-  recordButton.textContent = "开始录制";
+  recordButton.textContent = "Record";
   recordButton.classList.remove("rec");
 });
 
 setInterval(() => {
   updateStats();
-  if (recording) recordInfo.textContent = `录制中… ${recording.length} 个批次`;
+  if (recording) recordInfo.textContent = `Recording… ${recording.length} batches`;
 }, 250);
 connect();
 requestAnimationFrame(frame);

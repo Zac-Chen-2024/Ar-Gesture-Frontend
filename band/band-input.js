@@ -29,20 +29,31 @@
   const badge = document.getElementById("band-badge");
   const codeEl = document.getElementById("band-code");
   const statusEl = document.getElementById("band-status");
-  const gainInput = document.getElementById("band-gain");
-  const gainOutput = document.getElementById("band-gain-value");
+  const gainSwitch = document.getElementById("band-gain");
 
   let gain = 3.5; // degrees of forearm turn per key
   try { gain = Number(localStorage.getItem("band-gain")) || gain; } catch (e) { /* private window */ }
-  gainInput.value = gain;
-  gainOutput.textContent = `${gain}°/键`;
-  gainInput.addEventListener("input", () => {
-    gain = Number(gainInput.value);
-    gainOutput.textContent = `${gain}°/键`;
+  function syncGain() {
+    gainSwitch.querySelectorAll("button[data-value]").forEach((button) => {
+      const on = Number(button.dataset.value) === gain;
+      button.classList.toggle("is-active", on);
+      button.setAttribute("aria-checked", on ? "true" : "false");
+    });
+  }
+  gainSwitch.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-value]");
+    if (!button) return;
+    gain = Number(button.dataset.value);
     try { localStorage.setItem("band-gain", String(gain)); } catch (e) { /* not kept */ }
+    syncGain();
   });
+  if (![5, 3.5, 2.5].includes(gain)) gain = 3.5;
+  syncGain();
 
-  const setStatus = (text) => { statusEl.textContent = text; };
+  const setStatus = (text, paired = false) => {
+    statusEl.textContent = text;
+    badge.classList.toggle("is-paired", paired);
+  };
 
   // ---- the display opens in Unify (Space): a pinch is a click, Space decodes ----
   socket.addEventListener("message", (event) => {
@@ -83,24 +94,24 @@
     switch (message.type) {
       case "room-created":
         codeEl.textContent = message.code;
-        setStatus("在 Kinesis 里加入这个会话");
+        setStatus("waiting for band…");
         break;
       case "band-joined":
         bandPaired = true;
         handSign = message.deviceInfo?.hand === "left" ? -1 : 1;
         resetPointer();
-        setStatus("腕带已加入");
+        setStatus("band joined", true);
         openInput();
         break;
       case "band-left":
         bandPaired = false;
-        setStatus("腕带已离开");
+        setStatus("waiting for band…");
         closeInput();
         break;
       case "band-status":
         if (message.hand) handSign = message.hand === "left" ? -1 : 1;
-        if (message.connected === false) setStatus("Kinesis 在线，腕带未连接");
-        else if (bandPaired) setStatus(inputReady ? "控制中" : "腕带已加入");
+        if (message.connected === false) setStatus("band not connected");
+        else if (bandPaired) setStatus(inputReady ? "band live" : "band joined", true);
         break;
       case "band-batch":
         for (const e of message.events || []) onEvent(e);
@@ -128,7 +139,7 @@
       if (message.type === "room-joined") {
         inputReady = true;
         stroke = null;
-        setStatus("控制中");
+        setStatus("band live", true);
       } else if (message.type === "room-error" || message.type === "room-closed") {
         setStatus(message.message || "could not join the display");
         closeInput();

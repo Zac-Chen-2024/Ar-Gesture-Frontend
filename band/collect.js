@@ -4,11 +4,11 @@
 
 const COLLECT_STEPS = [];
 for (const [group, groupName, how] of [
-  ["arm", "整只手臂平移", (d) => `整只手臂向${d}平移，手腕保持不动，然后停住`],
-  ["wrist", "只转手腕", (d) => `手臂不动，只把手腕向${d}转，然后停住`],
-  ["point", "像激光笔一样指", (d) => `像拿着激光笔，把它指向${d}边，然后停住`],
+  ["arm", "Move the arm", (d) => `Move your whole arm ${d}, keep the wrist still, and hold`],
+  ["wrist", "Turn the wrist", (d) => `Keep the arm still, turn only the wrist ${d}, and hold`],
+  ["point", "Point", (d) => `Point ${d} as if holding a laser pointer, and hold`],
 ]) {
-  for (const [dir, word, vec] of [["right", "右", [1, 0]], ["left", "左", [-1, 0]], ["up", "上", [0, 1]], ["down", "下", [0, -1]]]) {
+  for (const [dir, word, vec] of [["right", "right", [1, 0]], ["left", "left", [-1, 0]], ["up", "up", [0, 1]], ["down", "down", [0, -1]]]) {
     COLLECT_STEPS.push({ id: `${group}_${dir}`, group, groupName, word, vec, text: how(word) });
   }
 }
@@ -36,8 +36,8 @@ function speak(text) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "zh-CN";
-    u.rate = 1.15;
+    u.lang = "en-US";
+    u.rate = 1.05;
     speechSynthesis.speak(u);
   } catch (e) { /* no speech: the prompt on screen still says it */ }
 }
@@ -122,14 +122,14 @@ function render(steps) {
     card.append(canvas);
     const title = document.createElement("div");
     title.className = "card-title";
-    title.textContent = `${step.def.groupName} · 向${step.def.word}`;
+    title.textContent = `${step.def.groupName} · ${step.def.word}`;
     const detail = document.createElement("div");
     detail.className = "card-detail";
-    detail.textContent = result.missing ? "没有收到数据"
-      : `${result.ok ? "✓" : "✗"} 目标方向 ${result.along.toFixed(0)}°，偏离 ${result.across.toFixed(0)}°`;
+    detail.textContent = result.missing ? "no data"
+      : `${result.ok ? "✓" : "✗"} ${result.along.toFixed(0)}° along, ${result.across.toFixed(0)}° off`;
     const gyro = document.createElement("div");
     gyro.className = "card-gyro";
-    if (result.gyro) gyro.textContent = `陀螺仪积分 x ${result.gyro[0].toFixed(0)}° · y ${result.gyro[1].toFixed(0)}° · z ${result.gyro[2].toFixed(0)}°`;
+    if (result.gyro) gyro.textContent = `gyro ∫ x ${result.gyro[0].toFixed(0)}° · y ${result.gyro[1].toFixed(0)}° · z ${result.gyro[2].toFixed(0)}°`;
     card.append(title, detail, gyro);
     results.append(card);
     drawStep(canvas, step, result);
@@ -140,7 +140,7 @@ function render(steps) {
   summary.textContent = [...groups].map(([name, rs]) => {
     const ok = rs.filter((r) => r.ok).length;
     const mean = rs.reduce((a, r) => a + Math.max(0, r.along), 0) / rs.length;
-    return `${name}：方向正确 ${ok}/${rs.length}，平均转动 ${mean.toFixed(0)}°`;
+    return `${name}: ${ok}/${rs.length} on target, ${mean.toFixed(0)}° on average`;
   }).join("　·　");
 }
 
@@ -150,20 +150,20 @@ async function runCollection() {
   summary.textContent = "";
   prompt.hidden = false;
   const steps = [];
-  speak("动作采集开始。每个动作做完停住，听到回到中间再回来。");
+  speak("Collection starts. Hold each movement until you hear back to centre.");
   promptStep.textContent = "";
-  promptText.textContent = "手臂自然放在身前，看着屏幕正前方";
-  promptPhase.textContent = "准备";
+  promptText.textContent = "Rest your arm in front of you and face the screen";
+  promptPhase.textContent = "Ready";
   await sleep(3500);
   mark("collection", "start");
   for (const [i, def] of COLLECT_STEPS.entries()) {
     promptStep.textContent = `${i + 1} / ${COLLECT_STEPS.length} · ${def.groupName}`;
     promptText.textContent = def.text;
-    promptPhase.textContent = "准备";
+    promptPhase.textContent = "Ready";
     prompt.dataset.phase = "prepare";
-    speak(`${def.groupName}，向${def.word}`);
+    speak(`${def.groupName}, ${def.word}`);
     await sleep(PREPARE_MS);
-    promptPhase.textContent = "现在做";
+    promptPhase.textContent = "Now";
     prompt.dataset.phase = "record";
     capture = { quats: [], gyros: [] };
     mark(def.id, "start");
@@ -171,15 +171,15 @@ async function runCollection() {
     mark(def.id, "end");
     steps.push({ def, ...capture });
     capture = null;
-    promptPhase.textContent = "回到中间";
+    promptPhase.textContent = "Back to centre";
     prompt.dataset.phase = "return";
     await sleep(RETURN_MS);
   }
   mark("collection", "end");
-  speak("采集完成");
+  speak("Done");
   prompt.hidden = true;
   collectButton.disabled = !paired;
-  collectInfo.textContent = "完成。绿色粗线是应该去的方向，红线是映射出来的轨迹。";
+  collectInfo.textContent = "Done. The broad green line is where each movement should go; the red line is where the mapping took it.";
   render(steps);
 }
 

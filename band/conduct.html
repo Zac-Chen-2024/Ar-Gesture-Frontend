@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Band Conduct</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="../favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+    <link rel="stylesheet" href="../styles.css?v=20261015-2" />
+    <link rel="stylesheet" href="../study/study.css?v=20261001-2" />
+    <!-- Game is red (the home page's Game colour), in the Editorial style -->
+    <style>
+      :root { --accent-main: #d6452b; --accent-main-rgb: 214, 69, 43; }
+      .conduct { position: relative; }
+      #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+      .conduct .home-link, .conduct .top-bar, .conduct .study-prompt, .score-bar { z-index: 3; }
+      .conduct .top-bar { position: fixed; top: 0; left: 0; right: 0; padding: 52px 56px 0; pointer-events: none; }
+      .conduct .top-bar > * { pointer-events: auto; }
+      .conduct-mark { font-style: italic; color: var(--ed-red); }
+
+      /* the opening card: centred over the hall, on a paper veil */
+      .veil { position: fixed; inset: 0; z-index: 2; background: rgba(250, 248, 243, 0.78);
+              transition: opacity 600ms ease; pointer-events: none; }
+      .conduct.is-live .veil { opacity: 0; }
+      .conduct .study-prompt { position: fixed; left: 50%; top: 30vh; transform: translateX(-50%); height: auto;
+                               transition: opacity 500ms ease, transform 600ms cubic-bezier(.2,.7,.2,1); }
+      .conduct.is-live .study-prompt { opacity: 0; transform: translate(-50%, -12px); pointer-events: none; }
+      .conduct .study-begin { margin-top: 14px; }
+      .conduct .study-sub { max-width: 34rem; }
+
+      /* the score bar: tempo, the dynamic, the bar; a ruled timeline under them */
+      .score-bar { position: fixed; left: 56px; right: 56px; bottom: 34px; pointer-events: none;
+                   display: grid; grid-template-columns: 1fr auto 1fr; align-items: end;
+                   opacity: 0; transform: translateY(8px); transition: opacity 500ms ease 200ms, transform 600ms ease 200ms; }
+      .conduct.is-live .score-bar { opacity: 1; transform: none; }
+      .score-cell { display: flex; flex-direction: column; gap: 4px; }
+      .score-cell.right { align-items: flex-end; }
+      .score-label { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); }
+      .score-value { font-family: var(--font-serif); font-size: 1.7rem; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+      .dynamic { font-family: var(--font-serif); font-style: italic; font-weight: 400; font-size: clamp(3rem, 7vmin, 4.6rem);
+                 line-height: 0.8; color: var(--ink); text-align: center; transition: transform 180ms ease; }
+      .dynamic.is-beat { transform: scale(1.06); }
+      .score-centre { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      .score-cue { font-family: var(--font-serif); font-style: italic; font-size: 1.05rem; color: var(--ink-soft); min-height: 1.3em; }
+      .score-label em { font-family: var(--font-serif); font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--ink); }
+      .credit { margin-top: 18px; font-size: 11px; color: var(--ink-faint); }
+      .podium-choice { display: flex; justify-content: center; gap: 22px; margin-top: 16px; pointer-events: auto; text-align: left; }
+      .podium-actions { display: flex; margin-top: 16px; border: 1px solid var(--ink); }
+      .podium-actions .study-begin { margin-top: 0; }
+      .conduct .study-resume:disabled { opacity: 0.45; cursor: default; }
+
+      /* the lesson card: a ruled sheet at the top of the hall */
+      .guide { position: fixed; z-index: 3; top: 118px; left: 50%; transform: translateX(-50%);
+               width: min(540px, calc(100vw - 48px)); padding: 22px 28px 16px; text-align: center;
+               background: rgba(250, 248, 243, 0.985); box-shadow: inset 0 0 0 1px var(--ink); }
+      .guide[hidden] { display: none; }
+      .guide-kicker { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
+      .guide-title { margin-top: 6px; font-family: var(--font-serif); font-size: 1.9rem; line-height: 1.1; color: var(--ink); }
+      .guide.is-passed .guide-title::after { content: " ✓"; color: var(--ed-red); }
+      .guide-art svg { display: block; width: 120px; height: 64px; margin: 10px auto 2px; fill: none; stroke: var(--ink);
+                       stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+      .guide-art .accent { stroke: var(--ed-red); }
+      .guide-art .fill { fill: var(--ed-red); }
+      .guide-text { margin-top: 6px; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.5; color: var(--ink-soft); }
+      .guide-progress { display: flex; justify-content: center; gap: 10px; margin-top: 14px; min-height: 12px;
+                        font-size: 12px; color: var(--ink-faint); }
+      .guide-progress i { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ink); }
+      .guide-progress i.is-on { background: var(--ed-red); box-shadow: none; }
+      .guide-progress span.is-on { color: var(--ink); }
+      .guide-progress.is-pulse i:not(.is-on) { animation: tick 240ms ease-out; }
+      @keyframes tick { from { box-shadow: inset 0 0 0 4px var(--ed-red); } to { box-shadow: inset 0 0 0 1px var(--ink); } }
+      .guide-status { min-height: 1.2em; margin-top: 8px; font-family: var(--font-serif); font-style: italic; font-size: 0.95rem; color: var(--ed-red); }
+      .guide-actions { display: flex; justify-content: center; gap: 22px; margin-top: 10px; }
+      .guide-actions button { border: 0; background: none; padding: 2px 0; font: inherit; font-size: 10px; font-weight: 600;
+                              letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); cursor: pointer; }
+      .guide-actions button:hover { color: var(--ink); }
+      .guide.is-done .guide-actions, .guide.is-done .guide-progress { display: none; }
+      .conduct.is-guide .cue-mark { display: none; }
+      .conduct .study-begin:disabled { opacity: 0.45; cursor: default; }
+      .timeline { grid-column: 1 / -1; position: relative; height: 14px; margin-top: 18px; border-top: 1px solid var(--ink); }
+      .timeline i { position: absolute; top: 0; width: 1px; height: 6px; background: rgba(17, 17, 17, 0.35); }
+      .timeline i.is-phrase { height: 10px; background: var(--ink); }
+      .section-label { position: fixed; left: 0; top: 0; z-index: 1; pointer-events: none; white-space: nowrap;
+                       font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+                       color: var(--ink-faint); transition: color 200ms ease; }
+      .section-label { transition: color 200ms ease, opacity 240ms ease, font-size 200ms ease; }
+      .section-label.is-pointed { color: var(--ink); }
+      .section-label.is-selected { color: var(--ed-red); font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+      .section-label.is-dim { opacity: 0.35; }
+      .section-label.is-cue { color: var(--ed-red); animation: cue-pulse 700ms ease-in-out infinite alternate; }
+      @keyframes cue-pulse { from { opacity: 1; } to { opacity: 0.35; } }
+      .section-note { position: absolute; left: 50%; top: 100%; margin-top: 4px; transform: translateX(-50%);
+                      font-family: var(--font-serif); font-style: italic; font-size: 13px; font-weight: 400;
+                      letter-spacing: 0; text-transform: none; color: var(--ed-red); opacity: 0; white-space: nowrap; }
+      .section-note.is-on { animation: note-on 1800ms ease forwards; }
+      .section-note.is-held { opacity: 1; animation: none; }
+      @keyframes note-on { 0% { opacity: 0; transform: translate(-50%, 4px); } 12% { opacity: 1; transform: translate(-50%, 0); } 75% { opacity: 1; } 100% { opacity: 0; } }
+      .cue-mark { position: absolute; top: -9px; width: 0; height: 0; margin-left: -5px;
+                  border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid var(--ed-red); }
+      .cue-mark span { position: absolute; bottom: 9px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+                       font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); }
+      .cue-mark.is-hit { border-top-color: var(--ink); }
+      .cue-mark.is-missed { border-top-color: rgba(17, 17, 17, 0.2); }
+      .cue-mark.is-hit span { color: var(--ink); }
+      .timeline b { position: absolute; top: -5px; width: 2px; height: 15px; background: var(--ed-red); transition: left 220ms ease; }
+    </style>
+    <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+    <script src="../transition.js?v=20261007-5"></script>
+  </head>
+  <body class="display-body conduct" data-theme="editorial">
+    <canvas id="stage" aria-label="The concert hall, seen from the podium"></canvas>
+    <div class="veil" aria-hidden="true"></div>
+    <a class="home-link" href="./" aria-label="Back to the band's home page"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>Home</a>
+    <header class="top-bar">
+      <div class="study-info">
+        <span class="study-info-title">Ar-Gesture <em class="conduct-mark">Conduct</em></span>
+        <span class="study-info-detail" id="detail">Mozart · Variations, K. 265</span>
+      </div>
+      <div id="band-badge" class="room-code">
+        <span class="room-code-label">Band</span>
+        <span class="room-code-value" id="band-code">····</span>
+        <span class="room-code-status" id="band-status">connecting…</span>
+      </div>
+    </header>
+    <section class="study-prompt" aria-live="polite">
+      <p class="study-kicker" id="kicker">Conduct</p>
+      <p class="study-title" id="title">Twinkle Variations</p>
+      <p class="study-sub" id="sub">Beat time with the baton: the players follow your downbeats, and the size of your beat is how loud they play. Point at a section and hold the pinch to bring it forward; raise or lower the arm while holding to balance it. Cue each entrance marked on the timeline, and pinch the last chord away.</p>
+      <div class="podium-choice">
+        <div class="setting"><span class="setting-label">Piece</span><div class="segmented" id="piece" role="radiogroup" aria-label="Piece"></div></div>
+        <div class="setting"><span class="setting-label">Level</span><div class="segmented" id="level" role="radiogroup" aria-label="Level"></div></div>
+      </div>
+      <div class="podium-actions">
+        <button class="study-begin" id="begin" type="button">Take the podium</button>
+        <button class="study-resume" id="learn" type="button">Learn first</button>
+      </div>
+      <p class="study-status" id="status">or pinch</p>
+      <p class="credit">Samples: FluidR3 GM by Frank Wen, CC BY 3.0</p>
+    </section>
+    <section id="guide" class="guide" hidden aria-live="polite">
+      <p class="guide-kicker"></p>
+      <p class="guide-title"></p>
+      <div class="guide-art"></div>
+      <p class="guide-text"></p>
+      <div class="guide-progress"></div>
+      <p class="guide-status"></p>
+      <div class="guide-actions"><button type="button" data-act="skip">Skip</button><button type="button" data-act="leave">Leave the lessons</button></div>
+    </section>
+    <footer class="score-bar" aria-live="off">
+      <div class="score-cell"><span class="score-label">Tempo</span><span class="score-value" id="tempo">♩ = –</span></div>
+      <div class="score-centre">
+        <span class="score-cue" id="cue">Give one beat to prepare; they come in on the next</span>
+        <div class="dynamic" id="dynamic">–</div>
+        <span class="score-label" id="marked">Marked –</span>
+      </div>
+      <div class="score-cell right"><span class="score-label">Bar</span><span class="score-value" id="bar">– / 32</span></div>
+      <div class="timeline" id="timeline"><b id="playhead" style="left: 0"></b></div>
+    </footer>
+    <script src="../config.js?v=20260929-1"></script>
+    <script type="module" src="conduct.js?v=20261018-6"></script>
+  </body>
+</html>

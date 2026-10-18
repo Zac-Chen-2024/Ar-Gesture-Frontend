@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Band Slice</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="../favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+    <link rel="stylesheet" href="../styles.css?v=20261015-2" />
+    <link rel="stylesheet" href="../study/study.css?v=20261001-2" />
+    <!-- Game is red (the home page's Game colour), in the Editorial style -->
+    <style>
+      :root { --accent-main: #d6452b; --accent-main-rgb: 214, 69, 43; }
+      .band-game { position: relative; display: flex; flex-direction: column; align-items: center; cursor: none; }
+      .band-game a, .band-game button { cursor: pointer; }
+      .band-game .top-bar { padding: 52px 56px 0; align-items: flex-start; }
+      .band-game .top-bar .setting { margin-left: auto; margin-right: 24px; }
+      .band-game-mark { font-style: italic; color: var(--ed-red); }
+      .band-game .study-info-detail { display: inline-flex; align-items: center; gap: 2px; }
+      .band-lives { display: inline-flex; gap: 3px; margin-left: 8px; color: var(--ed-red); }
+      .band-lives svg { width: 13px; height: 13px; }
+      .band-game .study-prompt { margin-top: 9vh; height: auto; pointer-events: none; }
+      .band-game .study-prompt .study-begin { pointer-events: auto; margin-top: 10px; }
+      .band-game.is-playing .study-prompt { margin-top: 4vh; }
+      .band-game.is-playing .study-title { font-size: clamp(2.6rem, 8vmin, 4.6rem); color: var(--ink); }
+      .band-game.is-playing .study-sub,
+      .band-game.is-playing .study-begin,
+      .band-game.is-playing .study-status { display: none; }
+      #board { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+      .band-game .top-bar, .band-game .study-prompt, .band-game .home-link { z-index: 4; }
+    </style>
+    <script src="../transition.js?v=20261007-5"></script>
+  </head>
+  <body class="display-body band-game" data-theme="editorial">
+    <a class="home-link" href="./" aria-label="Back to the band's home page"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>Home</a>
+    <header class="top-bar">
+      <div class="study-info">
+        <span class="study-info-title">Ar-Gesture <em class="band-game-mark">Game</em></span>
+        <span class="study-info-detail" id="detail">Neural Band · Slice</span>
+      </div>
+      <div class="setting">
+        <span class="setting-label">Reach</span>
+        <div class="segmented" id="reach" role="radiogroup" aria-label="Forearm turn across the board">
+          <button type="button" role="radio" data-value="35">Short</button>
+          <button type="button" role="radio" data-value="50">Medium</button>
+          <button type="button" role="radio" data-value="70">Long</button>
+        </div>
+      </div>
+      <div id="band-badge" class="room-code">
+        <span class="room-code-label">Band</span>
+        <span class="room-code-value" id="band-code">····</span>
+        <span class="room-code-status" id="band-status">connecting…</span>
+      </div>
+    </header>
+    <section class="study-prompt" aria-live="polite">
+      <p class="study-kicker" id="kicker">Game</p>
+      <p class="study-title" id="title">Slice</p>
+      <p class="study-sub" id="sub">Swing your forearm through the fruit. A slow pass only touches; a fast swing cuts. Miss three and the round ends. Leave the bombs.</p>
+      <button class="study-begin" id="start" type="button">Start</button>
+      <p class="study-status" id="status">or pinch to start</p>
+    </section>
+    <canvas id="board" aria-hidden="true"></canvas>
+    <script src="../config.js?v=20260929-1"></script>
+    <script src="fruit.js?v=20261018-3"></script>
+  </body>
+</html>
