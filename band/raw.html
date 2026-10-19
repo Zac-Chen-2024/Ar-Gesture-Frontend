@@ -75,6 +75,8 @@
       #gestures .empty { display: block; color: var(--ink-faint); }
       .counts { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; line-height: 1.6; }
       .emg-section { margin-top: 22px; }
+      .rec { margin-top: 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: var(--red); }
+      .rec[hidden] { display: none; }
       .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--hair); font-size: 13px; color: var(--ink-soft); }
       button {
         font: inherit; color: var(--ink); background: transparent;
@@ -118,6 +120,7 @@
           <div class="code" id="code">····</div>
           <div class="status"><span class="dot" id="dot"></span><span id="status">connecting…</span></div>
           <div class="device" id="device"></div>
+          <div class="rec" id="rec" hidden title="Kinesis asked the server to keep this session">REC · kept on the server</div>
         </div>
       </header>
 
@@ -180,7 +183,7 @@
       <div id="prompt-phase"></div>
     </div>
     <script src="../config.js?v=20260929-1"></script>
-    <script src="band.js?v=20261019-1"></script>
+    <script src="band.js?v=20261019-2"></script>
     <script src="collect.js?v=20261018-1"></script>
   </body>
 </html>

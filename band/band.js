@@ -83,6 +83,7 @@ function onMessage(message) {
     }
     case "band-left":
       paired = false;
+      el("rec").hidden = true;
       deviceEl.textContent = "";
       setStatus("waiting for band…", "wait");
       break;
@@ -93,6 +94,9 @@ function onMessage(message) {
       break;
     case "band-batch":
       onBatch(message);
+      break;
+    case "band-recording":
+      el("rec").hidden = !message.on;
       break;
   }
 }
