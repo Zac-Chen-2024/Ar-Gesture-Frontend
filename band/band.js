@@ -4,7 +4,9 @@
 //
 // band-batch: {seq, sent (Kinesis wall clock, ms), rx (server, ms), events: [
 //   {event: "gyro"|"quat"|"gesture", at (Mac uptime, s), t (band clock, µs),
-//    v: [...] (quat: w x y z) | finger/action/derived, late}]}
+//    v: [...] (quat: w x y z) | finger/action/derived, late}
+//   or, with Kinesis's raw sEMG switch on: {event: "emg", t, seq, d (base64: 16 samples ×
+//    8 channels, little-endian UInt16, sample by sample), late}]}
 // ?ws=ws://localhost:8790 points the page at another server.
 
 const WS_URL = new URLSearchParams(location.search).get("ws") || window.GESTURE_CONFIG.backendWsUrl;
@@ -21,7 +23,11 @@ let socket = null;
 let paired = false;
 let quats = [];   // {t (s, band clock), az, el}
 let gyros = [];   // {t, x, y, z}
-let arrivals = { gyro: [], quat: [], batch: [], late: [] }; // page receive times (ms), for rates
+let arrivals = { gyro: [], quat: [], batch: [], late: [], emg: [] }; // page receive times (ms), for rates
+// raw sEMG: the last EMG_SECONDS of each of the 8 channels, as a ring
+const EMG_RATE = 2048, EMG_SECONDS = 2, EMG_CHANNELS = 8;
+const emgRing = Array.from({ length: EMG_CHANNELS }, () => new Float32Array(EMG_RATE * EMG_SECONDS));
+let emgHead = 0, emgSeen = 0;
 let e2e = [];     // {at, ms}
 let gestureCount = 0;
 let gestureCounts = new Map();
@@ -143,11 +149,62 @@ function onBatch(batch) {
       arrivals.gyro.push(now);
     } else if (e.event === "gesture") {
       addGesture(e);
+    } else if (e.event === "emg" && typeof e.d === "string") {
+      addEMG(e.d);
+      arrivals.emg.push(now);
     }
   }
   const latest = Math.max(quats.length ? quats[quats.length - 1].t : 0, gyros.length ? gyros[gyros.length - 1].t : 0);
   quats = quats.filter((q) => latest - q.t <= WINDOW_S);
   gyros = gyros.filter((g) => latest - g.t <= WINDOW_S);
+}
+
+function addEMG(base64) {
+  const bin = atob(base64);
+  const n = Math.floor(bin.length / 2);
+  for (let i = 0; i < n; i++) {
+    const v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8);
+    const ch = i % EMG_CHANNELS;
+    emgRing[ch][emgHead] = v;
+    if (ch === EMG_CHANNELS - 1) emgHead = (emgHead + 1) % emgRing[0].length;
+  }
+  emgSeen += n / EMG_CHANNELS;
+}
+
+function drawEMG(canvas) {
+  const { ctx, width, height } = prepare(canvas);
+  const lane = height / EMG_CHANNELS, len = emgRing[0].length;
+  ctx.strokeStyle = css("--hair");
+  ctx.lineWidth = 1;
+  for (let c = 1; c < EMG_CHANNELS; c++) { ctx.beginPath(); ctx.moveTo(0, c * lane); ctx.lineTo(width, c * lane); ctx.stroke(); }
+  if (!emgSeen) {
+    ctx.fillStyle = css("--ink-faint");
+    ctx.font = "12px ui-sans-serif, system-ui";
+    ctx.fillText("No sEMG yet: turn on “stream raw sEMG” in Kinesis (band page › gesture typing).", 8, 18);
+    return;
+  }
+  const shown = Math.min(len, emgSeen);
+  const step = Math.max(1, Math.floor(shown / (width * 2)));
+  ctx.strokeStyle = css("--ink");
+  for (let c = 0; c < EMG_CHANNELS; c++) {
+    const ring = emgRing[c];
+    // the channel's mean and spread over what is shown: centre it, scale to its lane
+    let sum = 0, sq = 0;
+    for (let k = 0; k < shown; k++) { const v = ring[(emgHead - shown + k + len) % len]; sum += v; sq += v * v; }
+    const mean = sum / shown, sd = Math.sqrt(Math.max(1, sq / shown - mean * mean));
+    const mid = (c + 0.5) * lane, scale = (lane * 0.42) / (3 * sd);
+    ctx.beginPath();
+    for (let k = 0; k < shown; k += step) {
+      const v = ring[(emgHead - shown + k + len) % len];
+      const x = (k / (len - 1)) * width, y = mid - Math.max(-lane / 2, Math.min(lane / 2, (v - mean) * scale));
+      k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = css("--ink-faint");
+    ctx.font = "10px ui-sans-serif, system-ui";
+    ctx.fillText(`ch ${c + 1}`, 4, c * lane + 12);
+  }
 }
 
 function addGesture(e) {
@@ -196,6 +253,8 @@ function updateStats() {
   const ms = e2e.map((x) => x.ms);
   el("s-e2e").firstChild.textContent = ms.length ? `${Math.round(percentile(ms, 0.5))} / ${Math.round(percentile(ms, 0.95))}` : "–";
   el("s-gest").textContent = gestureCount;
+  const emg = perSecond(arrivals.emg, now);
+  el("s-emg").firstChild.textContent = paired && emg ? emg * 16 : "–";
 }
 
 // ---- drawing ----
@@ -277,6 +336,7 @@ function frame() {
   drawSeries(el("aim"), quats, [{ key: "az", color: "--blue" }, { key: "el", color: "--red" }], 20);
   drawSeries(el("gyro"), gyros, [{ key: "x", color: "--blue" }, { key: "y", color: "--red" }, { key: "z", color: "--green" }], 40);
   drawTrail(el("trail"));
+  drawEMG(el("emg"));
   requestAnimationFrame(frame);
 }
 

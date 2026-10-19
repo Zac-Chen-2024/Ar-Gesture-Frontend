@@ -74,6 +74,7 @@
       #gestures .late { color: var(--red); font-size: 12px; }
       #gestures .empty { display: block; color: var(--ink-faint); }
       .counts { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; line-height: 1.6; }
+      .emg-section { margin-top: 22px; }
       .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--hair); font-size: 13px; color: var(--ink-soft); }
       button {
         font: inherit; color: var(--ink); background: transparent;
@@ -127,6 +128,7 @@
         <div class="stat"><div class="k">Kinesis → page, p50 / p95</div><div class="v" id="s-e2e">–<small>ms</small></div></div>
         <div class="stat"><div class="k">Late on the Mac</div><div class="v" id="s-late">–<small>%</small></div></div>
         <div class="stat"><div class="k">Gestures</div><div class="v" id="s-gest">0</div></div>
+        <div class="stat"><div class="k">Raw sEMG</div><div class="v" id="s-emg">–<small>Hz</small></div></div>
       </div>
 
       <section class="collect">
@@ -161,6 +163,12 @@
         </section>
       </div>
 
+      <section class="emg-section">
+        <h2>Raw sEMG</h2>
+        <p class="hint">8 channels at 2048 Hz, the last 2 s; each centred and scaled to its own lane. Turn on “stream raw sEMG” in Kinesis.</p>
+        <canvas id="emg" height="320"></canvas>
+      </section>
+
       <div class="controls">
         <button id="record" disabled>Record</button>
         <span id="record-info">Keeps every batch received; stopping downloads them as JSON lines</span>
@@ -172,7 +180,7 @@
       <div id="prompt-phase"></div>
     </div>
     <script src="../config.js?v=20260929-1"></script>
-    <script src="band.js?v=20261018-1"></script>
+    <script src="band.js?v=20261019-1"></script>
     <script src="collect.js?v=20261018-1"></script>
   </body>
 </html>
