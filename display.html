@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20261015-2" />
+    <link rel="stylesheet" href="styles.css?v=20261020-1" />
     <!-- Demo is green (the home page's Demo colour) and always Editorial -->
     <style>:root { --accent-main: #25915f; --accent-main-rgb: 37, 145, 95; }</style>
     <script src="transition.js?v=20261007-5"></script>
@@ -71,7 +71,10 @@
                 <option value="unify">Unify</option>
                 <option value="unify-double">Unify · Double</option>
                 <option value="traditional">Unify · Long press</option>
-                <option value="revert">Unify · Revert</option>
+                <option value="revert-single">Unify · Revert · Single tap</option>
+                <option value="revert">Unify · Revert · Double tap</option>
+                <option value="revert-always-single">Unify · Revert · Always single tap</option>
+                <option value="revert-always-double">Unify · Revert · Always double tap</option>
               </select>
               <div class="segmented" id="input-mode-switch" role="radiogroup" aria-label="Input mode">
                 <button type="button" role="radio" data-value="center">Center</button>
@@ -88,6 +91,16 @@
                      Space and Double (display.js hides these two there) -->
                 <button type="button" role="radio" data-value="traditional" data-phone-only>Long press</button>
                 <button type="button" role="radio" data-value="revert" data-phone-only>Revert</button>
+              </div>
+            </div>
+            <!-- Revert: how a tap starts spelling, and whether letters then take taps too -->
+            <div class="setting" id="revert-variant-setting" hidden>
+              <span class="setting-label">Revert</span>
+              <div class="segmented" id="revert-variant" role="radiogroup" aria-label="Revert variant">
+                <button type="button" role="radio" data-value="revert-single">Single tap</button>
+                <button type="button" role="radio" data-value="revert">Double tap</button>
+                <button type="button" role="radio" data-value="revert-always-single">Always single tap</button>
+                <button type="button" role="radio" data-value="revert-always-double">Always double tap</button>
               </div>
             </div>
             <!-- Trace is hidden for now: always Gesture (cursor + drawn trail;
@@ -188,7 +201,7 @@
     <script src="config.js?v=20260929-1"></script>
     <script src="vendor/adb.bundle.js?v=20260929-1"></script>
     <script src="vendor/qrcode-generator.js?v=20261006-1"></script>
-    <script src="display.js?v=20261015-2"></script>
+    <script src="display.js?v=20261020-1"></script>
     <script src="collection.js?v=20260929-1"></script>
   </body>
   </html>

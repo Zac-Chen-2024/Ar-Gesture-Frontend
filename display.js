@@ -33,7 +33,18 @@ const UNIFY_MODES = ["unify", "unify-double", "unify-lp"];
 // Long press ("traditional") and Revert are listed under Unify but are Continuous at heart:
 // they draw and move like Continuous, and only their spelling bar is Unify's.
 // Revert starts spelling with a double tap instead of a hold.
-const WORD_BAR_MODES = ["traditional", "revert"];
+// Revert has four variants: a single or a double tap starts spelling, and in the
+// two Always ones letters then take that tap too (a slide only moves the cursor).
+const REVERT_MODES = ["revert-single", "revert", "revert-always-single", "revert-always-double"];
+const WORD_BAR_MODES = ["traditional", ...REVERT_MODES];
+const revertVariantSwitch = document.getElementById("revert-variant");
+const REVERT_START_HINT = {
+  "revert-single": "Tap a letter to spell a word (it replaces the swipe that got you there).",
+  revert: "Double-tap a letter to spell a word (it replaces the swipe that got you there).",
+  "revert-always-single": "Tap a letter to spell a word, then tap each letter (it replaces the swipe that got you there).",
+  "revert-always-double": "Double-tap a letter to spell a word, then double-tap each letter (it replaces the swipe that got you there)."
+};
+const REVERT_LETTER_VERB = { "revert-always-single": "tap", "revert-always-double": "double-tap" };
 
 function inUnifyGroup() {
   return isUnifyMode() || WORD_BAR_MODES.includes(currentInputMode);
@@ -264,7 +275,12 @@ function applyModeClasses() {
   if (variantSetting) {
     variantSetting.hidden = !inUnifyGroup();
   }
-  syncSegmented(unifyVariantSwitch, currentInputMode);
+  syncSegmented(unifyVariantSwitch, REVERT_MODES.includes(currentInputMode) ? "revert" : currentInputMode);
+  const revertSetting = document.getElementById("revert-variant-setting");
+  if (revertSetting) {
+    revertSetting.hidden = !REVERT_MODES.includes(currentInputMode);
+  }
+  syncSegmented(revertVariantSwitch, currentInputMode);
   inputModeSelect.disabled = isAbsoluteMode;
   inputModeSwitch?.querySelectorAll("button").forEach((button) => {
     button.disabled = isAbsoluteMode;
@@ -406,10 +422,10 @@ function renderSpellingState(state) {
     letterBadge.setAttribute("aria-hidden", String(!visible));
     const letter = (currentSpelling.preview || "").toUpperCase();
     const hint = currentSpelling.active
-      ? (letter ? `Spelling · lift to add ${letter}`
+      ? (letter ? `Spelling · ${REVERT_LETTER_VERB[currentInputMode] || "lift"} to add ${letter}`
         : WORD_BAR_MODES.includes(currentInputMode) ? "Spelling · Space for the word as typed, or pick in the bar"
         : (space ? "Spelling · slide down to Space to commit" : "Spelling · slide up to commit or cancel"))
-      : currentInputMode === "revert" ? "Double-tap a letter to spell a word (it replaces the swipe that got you there)."
+      : REVERT_START_HINT[currentInputMode] ? REVERT_START_HINT[currentInputMode]
       : (currentSpelling.armed ? `Hold complete · lift to spell ${letter}` : "Hold a letter for 1 s to spell a word.");
     if (letterBadge.textContent !== hint) letterBadge.textContent = hint;
   }
@@ -436,7 +452,7 @@ let spellingHoldShown = null;
 
 function renderSpellingHold() {
   const s = currentSpelling;
-  const holding = !s.active && s.preview && s.holdSeconds && !isUnifyMode() && currentInputMode !== "revert"
+  const holding = !s.active && s.preview && s.holdSeconds && !isUnifyMode() && !REVERT_MODES.includes(currentInputMode)
     ? `${s.preview}:${s.holdId}` : null;
   if (holding === spellingHoldShown && !s.armed) return;
   document.querySelectorAll(".key.is-spell-holding").forEach((key) => {
@@ -1535,6 +1551,7 @@ socket.addEventListener("message", (event) => {
     }
 
     applyModeClasses();
+    renderSpellingState(currentSpelling); // again: the hint depends on the mode set just above
     if (currentSpelling.active) {
       inputModeSwitch?.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     }
@@ -1565,6 +1582,16 @@ inputModeSwitch?.addEventListener("click", (event) => {
 });
 
 unifyVariantSwitch?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-value]");
+  if (!button || button.disabled || button.dataset.value === inputModeSelect.value
+      || (button.dataset.value === "revert" && REVERT_MODES.includes(inputModeSelect.value))) {
+    return;
+  }
+  inputModeSelect.value = button.dataset.value;
+  inputModeSelect.dispatchEvent(new Event("change"));
+});
+
+revertVariantSwitch?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-value]");
   if (!button || button.disabled || button.dataset.value === inputModeSelect.value) {
     return;
