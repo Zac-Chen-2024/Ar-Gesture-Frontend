@@ -423,6 +423,7 @@ function renderSpellingState(state) {
     const letter = (currentSpelling.preview || "").toUpperCase();
     const hint = currentSpelling.active
       ? (letter ? `Spelling · ${REVERT_LETTER_VERB[currentInputMode] || "lift"} to add ${letter}`
+        : REVERT_LETTER_VERB[currentInputMode] ? `Spelling · ${REVERT_LETTER_VERB[currentInputMode]} Space for the word as typed, or pick in the bar`
         : WORD_BAR_MODES.includes(currentInputMode) ? "Spelling · Space for the word as typed, or pick in the bar"
         : (space ? "Spelling · slide down to Space to commit" : "Spelling · slide up to commit or cancel"))
       : REVERT_START_HINT[currentInputMode] ? REVERT_START_HINT[currentInputMode]
@@ -1514,6 +1515,11 @@ socket.addEventListener("message", (event) => {
       if (!touchpadActive && !isUnifyMode()) {
         updateCursorByKey(currentCursorKey); // touchpad keeps its own unsnapped pointer
       }
+    }
+
+    // Revert · Always, spelling: the cursor can rest on Space instead of a letter
+    if (message.cursorPoint && !touchpadActive && !isUnifyMode()) {
+      moveCursor(toDisplayPoint(message.cursorPoint));
     }
 
     if (message.code) {
