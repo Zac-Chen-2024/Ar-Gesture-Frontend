@@ -6,6 +6,12 @@ const mappingModeSelect = document.getElementById("mapping-mode");
 const inputModeSelect = document.getElementById("input-mode"); // hidden; driven by the switch below
 const inputModeSwitch = document.getElementById("input-mode-switch");
 const unifyVariantSwitch = document.getElementById("unify-variant");
+// Demo: Mode (Gesture only | Gesture + typing) above the rule dropdown; the
+// other pages keep their segmented switches and have no family control
+const modeFamilySelect = document.getElementById("mode-family");
+const inputModeLabel = document.getElementById("input-mode-label");
+// what the second dropdown jumps to when the family changes
+const FAMILY_DEFAULT = { gesture: "continuous", typing: "revert-always-single", typingTouchpad: "unify-double" };
 // null while the Trace selector is commented out in display.html (Gesture only)
 const visualModeSelect = document.getElementById("visual-mode");
 // null while the Phone keys selector is commented out in display.html (Hide only)
@@ -281,11 +287,50 @@ function applyModeClasses() {
     revertSetting.hidden = !REVERT_MODES.includes(currentInputMode);
   }
   syncSegmented(revertVariantSwitch, currentInputMode);
+  syncModeFamily();
   inputModeSelect.disabled = isAbsoluteMode;
+  if (modeFamilySelect) {
+    modeFamilySelect.disabled = isAbsoluteMode;
+  }
   inputModeSwitch?.querySelectorAll("button").forEach((button) => {
     button.disabled = isAbsoluteMode;
   });
 }
+
+// Mode dropdown follows the current mode's family; the rule dropdown shows
+// only that family's options (and, on Touchpad, only its touchpad ones)
+function syncModeFamily() {
+  if (!modeFamilySelect) {
+    return;
+  }
+  const family = inUnifyGroup() ? "typing" : "gesture";
+  modeFamilySelect.value = family;
+  if (inputModeLabel) {
+    inputModeLabel.textContent = family === "typing" ? "Typing" : "Word start";
+  }
+  const isPhone = deviceMode === "phone";
+  [...inputModeSelect.options].forEach((option) => {
+    const phoneOnly = option.hasAttribute("data-phone-only");
+    const show = option.dataset.family === family && (isPhone || !phoneOnly);
+    option.hidden = !show;
+    option.disabled = !show;
+  });
+  if (inputModeSelect.value !== currentInputMode
+      && [...inputModeSelect.options].some((o) => o.value === currentInputMode)) {
+    inputModeSelect.value = currentInputMode;
+  }
+}
+
+modeFamilySelect?.addEventListener("change", () => {
+  const family = modeFamilySelect.value;
+  const wanted = family === "gesture" ? FAMILY_DEFAULT.gesture
+    : deviceMode === "touchpad" ? FAMILY_DEFAULT.typingTouchpad : FAMILY_DEFAULT.typing;
+  if (inputModeSelect.value === wanted) {
+    return;
+  }
+  inputModeSelect.value = wanted;
+  inputModeSelect.dispatchEvent(new Event("change"));
+});
 
 // trace look comes from the active display style (--trace-color/--trace-width)
 let traceColor = "#111111";
@@ -511,15 +556,7 @@ function renderLetterState(state) {
 // server's echoed gesture-move messages while the channel is up. All decoding
 // and state stay on the server - this is rendering-only.
 const lanModeSelect = document.getElementById("lan-mode");
-// the server only stores on/off, so lan-vs-usb would silently reset to "lan"
-// on every reload — persist the display-local choice
-if (lanModeSelect) {
-  const savedLink = localStorage.getItem("linkMode");
-  // "lan" is no longer offered (its button is commented out): fall back to Remote
-  if (savedLink === "usb" || savedLink === "server") {
-    lanModeSelect.value = savedLink;
-  }
-}
+// Link opens on Remote every time; USB is chosen per visit.
 const lanBadge = document.getElementById("lan-badge");
 let isApplyingServerLanMode = false;
 let linkModeBounce = false; // true while our own lan<->usb renegotiation bounce is in flight
@@ -578,6 +615,12 @@ function syncSegmented(group, value) {
   if (!group) {
     return;
   }
+  if (group.tagName === "SELECT") {
+    if (group.value !== value && [...group.options].some((o) => o.value === value)) {
+      group.value = value;
+    }
+    return;
+  }
   group.querySelectorAll("button[data-value]").forEach((button) => {
     const on = button.dataset.value === value;
     button.classList.toggle("is-active", on);
@@ -594,6 +637,7 @@ function updateUsbUi() {
   [usbSetting, usbArrow].forEach((el) => { if (el) el.hidden = !showUsb; });
   // Touchpad offers Unify's Space and Double only; Long press and Revert are phone modes
   unifyVariantSwitch?.querySelectorAll("[data-phone-only]").forEach((button) => { button.hidden = !isPhone; });
+  syncModeFamily();
   renderTouchpadStart();
 }
 
@@ -633,15 +677,16 @@ function renderTouchpadStart() {
   }
 }
 
-deviceSwitch?.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-value]");
-  if (!button || button.disabled || button.dataset.value === deviceMode) {
+function setDeviceMode(value) {
+  if (value === deviceMode) {
     return;
   }
-  deviceMode = button.dataset.value;
+  deviceMode = value;
   updateUsbUi();
-  if (deviceMode === "touchpad" && unifyVariantSwitch && WORD_BAR_MODES.includes(currentInputMode)) {
-    inputModeSelect.value = "unify-double"; // Long press / Revert have no touchpad version here
+  // Long press / Revert have no touchpad version here
+  const phoneOnlyRule = unifyVariantSwitch || modeFamilySelect;
+  if (deviceMode === "touchpad" && phoneOnlyRule && WORD_BAR_MODES.includes(currentInputMode)) {
+    inputModeSelect.value = FAMILY_DEFAULT.typingTouchpad;
     inputModeSelect.dispatchEvent(new Event("change"));
   }
   // this click is the user activation that pointer lock requires
@@ -652,7 +697,18 @@ deviceSwitch?.addEventListener("click", (event) => {
   } else {
     exitTouchpad();
   }
-});
+}
+
+if (deviceSwitch?.tagName === "SELECT") {
+  deviceSwitch.addEventListener("change", () => setDeviceMode(deviceSwitch.value));
+} else {
+  deviceSwitch?.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-value]");
+    if (button && !button.disabled) {
+      setDeviceMode(button.dataset.value);
+    }
+  });
+}
 
 // ---- Unify: the cursor persists and clicks alone act (unify.py on the server) ----
 let unifyCursor = { x: 0, y: 0 }; // keyboard units, as the server last placed it
@@ -1274,10 +1330,12 @@ socket.addEventListener("message", (event) => {
 
   if (message.type === "room-created") {
     updateRoomBadge(message.code, false);
-    // the main display opens in Unify · Double (the study pages share this
-    // script but have no Unify switch, and keep the server's default)
-    if (unifyVariantSwitch) {
-      sendMessage({ type: "mode-set", mode: "unify-double" });
+    // the page's opening mode: data-default-mode on <body> (the Demo), else
+    // Unify · Double where there is a Unify switch; the study pages share this
+    // script but have neither, and keep the server's default
+    const defaultMode = document.body.dataset.defaultMode || (unifyVariantSwitch ? "unify-double" : null);
+    if (defaultMode) {
+      sendMessage({ type: "mode-set", mode: defaultMode });
       sendMessage({ type: "version-set", version: "omact" }); // Standard: the algorithm is not chosen here for now
     }
     return;
@@ -1560,6 +1618,10 @@ socket.addEventListener("message", (event) => {
     renderSpellingState(currentSpelling); // again: the hint depends on the mode set just above
     if (currentSpelling.active) {
       inputModeSwitch?.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+      if (modeFamilySelect) {
+        inputModeSelect.disabled = true;
+        modeFamilySelect.disabled = true;
+      }
     }
     renderUnify(message.unify);
   }
@@ -1658,7 +1720,6 @@ if (lanModeSelect) {
       return;
     }
     const mode = lanModeSelect.value;
-    localStorage.setItem("linkMode", mode);
     updateUsbUi();
     const enabled = mode !== "server";
     const wasEnabled = prevLinkMode !== "server";

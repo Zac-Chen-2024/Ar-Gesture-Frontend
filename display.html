@@ -12,7 +12,7 @@
     <style>:root { --accent-main: #25915f; --accent-main-rgb: 37, 145, 95; }</style>
     <script src="transition.js?v=20261007-5"></script>
   </head>
-  <body class="display-body" data-pair-qr data-touchpad-start>
+  <body class="display-body" data-pair-qr data-touchpad-start data-default-mode="revert-always-single">
     <a class="home-link" href="./" aria-label="Back to the home page"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>Home</a>
     <main class="display-stage">
       <section class="display-frame" aria-label="Gesture display area">
@@ -35,73 +35,52 @@
             -->
             <div class="setting" id="device-setting">
               <span class="setting-label">Device</span>
-              <div class="segmented" id="device-mode" role="radiogroup" aria-label="Input device">
-                <button type="button" role="radio" data-value="touchpad">Touchpad</button>
-                <button type="button" role="radio" data-value="phone">Phone</button>
-              </div>
+              <select id="device-mode" class="mode-select" aria-label="Input device">
+                <option value="phone" selected>Phone</option>
+                <option value="touchpad">Touchpad</option>
+              </select>
             </div>
             <span class="setting-arrow" id="link-arrow" aria-hidden="true">›</span>
             <div class="setting" id="link-setting">
               <span class="setting-label">Link</span>
-              <!-- the select stays the source of truth for display.js; the
-                   segmented buttons just drive it -->
-              <select id="lan-mode" class="mode-select" aria-label="Gesture transport" hidden>
-                <option value="server">Remote</option>
-                <option value="lan">LAN</option>
+              <!-- always Remote on load; LAN is hidden for now (the option stays for later) -->
+              <select id="lan-mode" class="mode-select" aria-label="Gesture transport">
+                <option value="server" selected>Remote</option>
+                <option value="lan" hidden>LAN</option>
                 <option value="usb">USB</option>
               </select>
-              <div class="segmented" id="link-mode" role="radiogroup" aria-label="Gesture transport">
-                <button type="button" role="radio" data-value="server">Remote</button>
-                <!-- LAN is hidden for now; the select option stays for later
-                <button type="button" role="radio" data-value="lan">LAN</button>
-                -->
-                <button type="button" role="radio" data-value="usb">USB</button>
-              </div>
             </div>
             <span class="setting-arrow" id="usb-arrow" aria-hidden="true">›</span>
             <div class="setting" id="usb-setting">
               <span class="setting-label">USB</span>
               <button id="usb-connect" class="mode-select usb-connect" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Connect phone</button>
             </div>
+            <!-- Mode: what the fingers do. Gesture only = swipe, words split by
+                 lifting; Gesture + typing = swipe, then taps on letters to spell.
+                 The second dropdown picks the rule inside the chosen family. -->
             <div class="setting">
-              <span class="setting-label">Word start</span>
-              <select id="input-mode" class="mode-select" aria-label="Input mode" hidden>
-                <option value="center">Center</option>
-                <option value="continuous" selected>Continuous</option>
-                <option value="unify">Unify</option>
-                <option value="unify-double">Unify · Double</option>
-                <option value="traditional">Unify · Long press</option>
-                <option value="revert-single">Unify · Revert · Single tap</option>
-                <option value="revert">Unify · Revert · Double tap</option>
-                <option value="revert-always-single">Unify · Revert · Always single tap</option>
-                <option value="revert-always-double">Unify · Revert · Always double tap</option>
+              <span class="setting-label">Mode</span>
+              <select id="mode-family" class="mode-select" aria-label="Input family">
+                <option value="gesture">Gesture only</option>
+                <option value="typing" selected>Gesture + typing</option>
               </select>
-              <div class="segmented" id="input-mode-switch" role="radiogroup" aria-label="Input mode">
-                <button type="button" role="radio" data-value="center">Center</button>
-                <button type="button" role="radio" data-value="continuous">Continuous</button>
-                <button type="button" role="radio" data-value="unify">Unify</button>
-              </div>
             </div>
-            <div class="setting" id="unify-variant-setting" hidden>
-              <span class="setting-label">Unify</span>
-              <div class="segmented" id="unify-variant" role="radiogroup" aria-label="Unify variant">
-                <button type="button" role="radio" data-value="unify">Space</button>
-                <button type="button" role="radio" data-value="unify-double">Double</button>
-                <!-- Long press (traditional) and Revert are phone-only: Touchpad offers
-                     Space and Double (display.js hides these two there) -->
-                <button type="button" role="radio" data-value="traditional" data-phone-only>Long press</button>
-                <button type="button" role="radio" data-value="revert" data-phone-only>Revert</button>
-              </div>
-            </div>
-            <!-- Revert: how a tap starts spelling, and whether letters then take taps too -->
-            <div class="setting" id="revert-variant-setting" hidden>
-              <span class="setting-label">Revert</span>
-              <div class="segmented" id="revert-variant" role="radiogroup" aria-label="Revert variant">
-                <button type="button" role="radio" data-value="revert-single">Single tap</button>
-                <button type="button" role="radio" data-value="revert">Double tap</button>
-                <button type="button" role="radio" data-value="revert-always-single">Always single tap</button>
-                <button type="button" role="radio" data-value="revert-always-double">Always double tap</button>
-              </div>
+            <div class="setting">
+              <span class="setting-label" id="input-mode-label">Typing</span>
+              <select id="input-mode" class="mode-select" aria-label="Input mode">
+                <!-- Gesture only: where a word starts -->
+                <option value="center" data-family="gesture">Centre</option>
+                <option value="continuous" data-family="gesture">Continuous</option>
+                <!-- Gesture + typing: how a word ends and how spelling starts.
+                     Long press and Tap to retype are phone-only (hidden on Touchpad). -->
+                <option value="unify" data-family="typing">Space key</option>
+                <option value="unify-double" data-family="typing">Double tap</option>
+                <option value="traditional" data-family="typing" data-phone-only>Long press</option>
+                <option value="revert-single" data-family="typing" data-phone-only>Tap to retype · 1 tap</option>
+                <option value="revert" data-family="typing" data-phone-only>Tap to retype · 2 taps</option>
+                <option value="revert-always-single" data-family="typing" data-phone-only selected>Tap to retype · 1 tap, letters tapped</option>
+                <option value="revert-always-double" data-family="typing" data-phone-only>Tap to retype · 2 taps, letters tapped</option>
+              </select>
             </div>
             <!-- Trace is hidden for now: always Gesture (cursor + drawn trail;
                  Cursor = dot only). Kept for later — uncomment to bring it back.
@@ -198,10 +177,10 @@
         <div id="touchpad-hint" class="touchpad-hint" aria-live="polite" hidden></div>
       </section>
     </main>
-    <script src="config.js?v=20260929-1"></script>
+    <script src="config.js?v=20261109-1"></script>
     <script src="vendor/adb.bundle.js?v=20260929-1"></script>
     <script src="vendor/qrcode-generator.js?v=20261006-1"></script>
-    <script src="display.js?v=20261027-1"></script>
+    <script src="display.js?v=20261109-1"></script>
     <script src="collection.js?v=20260929-1"></script>
   </body>
   </html>
