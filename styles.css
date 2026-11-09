@@ -1208,49 +1208,52 @@ body[data-theme="editorial"] {
   box-shadow: none;
 }
 
-/* dropdown: the same square grey cells, chosen value solid black */
+/* dropdown: one square grey cell holding the value and the caret; the open
+   list is the same cells stacked, the chosen one a shade darker. Two greys,
+   no black block. */
 [data-theme="editorial"] .dropdown-toggle,
 [data-theme="editorial"] .dropdown-menu {
   padding: 0;
   gap: 0;
   border-radius: 0;
-  background: transparent;
+  background: rgba(17, 17, 17, 0.07);
   box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.22);
 }
 
 [data-theme="editorial"] .dropdown-menu {
   top: calc(100% + 6px);
-  background: var(--ed-paper);
 }
 
 [data-theme="editorial"] .dropdown-value,
 [data-theme="editorial"] .dropdown-caret,
 [data-theme="editorial"] .dropdown-item {
   border-radius: 0;
+  background: transparent;
   box-shadow: none;
+  color: var(--ink);
 }
 
 [data-theme="editorial"] .dropdown-value {
-  background: var(--ink);
-  color: #ffffff;
+  padding-right: 6px;
 }
 
 [data-theme="editorial"] .dropdown-caret {
-  background: rgba(17, 17, 17, 0.07);
+  padding-left: 0;
   color: var(--ink-faint);
-  box-shadow: inset 1px 0 0 rgba(17, 17, 17, 0.12);
+}
+
+[data-theme="editorial"] .dropdown-toggle:hover:not(:disabled) {
+  background: rgba(17, 17, 17, 0.12);
 }
 
 [data-theme="editorial"] .dropdown-toggle:hover:not(:disabled) .dropdown-caret,
 [data-theme="editorial"] .dropdown.is-open .dropdown-caret {
-  background: rgba(17, 17, 17, 0.12);
   color: var(--ink);
 }
 
 [data-theme="editorial"] .dropdown-item {
   height: var(--control-h);
-  background: rgba(17, 17, 17, 0.07);
-  color: var(--ink-faint);
+  color: var(--ink-soft);
 }
 
 [data-theme="editorial"] .dropdown-item + .dropdown-item {
@@ -1258,15 +1261,10 @@ body[data-theme="editorial"] {
 }
 
 [data-theme="editorial"] .dropdown-item:hover:not(.is-active):not(:disabled),
-[data-theme="editorial"] .dropdown-item:focus-visible {
+[data-theme="editorial"] .dropdown-item:focus-visible,
+[data-theme="editorial"] .dropdown-item.is-active {
   background: rgba(17, 17, 17, 0.12);
   color: var(--ink);
-}
-
-[data-theme="editorial"] .dropdown-item.is-active {
-  background: var(--ink);
-  color: #ffffff;
-  box-shadow: none;
 }
 
 [data-theme="editorial"] .usb-connect {
