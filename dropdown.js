@@ -36,8 +36,21 @@
     select.insertAdjacentElement("afterend", root);
 
     const widget = { select, root, toggle, value, menu };
+    const measure = document.createElement("canvas").getContext("2d");
+
+    // the control is as wide as its longest option, so it never jumps when
+    // the value changes (hidden options count too: the width stays put when
+    // the option set changes)
+    function fitWidth() {
+      const style = getComputedStyle(value);
+      measure.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const widest = Math.max(0, ...[...select.options].map((o) => measure.measureText(o.textContent).width));
+      const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight); // the box includes it
+      value.style.minWidth = `${Math.ceil(widest + padding)}px`;
+    }
 
     function render() {
+      fitWidth();
       const current = select.selectedOptions[0];
       value.textContent = current ? current.textContent : "";
       toggle.disabled = select.disabled;

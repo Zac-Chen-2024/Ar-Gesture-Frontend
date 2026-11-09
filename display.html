@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20261109-4" />
+    <link rel="stylesheet" href="styles.css?v=20261109-5" />
     <!-- Demo is green (the home page's Demo colour) and always Editorial -->
     <style>:root { --accent-main: #25915f; --accent-main-rgb: 37, 145, 95; }</style>
     <script src="transition.js?v=20261007-5"></script>
@@ -69,17 +69,18 @@
               <span class="setting-label" id="input-mode-label">Typing</span>
               <select id="input-mode" class="mode-select" data-dropdown aria-label="Input mode">
                 <!-- Gesture only: where a word starts -->
-                <option value="center" data-family="gesture">Centre</option>
+                <option value="center" data-family="gesture">Centre start</option>
                 <option value="continuous" data-family="gesture">Continuous</option>
                 <!-- Gesture + typing: how a word ends and how spelling starts.
-                     Long press and Tap to retype are phone-only (hidden on Touchpad). -->
+                     Long press and Retype are phone-only (hidden on Touchpad). Retype:
+                     a tap on a letter retypes the word from it; "always" = letters take taps too. -->
                 <option value="unify" data-family="typing">Space key</option>
                 <option value="unify-double" data-family="typing">Double tap</option>
                 <option value="traditional" data-family="typing" data-phone-only>Long press</option>
-                <option value="revert-single" data-family="typing" data-phone-only>Tap to retype · 1 tap</option>
-                <option value="revert" data-family="typing" data-phone-only>Tap to retype · 2 taps</option>
-                <option value="revert-always-single" data-family="typing" data-phone-only selected>Tap to retype · 1 tap, letters tapped</option>
-                <option value="revert-always-double" data-family="typing" data-phone-only>Tap to retype · 2 taps, letters tapped</option>
+                <option value="revert-single" data-family="typing" data-phone-only>Retype · 1 tap</option>
+                <option value="revert" data-family="typing" data-phone-only>Retype · 2 taps</option>
+                <option value="revert-always-single" data-family="typing" data-phone-only selected>Retype · 1 tap · always</option>
+                <option value="revert-always-double" data-family="typing" data-phone-only>Retype · 2 taps · always</option>
               </select>
             </div>
             <!-- Trace is hidden for now: always Gesture (cursor + drawn trail;
@@ -177,11 +178,11 @@
         <div id="touchpad-hint" class="touchpad-hint" aria-live="polite" hidden></div>
       </section>
     </main>
-    <script src="config.js?v=20261109-4"></script>
+    <script src="config.js?v=20261109-5"></script>
     <script src="vendor/adb.bundle.js?v=20260929-1"></script>
     <script src="vendor/qrcode-generator.js?v=20261006-1"></script>
-    <script src="display.js?v=20261109-4"></script>
-    <script src="dropdown.js?v=20261109-4"></script>
+    <script src="display.js?v=20261109-5"></script>
+    <script src="dropdown.js?v=20261109-5"></script>
     <script src="collection.js?v=20260929-1"></script>
   </body>
   </html>
