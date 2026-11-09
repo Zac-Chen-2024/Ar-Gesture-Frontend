@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20261109-2" />
+    <link rel="stylesheet" href="styles.css?v=20261109-3" />
     <!-- Demo is green (the home page's Demo colour) and always Editorial -->
     <style>:root { --accent-main: #25915f; --accent-main-rgb: 37, 145, 95; }</style>
     <script src="transition.js?v=20261007-5"></script>
@@ -35,7 +35,7 @@
             -->
             <div class="setting" id="device-setting">
               <span class="setting-label">Device</span>
-              <select id="device-mode" class="mode-select" aria-label="Input device">
+              <select id="device-mode" class="mode-select" data-dropdown aria-label="Input device">
                 <option value="phone" selected>Phone</option>
                 <option value="touchpad">Touchpad</option>
               </select>
@@ -44,7 +44,7 @@
             <div class="setting" id="link-setting">
               <span class="setting-label">Link</span>
               <!-- always Remote on load; LAN is hidden for now (the option stays for later) -->
-              <select id="lan-mode" class="mode-select" aria-label="Gesture transport">
+              <select id="lan-mode" class="mode-select" data-dropdown aria-label="Gesture transport">
                 <option value="server" selected>Remote</option>
                 <option value="lan" hidden>LAN</option>
                 <option value="usb">USB</option>
@@ -60,14 +60,14 @@
                  The second dropdown picks the rule inside the chosen family. -->
             <div class="setting">
               <span class="setting-label">Mode</span>
-              <select id="mode-family" class="mode-select" aria-label="Input family">
+              <select id="mode-family" class="mode-select" data-dropdown aria-label="Input family">
                 <option value="gesture">Gesture only</option>
                 <option value="typing" selected>Gesture + typing</option>
               </select>
             </div>
             <div class="setting">
               <span class="setting-label" id="input-mode-label">Typing</span>
-              <select id="input-mode" class="mode-select" aria-label="Input mode">
+              <select id="input-mode" class="mode-select" data-dropdown aria-label="Input mode">
                 <!-- Gesture only: where a word starts -->
                 <option value="center" data-family="gesture">Centre</option>
                 <option value="continuous" data-family="gesture">Continuous</option>
@@ -177,10 +177,11 @@
         <div id="touchpad-hint" class="touchpad-hint" aria-live="polite" hidden></div>
       </section>
     </main>
-    <script src="config.js?v=20261109-2"></script>
+    <script src="config.js?v=20261109-3"></script>
     <script src="vendor/adb.bundle.js?v=20260929-1"></script>
     <script src="vendor/qrcode-generator.js?v=20261006-1"></script>
-    <script src="display.js?v=20261109-1"></script>
+    <script src="display.js?v=20261109-3"></script>
+    <script src="dropdown.js?v=20261109-3"></script>
     <script src="collection.js?v=20260929-1"></script>
   </body>
   </html>

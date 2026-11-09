@@ -292,6 +292,7 @@ function applyModeClasses() {
   if (modeFamilySelect) {
     modeFamilySelect.disabled = isAbsoluteMode;
   }
+  window.Dropdown?.refresh();
   inputModeSwitch?.querySelectorAll("button").forEach((button) => {
     button.disabled = isAbsoluteMode;
   });
@@ -638,6 +639,7 @@ function updateUsbUi() {
   // Touchpad offers Unify's Space and Double only; Long press and Revert are phone modes
   unifyVariantSwitch?.querySelectorAll("[data-phone-only]").forEach((button) => { button.hidden = !isPhone; });
   syncModeFamily();
+  window.Dropdown?.refresh();
   renderTouchpadStart();
 }
 
@@ -1621,6 +1623,7 @@ socket.addEventListener("message", (event) => {
       if (modeFamilySelect) {
         inputModeSelect.disabled = true;
         modeFamilySelect.disabled = true;
+        window.Dropdown?.refresh();
       }
     }
     renderUnify(message.unify);
